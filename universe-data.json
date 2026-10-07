@@ -1,4 +1,7 @@
 {"format":"universe-export","schemaVersion":1,"collections":{
+"ai_profiles":[
+{"id":"user_266ec9fe326c68ff9d","name":"Antwan","instructions":"","style":"balanced","preferences":"Everything","keyMode":"shared","provider":"groq","model":null,"encryptedKey":null,"keyLast4":null,"createdAt":"2026-10-07T15:42:05.928Z","updatedAt":"2026-10-07T15:42:05.928Z"}
+],
 "app_installations":[
 {"id":"inventory","version":"1.0.0","enabled":true,"installedBy":"user_266ec9fe326c68ff9d","installedAt":"2026-10-07T15:40:49.028Z","createdAt":"2026-10-07T15:40:49.028Z","updatedAt":"2026-10-07T15:40:49.028Z"}
 ],
@@ -9,7 +12,9 @@
 {"id":"aud_577eb304199c9b5b56","at":"2026-10-07T15:39:59.717Z","actorId":"user_266ec9fe326c68ff9d","action":"auth.login","targetType":null,"targetId":null,"outcome":"failure","meta":{"email":"prosperufaruna@gmail.com","reason":"bad_password"},"ip":"10.27.25.223","createdAt":"2026-10-07T15:39:59.717Z","updatedAt":"2026-10-07T15:39:59.717Z"},
 {"id":"aud_cffae36f62467cadac","at":"2026-10-07T15:40:01.715Z","actorId":"user_266ec9fe326c68ff9d","action":"auth.login","targetType":null,"targetId":null,"outcome":"failure","meta":{"email":"prosperufaruna@gmail.com","reason":"bad_password"},"ip":"10.27.25.223","createdAt":"2026-10-07T15:40:01.715Z","updatedAt":"2026-10-07T15:40:01.715Z"},
 {"id":"aud_e12cab2a055988a70f","at":"2026-10-07T15:40:39.516Z","actorId":"user_266ec9fe326c68ff9d","action":"auth.login","targetType":null,"targetId":null,"outcome":"success","meta":{},"ip":"10.27.25.223","createdAt":"2026-10-07T15:40:39.516Z","updatedAt":"2026-10-07T15:40:39.516Z"},
-{"id":"aud_533c8b42ef7bd03ae0","at":"2026-10-07T15:40:49.028Z","actorId":"user_266ec9fe326c68ff9d","action":"app.install","targetType":"app","targetId":"inventory","outcome":"success","meta":{"version":"1.0.0"},"ip":"10.28.103.150","createdAt":"2026-10-07T15:40:49.028Z","updatedAt":"2026-10-07T15:40:49.028Z"}
+{"id":"aud_533c8b42ef7bd03ae0","at":"2026-10-07T15:40:49.028Z","actorId":"user_266ec9fe326c68ff9d","action":"app.install","targetType":"app","targetId":"inventory","outcome":"success","meta":{"version":"1.0.0"},"ip":"10.28.103.150","createdAt":"2026-10-07T15:40:49.028Z","updatedAt":"2026-10-07T15:40:49.028Z"},
+{"id":"aud_727e4fb4c2925fb261","at":"2026-10-07T15:42:05.929Z","actorId":"user_266ec9fe326c68ff9d","action":"ai.profile_update","targetType":null,"targetId":null,"outcome":"success","meta":{"fields":["name","instructions","style","preferences","keyMode","provider","model"]},"ip":"10.30.203.20","createdAt":"2026-10-07T15:42:05.929Z","updatedAt":"2026-10-07T15:42:05.929Z"},
+{"id":"aud_743ed9b85cf95b8c58","at":"2026-10-07T15:42:05.943Z","actorId":"user_266ec9fe326c68ff9d","action":"ai.admin_config","targetType":null,"targetId":null,"outcome":"success","meta":{"defaultProvider":"groq","defaultModel":"openai/gpt-oss-120b","sharedKeyEnabled":"[redacted]","sharedDailyLimit":0},"ip":"10.27.25.223","createdAt":"2026-10-07T15:42:05.943Z","updatedAt":"2026-10-07T15:42:05.943Z"}
 ],
 "inventory_categories":[
 {"id":"cat_ec23f914fdb81cbdf9","ownerId":"user_266ec9fe326c68ff9d","name":"Electronics","icon":null,"createdAt":"2026-10-07T15:41:07.919Z","updatedAt":"2026-10-07T15:41:07.919Z"},
@@ -29,6 +34,9 @@
 ],
 "sessions":[
 {"id":"289bb09a0064d6a83820e837801ca71145619b26fc8fc799f1e58a526ea2402b","userId":"user_266ec9fe326c68ff9d","ip":"10.27.25.223","userAgent":"Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Mobile Safari/537.36","expiresAt":"2026-10-14T15:40:39.515Z","createdAt":"2026-10-07T15:40:39.515Z","updatedAt":"2026-10-07T15:40:39.515Z"}
+],
+"settings":[
+{"id":"ai","defaultProvider":"groq","defaultModel":"openai/gpt-oss-120b","sharedKeyEnabled":true,"sharedDailyLimit":0,"createdAt":"2026-10-07T15:42:05.943Z","updatedAt":"2026-10-07T15:42:05.943Z"}
 ],
 "users":[
 {"id":"user_266ec9fe326c68ff9d","email":"prosperufaruna@gmail.com","displayName":"Admin","passwordHash":"scrypt$32768$8$1$dW50tXP/tPIm7gIAuZY77A==$WpvI9LsFnp9jWh5ZyYrLTqyttQJ3bi5luZdNFJnl5dp/FVXnZuG91O3GHHdPnd4+gRd9DPYF/O3+78Q541psBg==","roleId":"admin","status":"active","grants":[],"denies":[],"profile":{"avatarUrl":null,"bio":""},"profileVisibility":{"displayName":{"level":"public","sharedWith":[]},"avatarUrl":{"level":"public","sharedWith":[]},"bio":{"level":"private","sharedWith":[]}},"lastLoginAt":"2026-10-07T15:40:39.516Z","passwordChangedAt":"2026-10-07T15:32:38.916Z","createdAt":"2026-10-07T15:32:38.916Z","updatedAt":"2026-10-07T15:40:39.516Z"}
