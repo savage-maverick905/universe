@@ -42,7 +42,8 @@
 {"id":"aud_8d4a2d118d740bde27","at":"2026-10-07T15:44:34.930Z","actorId":"user_266ec9fe326c68ff9d","action":"app.install","targetType":"app","targetId":"inventory","outcome":"success","meta":{"version":"1.0.0"},"ip":"10.27.25.223","createdAt":"2026-10-07T15:44:34.930Z","updatedAt":"2026-10-07T15:44:34.930Z"},
 {"id":"aud_0b9ebff335c3481219","at":"2026-10-07T15:46:43.124Z","actorId":"user_266ec9fe326c68ff9d","action":"inventory.item.create","targetType":"item","targetId":"item_977a1f1bf106e694fc","outcome":"success","meta":{},"ip":"10.27.25.223","createdAt":"2026-10-07T15:46:43.124Z","updatedAt":"2026-10-07T15:46:43.124Z"},
 {"id":"aud_8816cd4e7fddfd5880","at":"2026-10-07T20:51:35.732Z","actorId":"user_266ec9fe326c68ff9d","action":"inventory.item.update","targetType":"item","targetId":"item_977a1f1bf106e694fc","outcome":"success","meta":{},"ip":"10.28.103.150","createdAt":"2026-10-07T20:51:35.732Z","updatedAt":"2026-10-07T20:51:35.732Z"},
-{"id":"aud_f4b7934ec77d5a31d9","at":"2026-10-07T20:53:51.122Z","actorId":"user_266ec9fe326c68ff9d","action":"auth.logout","targetType":null,"targetId":null,"outcome":"success","meta":{},"ip":"10.30.203.20","createdAt":"2026-10-07T20:53:51.122Z","updatedAt":"2026-10-07T20:53:51.122Z"}
+{"id":"aud_f4b7934ec77d5a31d9","at":"2026-10-07T20:53:51.122Z","actorId":"user_266ec9fe326c68ff9d","action":"auth.logout","targetType":null,"targetId":null,"outcome":"success","meta":{},"ip":"10.30.203.20","createdAt":"2026-10-07T20:53:51.122Z","updatedAt":"2026-10-07T20:53:51.122Z"},
+{"id":"aud_590eacc52a5f1b46b6","at":"2026-10-07T20:54:03.365Z","actorId":"user_266ec9fe326c68ff9d","action":"auth.login","targetType":null,"targetId":null,"outcome":"success","meta":{},"ip":"10.30.203.20","createdAt":"2026-10-07T20:54:03.365Z","updatedAt":"2026-10-07T20:54:03.365Z"}
 ],
 "inventory_categories":[
 {"id":"cat_ec23f914fdb81cbdf9","ownerId":"user_266ec9fe326c68ff9d","name":"Electronics","icon":null,"createdAt":"2026-10-07T15:41:07.919Z","updatedAt":"2026-10-07T15:41:07.919Z"},
@@ -63,10 +64,13 @@
 {"id":"resident","name":"Resident","permissions":["ai.use","inventory.item.read","inventory.item.write","inventory.item.delete","inventory.category.manage","inventory.location.manage","inventory.stats.read"],"system":true,"createdAt":"2026-10-07T15:32:38.183Z","updatedAt":"2026-10-07T15:44:34.930Z"},
 {"id":"guest","name":"Guest","permissions":[],"system":true,"createdAt":"2026-10-07T15:32:38.183Z","updatedAt":"2026-10-07T15:44:34.930Z"}
 ],
+"sessions":[
+{"id":"523e7ce07161ef3cb8f6f0d18b5f448ffe09bb9d30b7b001b8e26c69b07fbaca","userId":"user_266ec9fe326c68ff9d","ip":"10.30.203.20","userAgent":"Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Mobile Safari/537.36","expiresAt":"2026-10-14T20:54:03.365Z","createdAt":"2026-10-07T20:54:03.365Z","updatedAt":"2026-10-07T20:54:03.365Z"}
+],
 "settings":[
 {"id":"ai","defaultProvider":"groq","defaultModel":"openai/gpt-oss-120b","sharedKeyEnabled":true,"sharedDailyLimit":50,"createdAt":"2026-10-07T15:42:05.943Z","updatedAt":"2026-10-07T15:44:15.622Z"}
 ],
 "users":[
-{"id":"user_266ec9fe326c68ff9d","email":"prosperufaruna@gmail.com","displayName":"Admin","passwordHash":"scrypt$32768$8$1$dW50tXP/tPIm7gIAuZY77A==$WpvI9LsFnp9jWh5ZyYrLTqyttQJ3bi5luZdNFJnl5dp/FVXnZuG91O3GHHdPnd4+gRd9DPYF/O3+78Q541psBg==","roleId":"admin","status":"active","grants":[],"denies":[],"profile":{"avatarUrl":null,"bio":""},"profileVisibility":{"displayName":{"level":"public","sharedWith":[]},"avatarUrl":{"level":"public","sharedWith":[]},"bio":{"level":"private","sharedWith":[]}},"lastLoginAt":"2026-10-07T15:40:39.516Z","passwordChangedAt":"2026-10-07T15:32:38.916Z","createdAt":"2026-10-07T15:32:38.916Z","updatedAt":"2026-10-07T15:40:39.516Z"}
+{"id":"user_266ec9fe326c68ff9d","email":"prosperufaruna@gmail.com","displayName":"Admin","passwordHash":"scrypt$32768$8$1$dW50tXP/tPIm7gIAuZY77A==$WpvI9LsFnp9jWh5ZyYrLTqyttQJ3bi5luZdNFJnl5dp/FVXnZuG91O3GHHdPnd4+gRd9DPYF/O3+78Q541psBg==","roleId":"admin","status":"active","grants":[],"denies":[],"profile":{"avatarUrl":null,"bio":""},"profileVisibility":{"displayName":{"level":"public","sharedWith":[]},"avatarUrl":{"level":"public","sharedWith":[]},"bio":{"level":"private","sharedWith":[]}},"lastLoginAt":"2026-10-07T20:54:03.365Z","passwordChangedAt":"2026-10-07T15:32:38.916Z","createdAt":"2026-10-07T15:32:38.916Z","updatedAt":"2026-10-07T20:54:03.365Z"}
 ]
 }}
