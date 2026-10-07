@@ -11,6 +11,17 @@
 {"id":"aud_e12cab2a055988a70f","at":"2026-10-07T15:40:39.516Z","actorId":"user_266ec9fe326c68ff9d","action":"auth.login","targetType":null,"targetId":null,"outcome":"success","meta":{},"ip":"10.27.25.223","createdAt":"2026-10-07T15:40:39.516Z","updatedAt":"2026-10-07T15:40:39.516Z"},
 {"id":"aud_533c8b42ef7bd03ae0","at":"2026-10-07T15:40:49.028Z","actorId":"user_266ec9fe326c68ff9d","action":"app.install","targetType":"app","targetId":"inventory","outcome":"success","meta":{"version":"1.0.0"},"ip":"10.28.103.150","createdAt":"2026-10-07T15:40:49.028Z","updatedAt":"2026-10-07T15:40:49.028Z"}
 ],
+"inventory_categories":[
+{"id":"cat_ec23f914fdb81cbdf9","ownerId":"user_266ec9fe326c68ff9d","name":"Electronics","icon":null,"createdAt":"2026-10-07T15:41:07.919Z","updatedAt":"2026-10-07T15:41:07.919Z"},
+{"id":"cat_dd876970199d47f118","ownerId":"user_266ec9fe326c68ff9d","name":"Furniture","icon":null,"createdAt":"2026-10-07T15:41:07.919Z","updatedAt":"2026-10-07T15:41:07.919Z"},
+{"id":"cat_2749914b57d84b3d59","ownerId":"user_266ec9fe326c68ff9d","name":"Clothing","icon":null,"createdAt":"2026-10-07T15:41:07.919Z","updatedAt":"2026-10-07T15:41:07.919Z"},
+{"id":"cat_fec4efb6e65553da10","ownerId":"user_266ec9fe326c68ff9d","name":"Tools","icon":null,"createdAt":"2026-10-07T15:41:07.919Z","updatedAt":"2026-10-07T15:41:07.919Z"},
+{"id":"cat_adbe816d29537b9cd8","ownerId":"user_266ec9fe326c68ff9d","name":"Documents","icon":null,"createdAt":"2026-10-07T15:41:07.919Z","updatedAt":"2026-10-07T15:41:07.919Z"},
+{"id":"cat_359c3af760e343367a","ownerId":"user_266ec9fe326c68ff9d","name":"Other","icon":null,"createdAt":"2026-10-07T15:41:07.919Z","updatedAt":"2026-10-07T15:41:07.919Z"}
+],
+"inventory_settings":[
+{"id":"seed_user_266ec9fe326c68ff9d","ownerId":"user_266ec9fe326c68ff9d","createdAt":"2026-10-07T15:41:07.919Z","updatedAt":"2026-10-07T15:41:07.919Z"}
+],
 "roles":[
 {"id":"admin","name":"Admin","permissions":["*"],"system":true,"locked":true,"createdAt":"2026-10-07T15:32:38.182Z","updatedAt":"2026-10-07T15:32:38.182Z"},
 {"id":"resident","name":"Resident","permissions":["ai.use","inventory.item.read","inventory.item.write","inventory.item.delete","inventory.category.manage","inventory.location.manage","inventory.stats.read"],"system":true,"createdAt":"2026-10-07T15:32:38.183Z","updatedAt":"2026-10-07T15:40:49.028Z"},
