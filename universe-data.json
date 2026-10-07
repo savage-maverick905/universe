@@ -17,9 +17,6 @@
 "ai_usage":[
 {"id":"user_266ec9fe326c68ff9d_2026-10-07","userId":"user_266ec9fe326c68ff9d","messages":4,"tokens":0,"createdAt":"2026-10-07T15:42:14.328Z","updatedAt":"2026-10-07T15:44:18.554Z"}
 ],
-"app_installations":[
-{"id":"inventory","version":"1.0.0","enabled":true,"installedBy":"user_266ec9fe326c68ff9d","installedAt":"2026-10-07T15:40:49.028Z","createdAt":"2026-10-07T15:40:49.028Z","updatedAt":"2026-10-07T15:40:49.028Z"}
-],
 "audit_log":[
 {"id":"aud_7226c6256d4bf848cb","at":"2026-10-07T15:32:38.916Z","actorId":null,"action":"bootstrap.admin_created","targetType":"user","targetId":"user_266ec9fe326c68ff9d","outcome":"success","meta":{},"ip":null,"createdAt":"2026-10-07T15:32:38.916Z","updatedAt":"2026-10-07T15:32:38.916Z"},
 {"id":"aud_0be285f83d6eb9f771","at":"2026-10-07T15:38:58.025Z","actorId":"user_266ec9fe326c68ff9d","action":"auth.login","targetType":null,"targetId":null,"outcome":"failure","meta":{"email":"prosperufaruna@gmail.com","reason":"bad_password"},"ip":"10.27.25.223","createdAt":"2026-10-07T15:38:58.025Z","updatedAt":"2026-10-07T15:38:58.025Z"},
@@ -33,7 +30,8 @@
 {"id":"aud_fb4734190bea9b06fc","at":"2026-10-07T15:42:35.227Z","actorId":"user_266ec9fe326c68ff9d","action":"ai.admin_config","targetType":null,"targetId":null,"outcome":"success","meta":{"defaultProvider":"groq","defaultModel":"openai/gpt-oss-120b","sharedKeyEnabled":"[redacted]","sharedDailyLimit":50},"ip":"10.28.103.150","createdAt":"2026-10-07T15:42:35.227Z","updatedAt":"2026-10-07T15:42:35.227Z"},
 {"id":"aud_e116c417a891eaea72","at":"2026-10-07T15:43:09.773Z","actorId":"user_266ec9fe326c68ff9d","action":"ai.profile_update","targetType":null,"targetId":null,"outcome":"success","meta":{"fields":["name","instructions","style","preferences","keyMode","provider","model"]},"ip":"10.27.25.223","createdAt":"2026-10-07T15:43:09.773Z","updatedAt":"2026-10-07T15:43:09.773Z"},
 {"id":"aud_d776faeee2525a51f9","at":"2026-10-07T15:44:15.075Z","actorId":"user_266ec9fe326c68ff9d","action":"ai.profile_update","targetType":null,"targetId":null,"outcome":"success","meta":{"fields":["name","instructions","style","preferences","keyMode","provider","model"]},"ip":"10.27.25.223","createdAt":"2026-10-07T15:44:15.075Z","updatedAt":"2026-10-07T15:44:15.075Z"},
-{"id":"aud_2a486d8d51a23dc55e","at":"2026-10-07T15:44:15.623Z","actorId":"user_266ec9fe326c68ff9d","action":"ai.admin_config","targetType":null,"targetId":null,"outcome":"success","meta":{"defaultProvider":"groq","defaultModel":"openai/gpt-oss-120b","sharedKeyEnabled":"[redacted]","sharedDailyLimit":50},"ip":"10.27.25.223","createdAt":"2026-10-07T15:44:15.623Z","updatedAt":"2026-10-07T15:44:15.623Z"}
+{"id":"aud_2a486d8d51a23dc55e","at":"2026-10-07T15:44:15.623Z","actorId":"user_266ec9fe326c68ff9d","action":"ai.admin_config","targetType":null,"targetId":null,"outcome":"success","meta":{"defaultProvider":"groq","defaultModel":"openai/gpt-oss-120b","sharedKeyEnabled":"[redacted]","sharedDailyLimit":50},"ip":"10.27.25.223","createdAt":"2026-10-07T15:44:15.623Z","updatedAt":"2026-10-07T15:44:15.623Z"},
+{"id":"aud_755db13ae139d7f9ee","at":"2026-10-07T15:44:31.777Z","actorId":"user_266ec9fe326c68ff9d","action":"app.uninstall","targetType":"app","targetId":"inventory","outcome":"success","meta":{},"ip":"10.27.25.223","createdAt":"2026-10-07T15:44:31.778Z","updatedAt":"2026-10-07T15:44:31.778Z"}
 ],
 "inventory_categories":[
 {"id":"cat_ec23f914fdb81cbdf9","ownerId":"user_266ec9fe326c68ff9d","name":"Electronics","icon":null,"createdAt":"2026-10-07T15:41:07.919Z","updatedAt":"2026-10-07T15:41:07.919Z"},
