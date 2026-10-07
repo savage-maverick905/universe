@@ -73,6 +73,7 @@ Use it: Apps > Install on Inventory > Open. Home then shows its widgets. `npm ru
 | `STORAGE_DRIVER` | `sqlite` or `github` (see section 11b) | sqlite |
 | `GITHUB_TOKEN`, `GITHUB_REPO` | github driver only: fine-grained token (Contents read/write) and `owner/name` of a **private** repo | empty |
 | `GITHUB_BRANCH`, `GITHUB_DATA_PATH`, `GITHUB_FLUSH_MS` | github driver only: branch (created if missing), file path, and the longest wait before saving | `universe-data`, `universe-data.json`, 3000 |
+| `SIGNUP_ENABLED`, `SIGNUP_ROLE`, `SIGNUP_ALLOW_AI` | Public sign-up defaults (admins can change them in Settings): on or off, role for new accounts, whether they may use the shared AI key | true, resident, false |
 | `GITHUB_EPHEMERAL_COLLECTIONS` | github driver only: comma list of collections kept in memory and never committed (for example `sessions`) | empty |
 | `HOST` | interface to listen on; `0.0.0.0` only behind a proxy/firewall | `127.0.0.1` |
 | `PORT` | port | `3000` |
@@ -168,6 +169,28 @@ How it behaves:
 - If the file is edited on github.com while the server runs, the server's copy wins on its next save. If the file is corrupt, the server refuses to start rather than overwrite it.
 - The limits that matter are GitHub's: about 5,000 API calls an hour, and a data file under 100 MB. Both are far above personal use.
 - To move to SQLite later: `npm run export -- backup.json` with the github settings, then switch `STORAGE_DRIVER=sqlite` and `npm run import -- backup.json`.
+
+### 11c. Accounts, sign-up and settings
+
+- **New visitors** open the sign-in screen (the dashboard or any app) and tap **Create account**. They are signed in straight away and get the role in `SIGNUP_ROLE` (default `resident`). Sign-up can never create an admin.
+- New accounts do **not** get the assistant by default, so strangers cannot spend your shared AI key. Turn it on for everyone with `SIGNUP_ALLOW_AI=true`, or per person in Settings > People.
+- **Admins** change all of this at **Settings > Sign-ups** without redeploying: close sign-ups, choose the role, allow the assistant.
+- **Settings > People** (admins): see everyone, change a role, block or unblock an account, allow or remove assistant access, **set a new password** for someone who forgot theirs (it signs them out everywhere), and add accounts by hand.
+- **Everyone** can change their name and password in Settings (the dashboard and each app have their own Settings page).
+- There is no email, so there is no "forgot password" link: an admin sets a new password and tells the person.
+- Sign-ups are limited to 10 per IP per hour (`rateLimits.signup`).
+
+### 11d. Installing the apps (PWA)
+
+The dashboard and each app are separate installable apps with their own icon, window and scope: the dashboard is `/dashboard/`, Inventory is `/apps/inventory/`. Open either in Chrome, Edge or Android Chrome and use Settings > Install (or the Install button in the sidebar or top bar). On iPhone: Share > Add to Home Screen. Installing needs HTTPS (Render gives you that) or `localhost`.
+
+Each app signs in on its own screen and has its own navigation and Settings, so it works with no link back to the dashboard. The session cookie is shared, so signing in once covers every app on the same server.
+
+Each app ships `app.webmanifest`, `sw.js` and `icons/`. The service worker keeps the app's own files so it opens fast and shows its shell offline. It never caches `/api/` data.
+
+### 11e. Photos (Cloudinary)
+
+Photos are uploaded straight from the browser to Cloudinary; only the link is saved. Phone photos are shrunk to about 1600 px first. Needed on the server: `CLOUDINARY_CLOUD_NAME` and `CLOUDINARY_UPLOAD_PRESET`. **The preset must be set to Unsigned**: in Cloudinary open Settings > Upload > Upload presets, pick the preset, and set Signing mode to Unsigned (the built-in `ml_default` is usually Signed). Do not put your Cloudinary API secret on the server; it is not used.
 
 ## 12. Security notes
 

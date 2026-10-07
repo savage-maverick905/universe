@@ -1,54 +1,10 @@
 /* Universe dashboard layout. Tokens and components come from /shared/theme.css.
    Desktop: fixed sidebar. Under 900px: slim top bar plus bottom tab bar. */
 
-.side {
-  position: fixed; inset: 0 auto 0 0; width: 15rem; z-index: 10;
-  display: flex; flex-direction: column; gap: 1.5rem;
-  padding: 1.25rem .75rem; background: var(--bg2); border-right: 1px solid var(--line);
-}
-.brand { display: flex; align-items: center; gap: .7rem; padding: 0 .5rem; color: var(--text); text-decoration: none; }
-.mark { flex: none; display: grid; place-items: center; width: 2rem; height: 2rem; border-radius: 9px; background: var(--orange); color: #fff; font-weight: 700; font-size: 1rem; }
-.brand-text { display: flex; flex-direction: column; line-height: 1.2; }
-.brand-text b { font-size: 1rem; font-weight: 600; }
-.brand-text small { font-size: .6875rem; color: var(--mute); }
-
-.side nav { display: flex; flex-direction: column; gap: .15rem; }
-.side nav a {
-  display: flex; align-items: center; gap: .75rem; padding: .6rem .75rem;
-  font-size: .875rem; font-weight: 500; color: var(--dim); text-decoration: none;
-  border-radius: var(--r-sm); transition: background-color .15s, color .15s;
-}
-.side nav a:hover { color: var(--text); background: var(--hover); }
-.side nav a[aria-current=page] { color: var(--orange-light); background: var(--orange-soft); }
-.side nav a[aria-current=page] .icon { color: var(--orange); }
-
-.me { margin-top: auto; display: flex; align-items: center; gap: .5rem; padding: .9rem .5rem 0; border-top: 1px solid var(--line); }
-.who { flex: 1; min-width: 0; font-size: .8125rem; color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-.main { margin-left: 15rem; min-height: 100vh; min-height: 100dvh; }
-
 /* Home */
 .hello { margin-top: 0; display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
 .hello p { margin: .25rem 0 0; }
 .home-sections > section:first-child { margin-top: 0; }
-section > h2 { margin-bottom: .9rem; }
-
-.grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr)); align-items: start; }
-
-.stats { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem .75rem; }
-.stat b { display: block; font-size: 1.25rem; font-weight: 600; line-height: 1.2; }
-.stat span { font-size: .8125rem; color: var(--dim); }
-
-.bar { display: grid; grid-template-columns: minmax(4rem, 7rem) 1fr 2rem; gap: .6rem; align-items: center; font-size: .8125rem; margin: .5rem 0; }
-.bar > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--dim); }
-.bar > span:last-child { text-align: right; }
-.track { height: 6px; border-radius: 99px; background: var(--raise); overflow: hidden; }
-.track i { display: block; height: 100%; border-radius: 99px; background: var(--blue); }
-
-.items { list-style: none; margin: 0; padding: 0; }
-.items li { padding: .6rem 0; border-top: 1px solid var(--line); font-size: .875rem; }
-.items li:first-child { border: 0; padding-top: 0; }
-.items .sub { margin: 0; }
 
 /* Apps */
 .app { display: flex; gap: .9rem; align-items: flex-start; }
@@ -56,13 +12,6 @@ section > h2 { margin-bottom: .9rem; }
 .ico { flex: none; width: 2.5rem; height: 2.5rem; display: grid; place-items: center; border-radius: var(--r-sm); background: var(--raise); border: 1px solid var(--line-strong); color: var(--orange-light); font-weight: 600; }
 .ico .icon { width: 1.25rem; height: 1.25rem; }
 .app-head { display: flex; align-items: center; justify-content: space-between; gap: .5rem; margin-bottom: .15rem; }
-
-/* Sign in */
-.login { max-width: 24rem; margin: min(14vh, 6rem) auto 0; padding: 1.5rem; }
-.login .mark { width: 2.5rem; height: 2.5rem; margin-bottom: 1.25rem; }
-.login form { display: grid; gap: .75rem; margin-top: 1.25rem; }
-.login .err { min-height: 1.2em; }
-.login .btn { width: 100%; }
 
 /* Assistant */
 .chat .row { margin-top: 0; margin-bottom: .9rem; }
@@ -85,32 +34,9 @@ section > h2 { margin-bottom: .9rem; }
 .report-form .row input { flex: 1 1 10rem; }
 
 @media (max-width: 900px) {
-  .side {
-    position: sticky; top: 0; inset: auto; width: auto; flex-direction: row; align-items: center; gap: .75rem;
-    padding: .6rem 1rem; padding-top: calc(.6rem + env(safe-area-inset-top, 0px));
-    border-right: 0; border-bottom: 1px solid var(--line);
-  }
-  .brand { padding: 0; }
-  .brand-text small { display: none; }
-  .me { margin: 0 0 0 auto; padding: 0; border: 0; }
-  .who { display: none; }
-  .me .lbl { display: none; }
-  .me .btn { min-width: 2.125rem; padding: .35rem; }
-
-  .side nav {
-    position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
-    flex-direction: row; gap: 0; padding: .25rem .5rem calc(.25rem + var(--safe-b));
-    background: var(--bg2); border-top: 1px solid var(--line);
-  }
-  .side nav a { flex: 1; flex-direction: column; gap: .2rem; padding: .5rem .25rem; font-size: .6875rem; text-align: center; }
-  .side nav a .icon { width: 1.3rem; height: 1.3rem; }
-
-  .main { margin-left: 0; padding-bottom: calc(4.5rem + var(--safe-b)); }
-  :root { --toast-bottom: 5rem; }
   .chat-log { max-height: calc(100dvh - 21rem); min-height: 30vh; }
 }
 @media (max-width: 640px) {
   .msg { max-width: 92%; }
-  .stats { gap: .9rem .5rem; }
   .composer .btn .lbl { display: none; }
 }

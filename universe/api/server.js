@@ -20,6 +20,7 @@ import { AuditLog } from '../auth/audit.js';
 import { PermissionRegistry, PermissionService } from '../auth/permissions.js';
 import { SessionService } from '../auth/sessions.js';
 import { UserService } from '../auth/users.js';
+import { AuthSettings } from '../auth/authSettings.js';
 import { ensureDefaultRoles, ensureBootstrapAdmin } from '../auth/bootstrap.js';
 import { Router } from './router.js';
 import { parseCookies, readJsonBody, sendJson } from './http.js';
@@ -47,8 +48,10 @@ export async function createApp({ config, storage, log = console, appsDir = join
       loginIp: new RateLimiter(config.rateLimits.loginIp),
       loginEmail: new RateLimiter(config.rateLimits.loginEmail),
       ai: new RateLimiter(config.rateLimits.ai),
+      signup: new RateLimiter(config.rateLimits.signup),
     },
   };
+  s.authSettings = new AuthSettings({ storage, config });
   s.installer = new InstallService({ storage, registry: apps, permissions: s.permissions, audit: s.audit });
   const tools = new ToolRegistry({ installer: s.installer, permissions: s.permissions, audit: s.audit, apps });
   registerCoreTools(tools);
@@ -141,6 +144,10 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   loadDotEnv();
   const config = loadConfig();
   const storage = await createStorage(config.storage);
+  const g = config.storage.github;
+  console.log(`Storage: ${config.storage.driver}${config.storage.driver === 'github' ? ` (repo ${g.repo}, branch ${g.branch})` : ` (${config.storage.sqlitePath})`}`);
+  if (process.env.RENDER && config.storage.driver === 'sqlite') console.warn('WARNING: SQLite on Render is wiped on every restart. Set STORAGE_DRIVER=github (README section 11b).');
+  if (!config.production) console.warn('WARNING: NODE_ENV is not "production"; set it on your host.');
   const app = await createApp({ config, storage });
   app.server.listen(config.port, config.host, () => console.log(`Universe API listening on http://${config.host}:${config.port}`));
   const stop = async () => { try { await app.close(); } catch (e) { console.error('Shutdown error:', e.message); } process.exit(0); };

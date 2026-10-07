@@ -1,9 +1,9 @@
 /* Inventory layout. Tokens and components come from /shared/theme.css. */
 
-.head { display: flex; align-items: center; gap: .75rem; margin-bottom: 1.25rem; }
-.head h1 { flex: 1; min-width: 0; }
-.back { display: inline-flex; align-items: center; justify-content: center; gap: .4rem; min-height: 2.5rem; min-width: 2.5rem; padding: 0 .6rem 0 .4rem; margin-left: -.4rem; font-size: .8125rem; font-weight: 500; color: var(--dim); text-decoration: none; border-radius: var(--r-sm); }
-.back:hover { color: var(--text); background: var(--hover); }
+/* The shell (sidebar, bottom tabs, sign-in) comes from /shared/theme.css. This file is Inventory's own pages. */
+.mark.inv { background: var(--raise); border: 1px solid var(--line-strong); color: var(--orange); }
+.mark.inv .icon { width: 1.15rem; height: 1.15rem; }
+.auth-brand .mark.inv .icon { width: 1.5rem; height: 1.5rem; }
 
 .tools { display: grid; grid-template-columns: 1.6fr repeat(4, 1fr); gap: .6rem; margin-bottom: .6rem; }
 .search { position: relative; }
@@ -26,7 +26,6 @@
 .empty .icon { display: block; width: 1.75rem; height: 1.75rem; margin: 0 auto .75rem; color: var(--mute); }
 .empty .btn { margin-top: .75rem; }
 
-.footer-actions { margin-top: 1.25rem; }
 
 /* Item dialog */
 .imgs { display: flex; gap: .5rem; flex-wrap: wrap; margin: .5rem 0; }
@@ -52,10 +51,15 @@ dialog h3 { margin-top: 1.25rem; }
   .search { grid-column: 1 / -1; }
 }
 @media (max-width: 640px) {
-  .head { margin-bottom: 1rem; }
   .kv { grid-template-columns: 1fr; gap: .1rem; }
   .kv dd { margin-bottom: .6rem; }
   .item { padding: .7rem .75rem; gap: .7rem; }
-  .footer-actions .btn { flex: 1 1 auto; }
 }
 .imgs:empty { display: none; }
+
+/* Photos in the editor */
+.img-tile { position: relative; }
+.img-del { position: absolute; top: .25rem; right: .25rem; display: grid; place-items: center; width: 1.6rem; height: 1.6rem; padding: 0; color: #fff; background: rgba(13, 13, 13, .82); border: 1px solid var(--line-strong); border-radius: 50%; cursor: pointer; }
+.img-del:hover { background: var(--bad); border-color: var(--bad); }
+.up-status { margin: .5rem 0 0; font-size: .8125rem; color: var(--dim); min-height: 1.2em; }
+.up-status.bad { color: var(--bad-text); }

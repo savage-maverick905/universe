@@ -56,6 +56,27 @@ export function adminRoutes(router, s) {
     return { ok: true };
   });
 
+  // Who can sign up, and what they get. Admin only (config.manage).
+  router.add('GET', '/api/admin/signup', async ({ user }) => {
+    await permissions.assert(user, 'config.manage');
+    return { settings: await s.authSettings.get() };
+  });
+  router.add('PUT', '/api/admin/signup', async ({ user, body, ip }) => {
+    await permissions.assert(user, 'config.manage');
+    const b = allowKeys(v.object(body), ['signupEnabled', 'signupRoleId', 'signupAllowAi']);
+    const patch = {};
+    for (const k of ['signupEnabled', 'signupAllowAi']) if (k in b) { if (typeof b[k] !== 'boolean') throw badRequest(`${k} must be true or false`); patch[k] = b[k]; }
+    if ('signupRoleId' in b) {
+      const role = await permissions.getRole(v.id(b.signupRoleId, 'signupRoleId'));
+      if (!role) throw badRequest('Unknown role');
+      if (role.permissions.includes('*')) throw badRequest('New sign-ups cannot be given an admin role');
+      patch.signupRoleId = role.id;
+    }
+    await s.authSettings.set(patch);
+    await audit.record({ actorId: user.id, action: 'config.signup_changed', meta: patch, ip });
+    return { settings: await s.authSettings.get() };
+  });
+
   router.add('GET', '/api/audit', async ({ user, query }) => {
     await permissions.assert(user, 'audit.read');
     const num = (k, d) => { const n = parseInt(query.get(k) ?? '', 10); return Number.isFinite(n) ? n : d; };

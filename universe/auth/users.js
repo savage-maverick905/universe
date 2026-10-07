@@ -22,7 +22,7 @@ export class UserService {
   list() { return this.col.find({ orderBy: { field: 'createdAt', dir: 'asc' }, limit: 10000 }); }
   count() { return this.col.count(); }
 
-  async create({ email, displayName, password, roleId }) {
+  async create({ email, displayName, password, roleId, denies = [] }) {
     email = v.email(email);
     displayName = v.string(displayName, 'displayName', { min: 1, max: 80 });
     validatePasswordPolicy(password);
@@ -32,7 +32,7 @@ export class UserService {
       const now = nowIso();
       return this.col.insert({
         id: newId('user'), email, displayName, passwordHash, roleId, status: 'active',
-        grants: [], denies: [], profile: { avatarUrl: null, bio: '' }, profileVisibility: defaultVisibility(),
+        grants: [], denies, profile: { avatarUrl: null, bio: '' }, profileVisibility: defaultVisibility(),
         lastLoginAt: null, passwordChangedAt: now, createdAt: now, updatedAt: now,
       });
     });

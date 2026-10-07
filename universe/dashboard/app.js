@@ -3,64 +3,44 @@ import { assistantView } from './assistant.js';
 import { reportsView } from './reports.js';
 import { icon, hasIcon } from '/shared/icons.js';
 
+import { settingsView } from './settings.js';
+import { h, api as rawApi, toast } from '/shared/ui.js';
+import { showAuth } from '/shared/auth.js';
+import { renderWidget } from '/shared/widgets.js';
+import { registerServiceWorker, canPromptInstall, promptInstall, onInstallChange, isStandalone } from '/shared/pwa.js';
+
 const root = document.getElementById('root');
 let me = null;
+const api = rawApi;
 
-function h(tag, props = {}, ...kids) {
-  const e = document.createElement(tag);
-  for (const [k, v] of Object.entries(props)) {
-    if (k === 'class') e.className = v;
-    else if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
-    else if (v !== false && v != null) e.setAttribute(k, v);
-  }
-  for (const c of kids.flat()) if (c != null) e.append(c.nodeType ? c : document.createTextNode(c));
-  return e;
-}
-async function api(method, path, body) {
-  const res = await fetch(path, { method, headers: { 'X-Requested-With': 'universe', ...(body ? { 'Content-Type': 'application/json' } : {}) }, body: body ? JSON.stringify(body) : undefined });
-  const json = await res.json().catch(() => null);
-  if (!res.ok) throw Object.assign(new Error(json?.error?.message || res.statusText), { status: res.status });
-  return json;
-}
-function toast(msg) { const t = h('div', { class: 'toast', role: 'status' }, msg); document.body.append(t); setTimeout(() => t.remove(), 2600); }
+// The dashboard lives at /dashboard/ so it is its own installable app, separate from the apps it opens.
+if (location.pathname === '/') history.replaceState(null, '', `/dashboard/${location.search}${location.hash}`);
+registerServiceWorker('/dashboard/sw.js', '/dashboard/');
 
-function loginView(note = '') {
-  const err = h('p', { class: 'err', role: 'alert' }, note);
-  const email = h('input', { type: 'email', placeholder: 'Email', autocomplete: 'username', required: true });
-  const pw = h('input', { type: 'password', placeholder: 'Password', autocomplete: 'current-password', required: true });
-  const form = h('form', { onsubmit: async (e) => {
-    e.preventDefault(); err.textContent = '';
-    try { await api('POST', '/api/auth/login', { email: email.value, password: pw.value }); await boot(); }
-    catch (x) { err.textContent = x.message; }
-  } }, email, pw, err, h('button', { class: 'btn' }, 'Sign in'));
-  root.replaceChildren(h('main', { class: 'login' }, h('div', { class: 'mark', 'aria-hidden': 'true' }, 'U'), h('h1', {}, 'Sign in to Universe'), h('p', { class: 'muted' }, 'Your apps and assistant, in one place.'), form));
-}
+const brand = { name: 'Universe', blurb: 'Your apps and assistant, in one place.', mark: () => h('div', { class: 'mark', 'aria-hidden': 'true' }, 'U') };
+const signOut = () => { me = null; boot(); };
 
-const NAV = [['#/', 'Home', 'home', 'home'], ['#/assistant', 'Assistant', 'assistant', 'message'], ['#/reports', 'Reports', 'reports', 'file'], ['#/apps', 'Apps', 'apps', 'grid']];
 function shell(page, content) {
+  const nav = [['#/', 'Home', 'home', 'home'], me.permissions.includes('ai.use') ? ['#/assistant', 'Assistant', 'assistant', 'message'] : null,
+    ['#/reports', 'Reports', 'reports', 'file'], ['#/apps', 'Apps', 'apps', 'grid'], ['#/settings', 'Settings', 'settings', 'settings']].filter(Boolean);
   const link = ([href, label, id, ic]) => h('a', { href, 'aria-current': page === id ? 'page' : null }, icon(ic), h('span', {}, label));
+  const install = h('button', { class: 'btn ghost small', hidden: '', title: 'Install Universe', 'aria-label': 'Install Universe', onclick: promptInstall }, icon('download'), h('span', { class: 'lbl' }, 'Install'));
+  const syncInstall = () => { install.hidden = isStandalone() || !canPromptInstall(); };
+  syncInstall(); onInstallChange(syncInstall);
   root.replaceChildren(
     h('header', { class: 'side' },
-      h('a', { class: 'brand', href: '#/', 'aria-label': 'Universe home' }, h('span', { class: 'mark', 'aria-hidden': 'true' }, 'U'),
+      h('a', { class: 'brand', href: '#/', 'aria-label': 'Universe home' }, brand.mark(),
         h('span', { class: 'brand-text' }, h('b', {}, 'Universe'), h('small', {}, 'Hie Technologies'))),
-      h('nav', { 'aria-label': 'Main' }, NAV.map(link)),
-      h('div', { class: 'me' }, h('span', { class: 'who' }, me.user.displayName),
-        h('button', { class: 'btn ghost small', 'aria-label': 'Sign out', title: 'Sign out', onclick: async () => { await api('POST', '/api/auth/logout'); me = null; loginView(); } }, icon('logout'), h('span', { class: 'lbl' }, 'Sign out')))),
+      h('nav', { 'aria-label': 'Main' }, nav.map(link)),
+      h('div', { class: 'me' }, h('span', { class: 'who' }, me.user.displayName), install,
+        h('button', { class: 'btn ghost small', 'aria-label': 'Sign out', title: 'Sign out', onclick: async () => { try { await api('POST', '/api/auth/logout'); } catch { /* already out */ } signOut(); } }, icon('logout'), h('span', { class: 'lbl' }, 'Sign out')))),
     h('main', { class: 'main' }, h('div', { class: 'wrap' }, content)));
   window.scrollTo(0, 0);
 }
 
-// ---- widgets: contract per type (the app's dataEndpoint must return this shape) ----
-//  stat  -> { stats: [{label, value}] }   list -> { items: [{title, subtitle?}] }   chart -> { series: [{label, value}] }
-function renderWidget(w, data) {
-  if (w.type === 'stat') return h('div', { class: 'stats' }, (data.stats || []).map((s) => h('div', { class: 'stat' }, h('b', {}, String(s.value)), h('span', {}, s.label))));
-  if (w.type === 'list') return h('ul', { class: 'items' }, (data.items || []).map((i) => h('li', {}, i.title, i.subtitle ? h('div', { class: 'sub' }, i.subtitle) : null)));
-  const max = Math.max(1, ...(data.series || []).map((s) => s.value));
-  return h('div', {}, (data.series || []).map((s) => h('div', { class: 'bar' }, h('span', {}, s.label), h('span', { class: 'track' }, h('i', { style: `width:${Math.round((s.value / max) * 100)}%` })), h('span', {}, String(s.value)))));
-}
 function widgetCard(w) {
   const body = h('p', { class: 'muted' }, 'Loading…');
-  api('GET', w.dataEndpoint).then((d) => body.replaceWith(renderWidget(w, d)))
+  api('GET', w.dataEndpoint).then((d) => body.replaceWith(renderWidget(w.type, d)))
     .catch(() => { body.textContent = 'No data yet. This app has not provided data for this widget.'; });
   return h('article', { class: 'card' }, h('h3', {}, w.title), h('div', { class: 'sub' }, w.appName), body);
 }
@@ -89,7 +69,7 @@ async function appsView() {
     const buttons = [];
     if (a.status === 'available') buttons.push(admin ? h('button', { class: 'btn small', onclick: act(a.id, 'install', `${a.name} installed`) }, 'Install') : h('span', { class: 'muted' }, 'Ask an admin to install'));
     else {
-      if (a.status === 'enabled') buttons.push(h('a', { class: 'btn small', href: a.openUrl }, 'Open'));
+      if (a.status === 'enabled') buttons.push(h('a', { class: 'btn small', href: a.openUrl, target: '_blank', rel: 'noopener' }, 'Open')); // apps are separate installable apps
       if (admin) buttons.push(a.status === 'enabled'
         ? h('button', { class: 'btn ghost small', onclick: act(a.id, 'disable', `${a.name} disabled`) }, 'Disable')
         : h('button', { class: 'btn ghost small', onclick: act(a.id, 'enable', `${a.name} enabled`) }, 'Enable'),
@@ -105,12 +85,19 @@ async function appsView() {
 }
 
 async function route() {
-  try { if (location.hash === '#/apps') await appsView(); else if (location.hash === '#/reports') await reportsView({ h, api, toast, shell });
-    else if (location.hash === '#/assistant') await assistantView({ h, api, toast, shell, me }); else await homeView(); }
-  catch (x) { if (x.status === 401) { me = null; loginView('Your session ended. Sign in again.'); } else toast(x.message); }
+  try {
+    const hash = location.hash;
+    if (hash === '#/apps') await appsView();
+    else if (hash === '#/reports') await reportsView({ h, api, toast, shell });
+    else if (hash === '#/assistant') await assistantView({ h, api, toast, shell, me });
+    else if (hash === '#/settings') await settingsView({ me, shell, onSignOut: signOut });
+    else await homeView();
+  } catch (x) { if (x.status === 401) { me = null; boot('Your session ended. Sign in again.'); } else toast(x.message); }
 }
-async function boot() {
-  try { me = await api('GET', '/api/auth/me'); await route(); } catch { loginView(); }
+async function boot(note = '') {
+  try { me = await api('GET', '/api/auth/me'); }
+  catch { me = await showAuth({ root, brand, note }); }
+  await route();
 }
 addEventListener('hashchange', () => me && route());
 boot();

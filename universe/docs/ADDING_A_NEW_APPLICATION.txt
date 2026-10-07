@@ -498,3 +498,13 @@ I. TESTING (step 21). tests/example-app.test.js does all of this against the
 J. WHAT THE EXAMPLE DELIBERATELY LEAVES OUT
    schemaVersion/migrations, media upload, a "list" or "chart" widget, write
    AI tools, pagination, and a frontend test. See the steps above for each.
+
+MAKING YOUR APP INSTALLABLE (PWA)
+Copy these from apps/inventory and change the names, paths and colours:
+  app.webmanifest   name, start_url and scope = /apps/<your-id>/ (scopes must not overlap other apps), icons
+  sw.js             set prefix and the list of your files to keep for offline, then importScripts('/shared/sw-core.js')
+  icons/            icon-192.png, icon-512.png, maskable-512.png, apple-touch-icon.png, icon.svg
+In index.html add <link rel="manifest" href="/apps/<id>/app.webmanifest"> plus the icon and apple-mobile-web-app tags.
+In app.js call registerServiceWorker('/apps/<id>/sw.js', '/apps/<id>/') from /shared/pwa.js.
+Use /shared/auth.js (showAuth) for the sign-in screen and /shared/account.js (accountPanels) for Settings so your app
+is complete on its own and matches every other Hie app. Do not link back to the dashboard.

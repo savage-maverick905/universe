@@ -58,7 +58,7 @@ export function register({ router, services: s }) {
     const lab = (o) => Object.entries(o).map(([id, label]) => ({ id, label }));
     const c = s.config.cloudinary || {};
     return { statuses: lab(STATUSES), conditions: lab(CONDITIONS), acquisitionMethods: lab(METHODS),
-      cloudinary: c.cloudName && c.uploadPreset ? { cloudName: c.cloudName, uploadPreset: c.uploadPreset, folder: `universe/inventory/${user.id}`, tags: ['universe', 'inventory'], maxBytes: 5 * 1024 * 1024 } : null };
+      cloudinary: c.cloudName && c.uploadPreset ? { cloudName: c.cloudName, uploadPreset: c.uploadPreset, folder: `universe/inventory/${user.id}`, tags: ['universe', 'inventory'], maxBytes: 10 * 1024 * 1024 } : null };
   });
 
   // ---- items ----

@@ -1,23 +1,41 @@
-import { api, h, toast, B } from './services/api.js';
+import { api, h, toast, B, setUnauthorizedHandler } from './services/api.js';
 import { createUploader, thumbUrl } from './services/media.js';
 import { icon } from '/shared/icons.js';
+import { dialog, closer, initial, api as rootApi } from '/shared/ui.js';
+import { showAuth } from '/shared/auth.js';
+import { accountPanels } from '/shared/account.js';
+import { renderWidget } from '/shared/widgets.js';
+import { registerServiceWorker, canPromptInstall, promptInstall, onInstallChange, isStandalone } from '/shared/pwa.js';
 
 const root = document.getElementById('app');
 const S = { meta: null, cats: [], locs: [], items: [], total: 0, f: { q: '', status: '', category: '', sort: 'updatedAt', dir: 'desc', archived: false } };
+let me = null;
 const name = (list, id) => list.find((x) => x.id === id)?.name ?? '';
 const lab = (list, id) => list.find((x) => x.id === id)?.label ?? id ?? '';
 const warnStates = ['lost', 'stolen', 'damaged', 'under_repair'];
 const get = (o, p) => p.split('.').reduce((a, k) => a?.[k], o);
 
-function dialog(title, ...content) {
-  const d = h('dialog', {}, h('div', { class: 'sheet' }, h('h2', {}, title), ...content));
-  d.addEventListener('close', () => d.remove());
-  d.addEventListener('click', (e) => { if (e.target === d) d.close(); }); // tap outside to close
-  document.body.append(d); d.showModal();
-  return d;
+// Inventory is its own installable app: it has its own sign-in, navigation and settings.
+registerServiceWorker('/apps/inventory/sw.js', '/apps/inventory/');
+const brand = { name: 'Inventory', blurb: 'Track the things you own.', mark: () => h('div', { class: 'mark inv', 'aria-hidden': 'true' }, icon('box')) };
+setUnauthorizedHandler(() => { if (me) { me = null; boot('Your session ended. Sign in again.'); } });
+const signOut = () => { me = null; boot(); };
+
+const NAV = [['#/', 'Items', 'items', 'box'], ['#/overview', 'Overview', 'overview', 'chart'], ['#/organize', 'Organize', 'organize', 'folder'], ['#/settings', 'Settings', 'settings', 'settings']];
+function frame(page, ...content) {
+  const link = ([href, label, id, ic]) => h('a', { href, 'aria-current': page === id ? 'page' : null }, icon(ic), h('span', {}, label));
+  const install = h('button', { class: 'btn ghost small', hidden: '', title: 'Install Inventory', 'aria-label': 'Install Inventory', onclick: promptInstall }, icon('download'), h('span', { class: 'lbl' }, 'Install'));
+  const syncInstall = () => { install.hidden = isStandalone() || !canPromptInstall(); };
+  syncInstall(); onInstallChange(syncInstall);
+  root.replaceChildren(
+    h('header', { class: 'side' },
+      h('a', { class: 'brand', href: '#/', 'aria-label': 'Inventory home' }, brand.mark(), h('span', { class: 'brand-text' }, h('b', {}, 'Inventory'), h('small', {}, 'Hie Technologies'))),
+      h('nav', { 'aria-label': 'Main' }, NAV.map(link)),
+      h('div', { class: 'me' }, h('span', { class: 'who' }, me.user.displayName), install,
+        h('button', { class: 'btn ghost small', 'aria-label': 'Sign out', title: 'Sign out', onclick: async () => { try { await rootApi('POST', '/api/auth/logout'); } catch { /* already out */ } signOut(); } }, icon('logout'), h('span', { class: 'lbl' }, 'Sign out')))),
+    h('main', { class: 'main' }, h('div', { class: 'wrap' }, ...content)));
+  window.scrollTo(0, 0);
 }
-// Closes whichever dialog holds the button, so it can be created before the dialog exists.
-const closer = () => h('button', { type: 'button', class: 'btn ghost', onclick: (e) => e.currentTarget.closest('dialog').close() }, 'Close');
 
 async function refresh() {
   const f = S.f, qs = new URLSearchParams({ sort: f.sort, dir: f.dir, archived: f.archived });
@@ -37,7 +55,7 @@ function itemRow(it) {
 }
 let listEl, countEl;
 function renderList() {
-  if (!listEl) return; // refresh() runs once before shell() has built the page
+  if (!listEl) return; // refresh() can run before the page has been built
   const filtered = S.f.q || S.f.status || S.f.category;
   const rows = S.items.length ? S.items.map(itemRow) : [h('div', { class: 'empty' }, icon('box'),
     h('div', {}, filtered ? 'No items match these filters.' : S.f.archived ? 'No archived items.' : 'Nothing here yet.'),
@@ -49,30 +67,47 @@ function renderList() {
 function sel(options, value, onchange, label) {
   return h('select', { 'aria-label': label, onchange: (e) => onchange(e.target.value) }, options.map(([v, t]) => h('option', { value: v, selected: v === value ? '' : null }, t)));
 }
-function shell() {
+async function itemsPage() {
   const f = S.f;
   listEl = h('div', { class: 'list' });
   countEl = h('p', { class: 'count', 'aria-live': 'polite' });
   const search = h('input', { type: 'search', placeholder: 'Search items', 'aria-label': 'Search items', value: f.q });
   let timer; search.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(() => { f.q = search.value; refresh(); }, 250); });
   const set = (k) => (v) => { f[k] = v; refresh(); };
-  const importInput = h('input', { type: 'file', accept: 'application/json', hidden: '', onchange: async (e) => {
-    try { const r = await api('POST', '/import', JSON.parse(await e.target.files[0].text())); toast(`Imported ${r.imported.items} items`); await refresh(); } catch (x) { toast(x.message); }
-    e.target.value = '';
-  } });
-  root.replaceChildren(h('main', { class: 'wrap' },
-    h('div', { class: 'head' }, h('a', { href: '/', class: 'back', 'aria-label': 'Back to Universe' }, icon('back')), h('h1', {}, 'Inventory'),
-      h('button', { class: 'btn', onclick: () => editItem() }, icon('plus'), 'Add item')),
+  await refresh();
+  frame('items',
+    h('div', { class: 'page-head' }, h('h1', {}, 'Items'), h('button', { class: 'btn', onclick: () => editItem() }, icon('plus'), 'Add item')),
     h('div', { class: 'tools' }, h('div', { class: 'search' }, icon('search'), search),
       sel([['', 'Any status'], ...S.meta.statuses.map((s) => [s.id, s.label])], f.status, set('status'), 'Filter by status'),
       sel([['', 'Any category'], ...S.cats.map((c) => [c.id, c.name])], f.category, set('category'), 'Filter by category'),
       sel([['updatedAt|desc', 'Recent'], ['createdAt|desc', 'Newest'], ['name|asc', 'Name A to Z'], ['price|desc', 'Highest price']], `${f.sort}|${f.dir}`, (v) => { [f.sort, f.dir] = v.split('|'); refresh(); }, 'Sort'),
       sel([['false', 'Active items'], ['true', 'Archived items']], String(f.archived), (v) => { f.archived = v === 'true'; refresh(); }, 'Show')),
-    countEl, listEl,
-    h('div', { class: 'row footer-actions' }, h('button', { class: 'btn ghost small', onclick: organize }, icon('folder'), 'Categories and locations'),
-      h('a', { class: 'btn ghost small', href: `${B}/export`, download: 'universe-inventory.json' }, icon('download'), 'Export JSON'),
-      h('button', { class: 'btn ghost small', onclick: () => importInput.click() }, icon('upload'), 'Import JSON'), importInput)));
+    countEl, listEl);
   renderList();
+}
+
+async function overviewPage() {
+  const specs = [['Summary', 'stat', 'summary'], ['Items by category', 'chart', 'by-category'], ['Items by location', 'chart', 'by-location'], ['Recently added', 'list', 'recent']];
+  const cards = specs.map(([title, type, ep]) => {
+    const body = h('p', { class: 'muted' }, 'Loading…');
+    api('GET', `/stats/${ep}`).then((d) => body.replaceWith(renderWidget(type, d))).catch((x) => { body.textContent = x.message; });
+    return h('article', { class: 'card' }, h('h3', {}, title), body);
+  });
+  frame('overview', h('div', { class: 'page-head' }, h('h1', {}, 'Overview')), h('div', { class: 'grid' }, cards));
+}
+
+function settingsPage() {
+  const importInput = h('input', { type: 'file', accept: 'application/json', hidden: '', onchange: async (e) => {
+    try { const r = await api('POST', '/import', JSON.parse(await e.target.files[0].text())); toast(`Imported ${r.imported.items} items`); } catch (x) { toast(x.message); }
+    e.target.value = '';
+  } });
+  const data = h('section', { class: 'panel' }, h('h2', {}, 'Your data'),
+    h('p', { class: 'sub' }, 'Download everything in your inventory as a file, or load a file you exported earlier.'),
+    h('div', { class: 'row', style: 'margin-top:0' },
+      h('a', { class: 'btn ghost small', href: `${B}/export`, download: 'universe-inventory.json' }, icon('download'), 'Export JSON'),
+      h('button', { class: 'btn ghost small', onclick: () => importInput.click() }, icon('upload'), 'Import JSON'), importInput));
+  const [profile, password, install, session] = accountPanels({ session: me, appName: 'Inventory', onSignOut: signOut });
+  frame('settings', h('div', { class: 'settings' }, h('h1', { class: 'page-title' }, 'Settings'), profile, password, data, install, session));
 }
 
 // ---------- view ----------
@@ -125,11 +160,20 @@ async function editItem(it) {
   const related = h('select', { multiple: '', size: 4 }, others.map((x) => h('option', { value: x.id, selected: (cur.relationships?.relatedItems || []).includes(x.id) ? '' : null }, x.identity.name)));
   const imgBox = h('div', { class: 'imgs' });
   const uploader = createUploader(S.meta.cloudinary);
-  const drawImgs = () => imgBox.replaceChildren(...images.map((m, i) => h('a', { href: '#', title: 'Remove image', onclick: (e) => { e.preventDefault(); images.splice(i, 1); drawImgs(); } }, h('img', { src: thumbUrl(m.secureUrl, 168), alt: 'Attached image. Select to remove.' }))));
+  const upStatus = h('p', { class: 'up-status', role: 'status' });
+  const drawImgs = () => imgBox.replaceChildren(...images.map((m, i) => h('div', { class: 'img-tile' }, h('img', { src: thumbUrl(m.secureUrl, 168), alt: `Photo ${i + 1}` }),
+    h('button', { type: 'button', class: 'img-del', 'aria-label': `Remove photo ${i + 1}`, onclick: () => { images.splice(i, 1); drawImgs(); } }, icon('x', 14)))));
   drawImgs();
   const file = h('input', { type: 'file', accept: 'image/*', multiple: '', disabled: uploader ? null : '', onchange: async (e) => {
-    for (const f of e.target.files) { try { err.textContent = 'Uploading image…'; if (images.length >= 10) throw new Error('At most 10 images per item'); images.push(await uploader.upload(f)); drawImgs(); err.textContent = ''; } catch (x) { err.textContent = x.message; } }
-    e.target.value = '';
+    const files = [...e.target.files]; e.target.value = ''; upStatus.className = 'up-status';
+    let done = 0;
+    for (const [n, f] of files.entries()) {
+      try {
+        if (images.length >= 10) throw new Error('At most 10 photos per item');
+        images.push(await uploader.upload(f, (t) => { upStatus.textContent = `${files.length > 1 ? `Photo ${n + 1} of ${files.length}: ` : ''}${t}`; })); drawImgs(); done++;
+      } catch (x) { upStatus.className = 'up-status bad'; upStatus.textContent = x.message; return; }
+    }
+    upStatus.textContent = `${done} photo${done === 1 ? '' : 's'} added. Save the item to keep ${done === 1 ? 'it' : 'them'}.`;
   } });
   const d = dialog(it ? 'Edit item' : 'Add item', h('form', { onsubmit: async (e) => {
     e.preventDefault(); err.textContent = '';
@@ -142,29 +186,52 @@ async function editItem(it) {
     try { const r = await (cur.id ? api('PATCH', `/items/${cur.id}`, body) : api('POST', '/items', body)); d.close(); toast(cur.id ? 'Changes saved' : 'Item added'); await refresh(); showItem(r.item.id); }
     catch (x) { err.textContent = x.message; }
   } }, secs,
-  h('details', {}, h('summary', {}, 'Photos'), uploader ? h('label', {}, 'Add photos', file) : h('p', { class: 'muted' }, 'Photo upload is off. Set CLOUDINARY_CLOUD_NAME and CLOUDINARY_UPLOAD_PRESET on the server.'), imgBox),
+  h('details', {}, h('summary', {}, 'Photos'), uploader ? h('label', {}, 'Add photos', file) : h('p', { class: 'muted' }, 'Photo upload is off. Set CLOUDINARY_CLOUD_NAME and CLOUDINARY_UPLOAD_PRESET on the server.'), upStatus, imgBox),
   h('details', {}, h('summary', {}, 'Related items'), h('label', {}, 'Part of', parent), h('label', {}, 'Related to (hold Ctrl or Cmd to select several)', related)),
   err, h('div', { class: 'row actions' }, h('button', { class: 'btn' }, 'Save item'), closer())));
 }
 
 // ---------- categories and locations ----------
-function organize() {
-  const box = h('div', {}); const d = dialog('Categories and locations', box); d.firstChild.append(h('div', { class: 'row actions' }, closer()));
+async function organizePage() {
+  await refresh();
+  const box = h('div', {});
   const draw = () => {
-    const section = (title, path, list, key, parented) => h('section', {}, h('h3', {}, title),
-      h('ul', { class: 'manage' }, list.map((x) => h('li', {}, h('span', {}, `${parented && x.parentId ? `${name(list, x.parentId)} / ` : ''}${x.name}`),
+    const section = (title, path, list, key, parented) => h('section', { class: 'panel' }, h('h2', {}, title),
+      list.length ? h('ul', { class: 'manage' }, list.map((x) => h('li', {}, h('span', {}, `${parented && x.parentId ? `${name(list, x.parentId)} / ` : ''}${x.name}`),
         h('span', { class: 'acts' },
           h('button', { class: 'btn ghost small', onclick: async () => { const n = prompt('New name', x.name); if (n) await run(() => api('PATCH', `/${path}/${x.id}`, { name: n })); } }, 'Rename'),
-          h('button', { class: 'btn ghost small danger', onclick: () => run(() => api('DELETE', `/${path}/${x.id}`)) }, 'Delete'))))),
+          h('button', { class: 'btn ghost small danger', onclick: () => run(() => api('DELETE', `/${path}/${x.id}`)) }, 'Delete'))))) : h('p', { class: 'muted' }, `No ${key}s yet.`),
       (() => { const i = h('input', { placeholder: `New ${key}`, 'aria-label': `New ${key} name` }); const p = parented ? sel([['', 'Top level'], ...list.map((l) => [l.id, `Inside ${l.name}`])], '', () => {}, 'Parent location') : null;
         return h('div', { class: 'row add-row' }, i, p, h('button', { class: 'btn small', onclick: () => i.value && run(() => api('POST', `/${path}`, { name: i.value, ...(p?.value ? { parentId: p.value } : {}) })) }, `Add ${key}`)); })());
     box.replaceChildren(section('Categories', 'categories', S.cats, 'category', false), section('Locations', 'locations', S.locs, 'location', true));
   };
   const run = async (fn) => { try { await fn(); await refresh(); draw(); } catch (x) { toast(x.message); } };
   draw();
+  frame('organize', h('div', { class: 'page-head' }, h('h1', {}, 'Organize')), h('p', { class: 'sub' }, 'Categories and places to keep your items sorted.'), box);
 }
 
-(async () => {
-  try { S.meta = await api('GET', '/meta'); await refresh(); shell(); }
-  catch (x) { root.replaceChildren(h('main', { class: 'wrap' }, h('h1', {}, 'Inventory'), h('p', { class: 'muted' }, `Inventory could not load: ${x.message}`), h('a', { class: 'btn', href: '/' }, 'Back to dashboard'))); }
-})();
+async function route() {
+  try {
+    const hash = location.hash;
+    if (hash === '#/overview') await overviewPage();
+    else if (hash === '#/organize') await organizePage();
+    else if (hash === '#/settings') settingsPage();
+    else if (hash === '#/new') { await itemsPage(); history.replaceState(null, '', '#/'); editItem(); }
+    else await itemsPage();
+  } catch (x) { if (x.status !== 401) toast(x.message); }
+}
+
+async function boot(note = '') {
+  try { me = await rootApi('GET', '/api/auth/me'); }
+  catch { me = await showAuth({ root, brand, note }); }
+  try { S.meta = await api('GET', '/meta'); }
+  catch (x) {
+    if (x.status === 401) return;
+    frame('items', h('h1', {}, 'Inventory'), h('p', { class: 'muted' }, x.status === 403 ? 'Your account does not have access to Inventory yet. Ask an admin to give you access.' : `Inventory could not load: ${x.message}`),
+      h('div', { class: 'row' }, h('button', { class: 'btn ghost', onclick: signOut }, 'Sign out')));
+    return;
+  }
+  await route();
+}
+addEventListener('hashchange', () => me && S.meta && route());
+boot();

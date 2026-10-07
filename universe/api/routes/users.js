@@ -24,6 +24,29 @@ function validateGrantList(s, list, name) {
 export function userRoutes(router, s) {
   const { users, permissions, sessions, audit, registry } = s;
 
+  // Privileged targets (admins, or anyone who can manage users/roles/apps/config) can only be
+  // modified by someone who holds every permission they hold.
+  async function assertCanModify(user, target) {
+    const t = await permissions.resolve(target);
+    const privileged = t.allow.includes('*') || MANAGEMENT_PERMS.some((p) => PermissionService.check(t, p));
+    if (privileged && !(await permissions.canGrant(user, t.allow))) throw forbidden('You cannot modify a user more powerful than you');
+    return t;
+  }
+
+  // An admin sets a new password for someone else (there is no email-based reset). Signs them out everywhere.
+  router.add('POST', '/api/users/:id/password', async ({ user, params, body, ip }) => {
+    await permissions.assert(user, 'users.manage');
+    const b = allowKeys(v.object(body), ['newPassword']);
+    const target = await users.getById(params.id);
+    if (!target) throw notFound('User not found');
+    if (target.id === user.id) throw badRequest('To change your own password, use Settings > Password');
+    await assertCanModify(user, target);
+    await users.setPassword(target.id, b.newPassword);
+    await sessions.destroyAllForUser(target.id);
+    await audit.record({ actorId: user.id, action: 'user.password_reset', targetType: 'user', targetId: target.id, ip });
+    return { ok: true };
+  });
+
   router.add('GET', '/api/permissions', async ({ user }) => {
     await permissions.assert(user, 'users.read');
     return { permissions: registry.describe() };
@@ -62,11 +85,7 @@ export function userRoutes(router, s) {
     const sensitive = ['roleId', 'status', 'grants', 'denies'].some((k) => k in b);
     if (target.id === user.id && sensitive) throw forbidden('You cannot change your own role, status or permissions');
 
-    // Privileged targets (admins, or anyone who can manage users/roles/apps/config) can only be
-    // modified by someone who holds every permission they hold.
-    const t = await permissions.resolve(target);
-    const privileged = t.allow.includes('*') || MANAGEMENT_PERMS.some((p) => PermissionService.check(t, p));
-    if (privileged && !(await permissions.canGrant(user, t.allow))) throw forbidden('You cannot modify a user more powerful than you');
+    await assertCanModify(user, target);
 
     const patch = {};
     if ('displayName' in b) patch.displayName = v.string(b.displayName, 'displayName', { min: 1, max: 80 });
