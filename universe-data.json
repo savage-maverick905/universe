@@ -1,18 +1,20 @@
 {"format":"universe-export","schemaVersion":1,"collections":{
 "ai_conversations":[
-{"id":"conv_b8b482e206c2c7a5ad","userId":"user_266ec9fe326c68ff9d","title":"Hello","messageCount":4,"summary":null,"createdAt":"2026-10-07T21:18:25.847Z","updatedAt":"2026-10-07T21:21:11.993Z"}
+{"id":"conv_b8b482e206c2c7a5ad","userId":"user_266ec9fe326c68ff9d","title":"Hello","messageCount":6,"summary":null,"createdAt":"2026-10-07T21:18:25.847Z","updatedAt":"2026-10-07T21:22:43.831Z"}
 ],
 "ai_messages":[
 {"id":"msg_46b4378960f0051632","conversationId":"conv_b8b482e206c2c7a5ad","userId":"user_266ec9fe326c68ff9d","seq":1,"role":"user","content":"Hello","createdAt":"2026-10-07T21:18:25.847Z","updatedAt":"2026-10-07T21:18:25.847Z"},
 {"id":"msg_67679e116d9b1ad201","conversationId":"conv_b8b482e206c2c7a5ad","userId":"user_266ec9fe326c68ff9d","seq":2,"role":"assistant","content":"Hello! How can I assist you today?","provider":"groq","model":"openai/gpt-oss-120b","usage":{"promptTokens":683,"completionTokens":38,"totalTokens":721},"createdAt":"2026-10-07T21:18:26.111Z","updatedAt":"2026-10-07T21:18:26.111Z"},
 {"id":"msg_194b1b8eb185dced78","conversationId":"conv_b8b482e206c2c7a5ad","userId":"user_266ec9fe326c68ff9d","seq":3,"role":"user","content":"Hello valerian","createdAt":"2026-10-07T21:21:11.601Z","updatedAt":"2026-10-07T21:21:11.601Z"},
-{"id":"msg_0adfb93bc6e2422abf","conversationId":"conv_b8b482e206c2c7a5ad","userId":"user_266ec9fe326c68ff9d","seq":4,"role":"assistant","content":"Hi there! How can I help you today?","provider":"groq","model":"openai/gpt-oss-120b","usage":{"promptTokens":706,"completionTokens":36,"totalTokens":742},"createdAt":"2026-10-07T21:21:11.994Z","updatedAt":"2026-10-07T21:21:11.994Z"}
+{"id":"msg_0adfb93bc6e2422abf","conversationId":"conv_b8b482e206c2c7a5ad","userId":"user_266ec9fe326c68ff9d","seq":4,"role":"assistant","content":"Hi there! How can I help you today?","provider":"groq","model":"openai/gpt-oss-120b","usage":{"promptTokens":706,"completionTokens":36,"totalTokens":742},"createdAt":"2026-10-07T21:21:11.994Z","updatedAt":"2026-10-07T21:21:11.994Z"},
+{"id":"msg_768d96535fa6ca357e","conversationId":"conv_b8b482e206c2c7a5ad","userId":"user_266ec9fe326c68ff9d","seq":5,"role":"user","content":"Mmmmm tell me everything you know about me","createdAt":"2026-10-07T21:22:43.050Z","updatedAt":"2026-10-07T21:22:43.050Z"},
+{"id":"msg_be5f4708453bb1dd17","conversationId":"conv_b8b482e206c2c7a5ad","userId":"user_266ec9fe326c68ff9d","seq":6,"role":"assistant","content":"I don’t have direct access to a personal profile summary about you, but I can pull information from the apps you use in this ecosystem. For example, I can:\n\n* Generate activity reports (daily, weekly, monthly, etc.) for any apps you have access to.  \n* Search or list items in your inventory, show statistics, or look up a specific item by ID.  \n* Find other people’s public profiles if you give me part of their display name.\n\nLet me know which of those you’d like to see (e.g., a recent inventory report, a list of your currently “in‑use” items, or anything else), and I’ll retrieve the details for you.","provider":"groq","model":"openai/gpt-oss-120b","usage":{"promptTokens":735,"completionTokens":254,"totalTokens":989},"createdAt":"2026-10-07T21:22:43.832Z","updatedAt":"2026-10-07T21:22:43.832Z"}
 ],
 "ai_profiles":[
 {"id":"user_266ec9fe326c68ff9d","name":"Valerian","instructions":"","style":"balanced","preferences":"","keyMode":"shared","provider":"groq","model":null,"encryptedKey":null,"keyLast4":null,"createdAt":"2026-10-07T15:42:05.928Z","updatedAt":"2026-10-07T21:20:38.702Z"}
 ],
 "ai_usage":[
-{"id":"user_266ec9fe326c68ff9d_2026-10-07","userId":"user_266ec9fe326c68ff9d","messages":9,"tokens":1463,"createdAt":"2026-10-07T15:42:14.328Z","updatedAt":"2026-10-07T21:21:11.994Z"}
+{"id":"user_266ec9fe326c68ff9d_2026-10-07","userId":"user_266ec9fe326c68ff9d","messages":10,"tokens":2452,"createdAt":"2026-10-07T15:42:14.328Z","updatedAt":"2026-10-07T21:22:43.832Z"}
 ],
 "app_installations":[
 {"id":"inventory","version":"1.0.0","enabled":true,"installedBy":"user_266ec9fe326c68ff9d","installedAt":"2026-10-07T15:44:34.930Z","createdAt":"2026-10-07T15:44:34.930Z","updatedAt":"2026-10-07T15:44:34.930Z"}
