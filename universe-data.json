@@ -1,12 +1,10 @@
 {"format":"universe-export","schemaVersion":1,"collections":{
 "ai_conversations":[
-{"id":"conv_d31a550c7ad4093a02","userId":"user_266ec9fe326c68ff9d","title":"New chat","messageCount":1,"summary":null,"createdAt":"2026-10-07T15:43:13.202Z","updatedAt":"2026-10-07T15:43:13.203Z"},
 {"id":"conv_284eed6138c2700350","userId":"user_266ec9fe326c68ff9d","title":"New chat","messageCount":1,"summary":null,"createdAt":"2026-10-07T15:43:22.791Z","updatedAt":"2026-10-07T15:43:22.791Z"},
 {"id":"conv_8ba4112d2a80d926bd","userId":"user_266ec9fe326c68ff9d","title":"New chat","messageCount":1,"summary":null,"createdAt":"2026-10-07T15:44:18.554Z","updatedAt":"2026-10-07T15:44:18.554Z"},
 {"id":"conv_b8b482e206c2c7a5ad","userId":"user_266ec9fe326c68ff9d","title":"Hello","messageCount":2,"summary":null,"createdAt":"2026-10-07T21:18:25.847Z","updatedAt":"2026-10-07T21:18:26.111Z"}
 ],
 "ai_messages":[
-{"id":"msg_b3cc9fcfd47f3fa503","conversationId":"conv_d31a550c7ad4093a02","userId":"user_266ec9fe326c68ff9d","seq":1,"role":"user","content":"Salutations","createdAt":"2026-10-07T15:43:13.203Z","updatedAt":"2026-10-07T15:43:13.203Z"},
 {"id":"msg_60d504af4bac7d5a20","conversationId":"conv_284eed6138c2700350","userId":"user_266ec9fe326c68ff9d","seq":1,"role":"user","content":"Hello","createdAt":"2026-10-07T15:43:22.791Z","updatedAt":"2026-10-07T15:43:22.791Z"},
 {"id":"msg_8955e8c7cbd77b31f4","conversationId":"conv_8ba4112d2a80d926bd","userId":"user_266ec9fe326c68ff9d","seq":1,"role":"user","content":"Hello","createdAt":"2026-10-07T15:44:18.554Z","updatedAt":"2026-10-07T15:44:18.554Z"},
 {"id":"msg_46b4378960f0051632","conversationId":"conv_b8b482e206c2c7a5ad","userId":"user_266ec9fe326c68ff9d","seq":1,"role":"user","content":"Hello","createdAt":"2026-10-07T21:18:25.847Z","updatedAt":"2026-10-07T21:18:25.847Z"},
@@ -45,7 +43,8 @@
 {"id":"aud_5f8d2ddffa7ffa5a4a","at":"2026-10-07T21:18:51.445Z","actorId":"user_266ec9fe326c68ff9d","action":"ai.conversation_delete","targetType":"conversation","targetId":"conv_14ad00e98769744d5f","outcome":"success","meta":{},"ip":"10.27.25.223","createdAt":"2026-10-07T21:18:51.445Z","updatedAt":"2026-10-07T21:18:51.445Z"},
 {"id":"aud_88f37f845f57e10cff","at":"2026-10-07T21:18:58.339Z","actorId":"user_266ec9fe326c68ff9d","action":"ai.conversation_delete","targetType":"conversation","targetId":"conv_893c70dae678c3dcb7","outcome":"success","meta":{},"ip":"10.30.203.20","createdAt":"2026-10-07T21:18:58.339Z","updatedAt":"2026-10-07T21:18:58.339Z"},
 {"id":"aud_4da80d936e790a47c6","at":"2026-10-07T21:19:03.255Z","actorId":"user_266ec9fe326c68ff9d","action":"ai.conversation_delete","targetType":"conversation","targetId":"conv_ddbe2b6ceab35025e5","outcome":"success","meta":{},"ip":"10.28.103.150","createdAt":"2026-10-07T21:19:03.255Z","updatedAt":"2026-10-07T21:19:03.255Z"},
-{"id":"aud_d398f45e6080866df4","at":"2026-10-07T21:19:13.079Z","actorId":"user_266ec9fe326c68ff9d","action":"ai.conversation_delete","targetType":"conversation","targetId":"conv_60d42fcd962af9a0bc","outcome":"success","meta":{},"ip":"10.30.203.20","createdAt":"2026-10-07T21:19:13.079Z","updatedAt":"2026-10-07T21:19:13.079Z"}
+{"id":"aud_d398f45e6080866df4","at":"2026-10-07T21:19:13.079Z","actorId":"user_266ec9fe326c68ff9d","action":"ai.conversation_delete","targetType":"conversation","targetId":"conv_60d42fcd962af9a0bc","outcome":"success","meta":{},"ip":"10.30.203.20","createdAt":"2026-10-07T21:19:13.079Z","updatedAt":"2026-10-07T21:19:13.079Z"},
+{"id":"aud_ca3211749e913e84a3","at":"2026-10-07T21:19:17.928Z","actorId":"user_266ec9fe326c68ff9d","action":"ai.conversation_delete","targetType":"conversation","targetId":"conv_d31a550c7ad4093a02","outcome":"success","meta":{},"ip":"10.30.203.20","createdAt":"2026-10-07T21:19:17.928Z","updatedAt":"2026-10-07T21:19:17.928Z"}
 ],
 "inventory_categories":[
 {"id":"cat_ec23f914fdb81cbdf9","ownerId":"user_266ec9fe326c68ff9d","name":"Electronics","icon":null,"createdAt":"2026-10-07T15:41:07.919Z","updatedAt":"2026-10-07T15:41:07.919Z"},
