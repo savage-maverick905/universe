@@ -5,7 +5,8 @@
 {"id":"conv_284eed6138c2700350","userId":"user_266ec9fe326c68ff9d","title":"New chat","messageCount":1,"summary":null,"createdAt":"2026-10-07T15:43:22.791Z","updatedAt":"2026-10-07T15:43:22.791Z"},
 {"id":"conv_8ba4112d2a80d926bd","userId":"user_266ec9fe326c68ff9d","title":"New chat","messageCount":1,"summary":null,"createdAt":"2026-10-07T15:44:18.554Z","updatedAt":"2026-10-07T15:44:18.554Z"},
 {"id":"conv_ddbe2b6ceab35025e5","userId":"user_266ec9fe326c68ff9d","title":"New chat","messageCount":1,"summary":null,"createdAt":"2026-10-07T15:47:25.024Z","updatedAt":"2026-10-07T15:47:25.024Z"},
-{"id":"conv_893c70dae678c3dcb7","userId":"user_266ec9fe326c68ff9d","title":"New chat","messageCount":1,"summary":null,"createdAt":"2026-10-07T20:52:47.892Z","updatedAt":"2026-10-07T20:52:47.893Z"}
+{"id":"conv_893c70dae678c3dcb7","userId":"user_266ec9fe326c68ff9d","title":"New chat","messageCount":1,"summary":null,"createdAt":"2026-10-07T20:52:47.892Z","updatedAt":"2026-10-07T20:52:47.893Z"},
+{"id":"conv_14ad00e98769744d5f","userId":"user_266ec9fe326c68ff9d","title":"New chat","messageCount":1,"summary":null,"createdAt":"2026-10-07T21:08:14.860Z","updatedAt":"2026-10-07T21:08:14.861Z"}
 ],
 "ai_messages":[
 {"id":"msg_be182303d23a9f3ca6","conversationId":"conv_60d42fcd962af9a0bc","userId":"user_266ec9fe326c68ff9d","seq":1,"role":"user","content":"Salutations","createdAt":"2026-10-07T15:42:14.328Z","updatedAt":"2026-10-07T15:42:14.328Z"},
@@ -13,13 +14,14 @@
 {"id":"msg_60d504af4bac7d5a20","conversationId":"conv_284eed6138c2700350","userId":"user_266ec9fe326c68ff9d","seq":1,"role":"user","content":"Hello","createdAt":"2026-10-07T15:43:22.791Z","updatedAt":"2026-10-07T15:43:22.791Z"},
 {"id":"msg_8955e8c7cbd77b31f4","conversationId":"conv_8ba4112d2a80d926bd","userId":"user_266ec9fe326c68ff9d","seq":1,"role":"user","content":"Hello","createdAt":"2026-10-07T15:44:18.554Z","updatedAt":"2026-10-07T15:44:18.554Z"},
 {"id":"msg_2893b71697d996dec8","conversationId":"conv_ddbe2b6ceab35025e5","userId":"user_266ec9fe326c68ff9d","seq":1,"role":"user","content":"Hello","createdAt":"2026-10-07T15:47:25.024Z","updatedAt":"2026-10-07T15:47:25.024Z"},
-{"id":"msg_562aa9e052a4051557","conversationId":"conv_893c70dae678c3dcb7","userId":"user_266ec9fe326c68ff9d","seq":1,"role":"user","content":"Hello","createdAt":"2026-10-07T20:52:47.893Z","updatedAt":"2026-10-07T20:52:47.893Z"}
+{"id":"msg_562aa9e052a4051557","conversationId":"conv_893c70dae678c3dcb7","userId":"user_266ec9fe326c68ff9d","seq":1,"role":"user","content":"Hello","createdAt":"2026-10-07T20:52:47.893Z","updatedAt":"2026-10-07T20:52:47.893Z"},
+{"id":"msg_27394a8f5cb2b860d0","conversationId":"conv_14ad00e98769744d5f","userId":"user_266ec9fe326c68ff9d","seq":1,"role":"user","content":"Hello","createdAt":"2026-10-07T21:08:14.861Z","updatedAt":"2026-10-07T21:08:14.861Z"}
 ],
 "ai_profiles":[
 {"id":"user_266ec9fe326c68ff9d","name":"Assistant","instructions":"","style":"balanced","preferences":"","keyMode":"shared","provider":"groq","model":null,"encryptedKey":null,"keyLast4":null,"createdAt":"2026-10-07T15:42:05.928Z","updatedAt":"2026-10-07T15:44:15.074Z"}
 ],
 "ai_usage":[
-{"id":"user_266ec9fe326c68ff9d_2026-10-07","userId":"user_266ec9fe326c68ff9d","messages":6,"tokens":0,"createdAt":"2026-10-07T15:42:14.328Z","updatedAt":"2026-10-07T20:52:47.892Z"}
+{"id":"user_266ec9fe326c68ff9d_2026-10-07","userId":"user_266ec9fe326c68ff9d","messages":7,"tokens":0,"createdAt":"2026-10-07T15:42:14.328Z","updatedAt":"2026-10-07T21:08:14.860Z"}
 ],
 "app_installations":[
 {"id":"inventory","version":"1.0.0","enabled":true,"installedBy":"user_266ec9fe326c68ff9d","installedAt":"2026-10-07T15:44:34.930Z","createdAt":"2026-10-07T15:44:34.930Z","updatedAt":"2026-10-07T15:44:34.930Z"}
