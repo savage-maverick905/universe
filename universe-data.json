@@ -35,7 +35,8 @@
 {"id":"aud_d776faeee2525a51f9","at":"2026-10-07T15:44:15.075Z","actorId":"user_266ec9fe326c68ff9d","action":"ai.profile_update","targetType":null,"targetId":null,"outcome":"success","meta":{"fields":["name","instructions","style","preferences","keyMode","provider","model"]},"ip":"10.27.25.223","createdAt":"2026-10-07T15:44:15.075Z","updatedAt":"2026-10-07T15:44:15.075Z"},
 {"id":"aud_2a486d8d51a23dc55e","at":"2026-10-07T15:44:15.623Z","actorId":"user_266ec9fe326c68ff9d","action":"ai.admin_config","targetType":null,"targetId":null,"outcome":"success","meta":{"defaultProvider":"groq","defaultModel":"openai/gpt-oss-120b","sharedKeyEnabled":"[redacted]","sharedDailyLimit":50},"ip":"10.27.25.223","createdAt":"2026-10-07T15:44:15.623Z","updatedAt":"2026-10-07T15:44:15.623Z"},
 {"id":"aud_755db13ae139d7f9ee","at":"2026-10-07T15:44:31.777Z","actorId":"user_266ec9fe326c68ff9d","action":"app.uninstall","targetType":"app","targetId":"inventory","outcome":"success","meta":{},"ip":"10.27.25.223","createdAt":"2026-10-07T15:44:31.778Z","updatedAt":"2026-10-07T15:44:31.778Z"},
-{"id":"aud_8d4a2d118d740bde27","at":"2026-10-07T15:44:34.930Z","actorId":"user_266ec9fe326c68ff9d","action":"app.install","targetType":"app","targetId":"inventory","outcome":"success","meta":{"version":"1.0.0"},"ip":"10.27.25.223","createdAt":"2026-10-07T15:44:34.930Z","updatedAt":"2026-10-07T15:44:34.930Z"}
+{"id":"aud_8d4a2d118d740bde27","at":"2026-10-07T15:44:34.930Z","actorId":"user_266ec9fe326c68ff9d","action":"app.install","targetType":"app","targetId":"inventory","outcome":"success","meta":{"version":"1.0.0"},"ip":"10.27.25.223","createdAt":"2026-10-07T15:44:34.930Z","updatedAt":"2026-10-07T15:44:34.930Z"},
+{"id":"aud_0b9ebff335c3481219","at":"2026-10-07T15:46:43.124Z","actorId":"user_266ec9fe326c68ff9d","action":"inventory.item.create","targetType":"item","targetId":"item_977a1f1bf106e694fc","outcome":"success","meta":{},"ip":"10.27.25.223","createdAt":"2026-10-07T15:46:43.124Z","updatedAt":"2026-10-07T15:46:43.124Z"}
 ],
 "inventory_categories":[
 {"id":"cat_ec23f914fdb81cbdf9","ownerId":"user_266ec9fe326c68ff9d","name":"Electronics","icon":null,"createdAt":"2026-10-07T15:41:07.919Z","updatedAt":"2026-10-07T15:41:07.919Z"},
@@ -44,6 +45,9 @@
 {"id":"cat_fec4efb6e65553da10","ownerId":"user_266ec9fe326c68ff9d","name":"Tools","icon":null,"createdAt":"2026-10-07T15:41:07.919Z","updatedAt":"2026-10-07T15:41:07.919Z"},
 {"id":"cat_adbe816d29537b9cd8","ownerId":"user_266ec9fe326c68ff9d","name":"Documents","icon":null,"createdAt":"2026-10-07T15:41:07.919Z","updatedAt":"2026-10-07T15:41:07.919Z"},
 {"id":"cat_359c3af760e343367a","ownerId":"user_266ec9fe326c68ff9d","name":"Other","icon":null,"createdAt":"2026-10-07T15:41:07.919Z","updatedAt":"2026-10-07T15:41:07.919Z"}
+],
+"inventory_items":[
+{"id":"item_977a1f1bf106e694fc","schemaVersion":1,"identity":{"name":"Power bank","description":"","categoryId":null,"tags":[]},"status":{"state":"in_use","reason":""},"location":{"type":"home","locationId":null},"acquisition":{"method":null,"date":null,"source":null,"price":null,"currency":null},"condition":{"state":"good","notes":""},"identification":{"brand":null,"model":null,"modelNumber":null,"serialNumber":null,"imei":null},"media":{"images":[],"documents":[]},"relationships":{"parentItemId":null,"relatedItems":[]},"notes":"","ownership":{"type":"personal","ownerId":"user_266ec9fe326c68ff9d"},"archived":false,"createdAt":"2026-10-07T15:46:43.123Z","updatedAt":"2026-10-07T15:46:43.123Z","history":[{"date":"2026-10-07","event":"created","reason":""}]}
 ],
 "inventory_settings":[
 {"id":"seed_user_266ec9fe326c68ff9d","ownerId":"user_266ec9fe326c68ff9d","createdAt":"2026-10-07T15:41:07.919Z","updatedAt":"2026-10-07T15:41:07.919Z"}
