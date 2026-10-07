@@ -5,7 +5,6 @@
 {"id":"conv_284eed6138c2700350","userId":"user_266ec9fe326c68ff9d","title":"New chat","messageCount":1,"summary":null,"createdAt":"2026-10-07T15:43:22.791Z","updatedAt":"2026-10-07T15:43:22.791Z"},
 {"id":"conv_8ba4112d2a80d926bd","userId":"user_266ec9fe326c68ff9d","title":"New chat","messageCount":1,"summary":null,"createdAt":"2026-10-07T15:44:18.554Z","updatedAt":"2026-10-07T15:44:18.554Z"},
 {"id":"conv_ddbe2b6ceab35025e5","userId":"user_266ec9fe326c68ff9d","title":"New chat","messageCount":1,"summary":null,"createdAt":"2026-10-07T15:47:25.024Z","updatedAt":"2026-10-07T15:47:25.024Z"},
-{"id":"conv_893c70dae678c3dcb7","userId":"user_266ec9fe326c68ff9d","title":"New chat","messageCount":1,"summary":null,"createdAt":"2026-10-07T20:52:47.892Z","updatedAt":"2026-10-07T20:52:47.893Z"},
 {"id":"conv_b8b482e206c2c7a5ad","userId":"user_266ec9fe326c68ff9d","title":"Hello","messageCount":2,"summary":null,"createdAt":"2026-10-07T21:18:25.847Z","updatedAt":"2026-10-07T21:18:26.111Z"}
 ],
 "ai_messages":[
@@ -14,7 +13,6 @@
 {"id":"msg_60d504af4bac7d5a20","conversationId":"conv_284eed6138c2700350","userId":"user_266ec9fe326c68ff9d","seq":1,"role":"user","content":"Hello","createdAt":"2026-10-07T15:43:22.791Z","updatedAt":"2026-10-07T15:43:22.791Z"},
 {"id":"msg_8955e8c7cbd77b31f4","conversationId":"conv_8ba4112d2a80d926bd","userId":"user_266ec9fe326c68ff9d","seq":1,"role":"user","content":"Hello","createdAt":"2026-10-07T15:44:18.554Z","updatedAt":"2026-10-07T15:44:18.554Z"},
 {"id":"msg_2893b71697d996dec8","conversationId":"conv_ddbe2b6ceab35025e5","userId":"user_266ec9fe326c68ff9d","seq":1,"role":"user","content":"Hello","createdAt":"2026-10-07T15:47:25.024Z","updatedAt":"2026-10-07T15:47:25.024Z"},
-{"id":"msg_562aa9e052a4051557","conversationId":"conv_893c70dae678c3dcb7","userId":"user_266ec9fe326c68ff9d","seq":1,"role":"user","content":"Hello","createdAt":"2026-10-07T20:52:47.893Z","updatedAt":"2026-10-07T20:52:47.893Z"},
 {"id":"msg_46b4378960f0051632","conversationId":"conv_b8b482e206c2c7a5ad","userId":"user_266ec9fe326c68ff9d","seq":1,"role":"user","content":"Hello","createdAt":"2026-10-07T21:18:25.847Z","updatedAt":"2026-10-07T21:18:25.847Z"},
 {"id":"msg_67679e116d9b1ad201","conversationId":"conv_b8b482e206c2c7a5ad","userId":"user_266ec9fe326c68ff9d","seq":2,"role":"assistant","content":"Hello! How can I assist you today?","provider":"groq","model":"openai/gpt-oss-120b","usage":{"promptTokens":683,"completionTokens":38,"totalTokens":721},"createdAt":"2026-10-07T21:18:26.111Z","updatedAt":"2026-10-07T21:18:26.111Z"}
 ],
@@ -48,7 +46,8 @@
 {"id":"aud_f4b7934ec77d5a31d9","at":"2026-10-07T20:53:51.122Z","actorId":"user_266ec9fe326c68ff9d","action":"auth.logout","targetType":null,"targetId":null,"outcome":"success","meta":{},"ip":"10.30.203.20","createdAt":"2026-10-07T20:53:51.122Z","updatedAt":"2026-10-07T20:53:51.122Z"},
 {"id":"aud_590eacc52a5f1b46b6","at":"2026-10-07T20:54:03.365Z","actorId":"user_266ec9fe326c68ff9d","action":"auth.login","targetType":null,"targetId":null,"outcome":"success","meta":{},"ip":"10.30.203.20","createdAt":"2026-10-07T20:54:03.365Z","updatedAt":"2026-10-07T20:54:03.365Z"},
 {"id":"aud_87c301d07dd0d98f38","at":"2026-10-07T21:06:24.341Z","actorId":"user_266ec9fe326c68ff9d","action":"inventory.item.update","targetType":"item","targetId":"item_977a1f1bf106e694fc","outcome":"success","meta":{},"ip":"10.30.203.20","createdAt":"2026-10-07T21:06:24.341Z","updatedAt":"2026-10-07T21:06:24.341Z"},
-{"id":"aud_5f8d2ddffa7ffa5a4a","at":"2026-10-07T21:18:51.445Z","actorId":"user_266ec9fe326c68ff9d","action":"ai.conversation_delete","targetType":"conversation","targetId":"conv_14ad00e98769744d5f","outcome":"success","meta":{},"ip":"10.27.25.223","createdAt":"2026-10-07T21:18:51.445Z","updatedAt":"2026-10-07T21:18:51.445Z"}
+{"id":"aud_5f8d2ddffa7ffa5a4a","at":"2026-10-07T21:18:51.445Z","actorId":"user_266ec9fe326c68ff9d","action":"ai.conversation_delete","targetType":"conversation","targetId":"conv_14ad00e98769744d5f","outcome":"success","meta":{},"ip":"10.27.25.223","createdAt":"2026-10-07T21:18:51.445Z","updatedAt":"2026-10-07T21:18:51.445Z"},
+{"id":"aud_88f37f845f57e10cff","at":"2026-10-07T21:18:58.339Z","actorId":"user_266ec9fe326c68ff9d","action":"ai.conversation_delete","targetType":"conversation","targetId":"conv_893c70dae678c3dcb7","outcome":"success","meta":{},"ip":"10.30.203.20","createdAt":"2026-10-07T21:18:58.339Z","updatedAt":"2026-10-07T21:18:58.339Z"}
 ],
 "inventory_categories":[
 {"id":"cat_ec23f914fdb81cbdf9","ownerId":"user_266ec9fe326c68ff9d","name":"Electronics","icon":null,"createdAt":"2026-10-07T15:41:07.919Z","updatedAt":"2026-10-07T15:41:07.919Z"},
