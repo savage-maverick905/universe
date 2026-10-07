@@ -3,19 +3,21 @@
 {"id":"conv_60d42fcd962af9a0bc","userId":"user_266ec9fe326c68ff9d","title":"New chat","messageCount":1,"summary":null,"createdAt":"2026-10-07T15:42:14.328Z","updatedAt":"2026-10-07T15:42:14.328Z"},
 {"id":"conv_d31a550c7ad4093a02","userId":"user_266ec9fe326c68ff9d","title":"New chat","messageCount":1,"summary":null,"createdAt":"2026-10-07T15:43:13.202Z","updatedAt":"2026-10-07T15:43:13.203Z"},
 {"id":"conv_284eed6138c2700350","userId":"user_266ec9fe326c68ff9d","title":"New chat","messageCount":1,"summary":null,"createdAt":"2026-10-07T15:43:22.791Z","updatedAt":"2026-10-07T15:43:22.791Z"},
-{"id":"conv_8ba4112d2a80d926bd","userId":"user_266ec9fe326c68ff9d","title":"New chat","messageCount":1,"summary":null,"createdAt":"2026-10-07T15:44:18.554Z","updatedAt":"2026-10-07T15:44:18.554Z"}
+{"id":"conv_8ba4112d2a80d926bd","userId":"user_266ec9fe326c68ff9d","title":"New chat","messageCount":1,"summary":null,"createdAt":"2026-10-07T15:44:18.554Z","updatedAt":"2026-10-07T15:44:18.554Z"},
+{"id":"conv_ddbe2b6ceab35025e5","userId":"user_266ec9fe326c68ff9d","title":"New chat","messageCount":1,"summary":null,"createdAt":"2026-10-07T15:47:25.024Z","updatedAt":"2026-10-07T15:47:25.024Z"}
 ],
 "ai_messages":[
 {"id":"msg_be182303d23a9f3ca6","conversationId":"conv_60d42fcd962af9a0bc","userId":"user_266ec9fe326c68ff9d","seq":1,"role":"user","content":"Salutations","createdAt":"2026-10-07T15:42:14.328Z","updatedAt":"2026-10-07T15:42:14.328Z"},
 {"id":"msg_b3cc9fcfd47f3fa503","conversationId":"conv_d31a550c7ad4093a02","userId":"user_266ec9fe326c68ff9d","seq":1,"role":"user","content":"Salutations","createdAt":"2026-10-07T15:43:13.203Z","updatedAt":"2026-10-07T15:43:13.203Z"},
 {"id":"msg_60d504af4bac7d5a20","conversationId":"conv_284eed6138c2700350","userId":"user_266ec9fe326c68ff9d","seq":1,"role":"user","content":"Hello","createdAt":"2026-10-07T15:43:22.791Z","updatedAt":"2026-10-07T15:43:22.791Z"},
-{"id":"msg_8955e8c7cbd77b31f4","conversationId":"conv_8ba4112d2a80d926bd","userId":"user_266ec9fe326c68ff9d","seq":1,"role":"user","content":"Hello","createdAt":"2026-10-07T15:44:18.554Z","updatedAt":"2026-10-07T15:44:18.554Z"}
+{"id":"msg_8955e8c7cbd77b31f4","conversationId":"conv_8ba4112d2a80d926bd","userId":"user_266ec9fe326c68ff9d","seq":1,"role":"user","content":"Hello","createdAt":"2026-10-07T15:44:18.554Z","updatedAt":"2026-10-07T15:44:18.554Z"},
+{"id":"msg_2893b71697d996dec8","conversationId":"conv_ddbe2b6ceab35025e5","userId":"user_266ec9fe326c68ff9d","seq":1,"role":"user","content":"Hello","createdAt":"2026-10-07T15:47:25.024Z","updatedAt":"2026-10-07T15:47:25.024Z"}
 ],
 "ai_profiles":[
 {"id":"user_266ec9fe326c68ff9d","name":"Assistant","instructions":"","style":"balanced","preferences":"","keyMode":"shared","provider":"groq","model":null,"encryptedKey":null,"keyLast4":null,"createdAt":"2026-10-07T15:42:05.928Z","updatedAt":"2026-10-07T15:44:15.074Z"}
 ],
 "ai_usage":[
-{"id":"user_266ec9fe326c68ff9d_2026-10-07","userId":"user_266ec9fe326c68ff9d","messages":4,"tokens":0,"createdAt":"2026-10-07T15:42:14.328Z","updatedAt":"2026-10-07T15:44:18.554Z"}
+{"id":"user_266ec9fe326c68ff9d_2026-10-07","userId":"user_266ec9fe326c68ff9d","messages":5,"tokens":0,"createdAt":"2026-10-07T15:42:14.328Z","updatedAt":"2026-10-07T15:47:25.024Z"}
 ],
 "app_installations":[
 {"id":"inventory","version":"1.0.0","enabled":true,"installedBy":"user_266ec9fe326c68ff9d","installedAt":"2026-10-07T15:44:34.930Z","createdAt":"2026-10-07T15:44:34.930Z","updatedAt":"2026-10-07T15:44:34.930Z"}
