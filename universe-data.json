@@ -1,6 +1,7 @@
 {"format":"universe-export","schemaVersion":1,"collections":{
 "audit_log":[
-{"id":"aud_7226c6256d4bf848cb","at":"2026-10-07T15:32:38.916Z","actorId":null,"action":"bootstrap.admin_created","targetType":"user","targetId":"user_266ec9fe326c68ff9d","outcome":"success","meta":{},"ip":null,"createdAt":"2026-10-07T15:32:38.916Z","updatedAt":"2026-10-07T15:32:38.916Z"}
+{"id":"aud_7226c6256d4bf848cb","at":"2026-10-07T15:32:38.916Z","actorId":null,"action":"bootstrap.admin_created","targetType":"user","targetId":"user_266ec9fe326c68ff9d","outcome":"success","meta":{},"ip":null,"createdAt":"2026-10-07T15:32:38.916Z","updatedAt":"2026-10-07T15:32:38.916Z"},
+{"id":"aud_0be285f83d6eb9f771","at":"2026-10-07T15:38:58.025Z","actorId":"user_266ec9fe326c68ff9d","action":"auth.login","targetType":null,"targetId":null,"outcome":"failure","meta":{"email":"prosperufaruna@gmail.com","reason":"bad_password"},"ip":"10.27.25.223","createdAt":"2026-10-07T15:38:58.025Z","updatedAt":"2026-10-07T15:38:58.025Z"}
 ],
 "roles":[
 {"id":"admin","name":"Admin","permissions":["*"],"system":true,"locked":true,"createdAt":"2026-10-07T15:32:38.182Z","updatedAt":"2026-10-07T15:32:38.182Z"},
