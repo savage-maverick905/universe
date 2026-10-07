@@ -6,7 +6,7 @@
 {"id":"msg_be182303d23a9f3ca6","conversationId":"conv_60d42fcd962af9a0bc","userId":"user_266ec9fe326c68ff9d","seq":1,"role":"user","content":"Salutations","createdAt":"2026-10-07T15:42:14.328Z","updatedAt":"2026-10-07T15:42:14.328Z"}
 ],
 "ai_profiles":[
-{"id":"user_266ec9fe326c68ff9d","name":"Antwan","instructions":"","style":"balanced","preferences":"Everything","keyMode":"shared","provider":"groq","model":null,"encryptedKey":null,"keyLast4":null,"createdAt":"2026-10-07T15:42:05.928Z","updatedAt":"2026-10-07T15:42:05.928Z"}
+{"id":"user_266ec9fe326c68ff9d","name":"Antwan","instructions":"","style":"balanced","preferences":"Everything","keyMode":"shared","provider":"groq","model":null,"encryptedKey":null,"keyLast4":null,"createdAt":"2026-10-07T15:42:05.928Z","updatedAt":"2026-10-07T15:43:09.773Z"}
 ],
 "ai_usage":[
 {"id":"user_266ec9fe326c68ff9d_2026-10-07","userId":"user_266ec9fe326c68ff9d","messages":1,"tokens":0,"createdAt":"2026-10-07T15:42:14.328Z","updatedAt":"2026-10-07T15:42:14.328Z"}
@@ -24,7 +24,8 @@
 {"id":"aud_533c8b42ef7bd03ae0","at":"2026-10-07T15:40:49.028Z","actorId":"user_266ec9fe326c68ff9d","action":"app.install","targetType":"app","targetId":"inventory","outcome":"success","meta":{"version":"1.0.0"},"ip":"10.28.103.150","createdAt":"2026-10-07T15:40:49.028Z","updatedAt":"2026-10-07T15:40:49.028Z"},
 {"id":"aud_727e4fb4c2925fb261","at":"2026-10-07T15:42:05.929Z","actorId":"user_266ec9fe326c68ff9d","action":"ai.profile_update","targetType":null,"targetId":null,"outcome":"success","meta":{"fields":["name","instructions","style","preferences","keyMode","provider","model"]},"ip":"10.30.203.20","createdAt":"2026-10-07T15:42:05.929Z","updatedAt":"2026-10-07T15:42:05.929Z"},
 {"id":"aud_743ed9b85cf95b8c58","at":"2026-10-07T15:42:05.943Z","actorId":"user_266ec9fe326c68ff9d","action":"ai.admin_config","targetType":null,"targetId":null,"outcome":"success","meta":{"defaultProvider":"groq","defaultModel":"openai/gpt-oss-120b","sharedKeyEnabled":"[redacted]","sharedDailyLimit":0},"ip":"10.27.25.223","createdAt":"2026-10-07T15:42:05.943Z","updatedAt":"2026-10-07T15:42:05.943Z"},
-{"id":"aud_fb4734190bea9b06fc","at":"2026-10-07T15:42:35.227Z","actorId":"user_266ec9fe326c68ff9d","action":"ai.admin_config","targetType":null,"targetId":null,"outcome":"success","meta":{"defaultProvider":"groq","defaultModel":"openai/gpt-oss-120b","sharedKeyEnabled":"[redacted]","sharedDailyLimit":50},"ip":"10.28.103.150","createdAt":"2026-10-07T15:42:35.227Z","updatedAt":"2026-10-07T15:42:35.227Z"}
+{"id":"aud_fb4734190bea9b06fc","at":"2026-10-07T15:42:35.227Z","actorId":"user_266ec9fe326c68ff9d","action":"ai.admin_config","targetType":null,"targetId":null,"outcome":"success","meta":{"defaultProvider":"groq","defaultModel":"openai/gpt-oss-120b","sharedKeyEnabled":"[redacted]","sharedDailyLimit":50},"ip":"10.28.103.150","createdAt":"2026-10-07T15:42:35.227Z","updatedAt":"2026-10-07T15:42:35.227Z"},
+{"id":"aud_e116c417a891eaea72","at":"2026-10-07T15:43:09.773Z","actorId":"user_266ec9fe326c68ff9d","action":"ai.profile_update","targetType":null,"targetId":null,"outcome":"success","meta":{"fields":["name","instructions","style","preferences","keyMode","provider","model"]},"ip":"10.27.25.223","createdAt":"2026-10-07T15:43:09.773Z","updatedAt":"2026-10-07T15:43:09.773Z"}
 ],
 "inventory_categories":[
 {"id":"cat_ec23f914fdb81cbdf9","ownerId":"user_266ec9fe326c68ff9d","name":"Electronics","icon":null,"createdAt":"2026-10-07T15:41:07.919Z","updatedAt":"2026-10-07T15:41:07.919Z"},
