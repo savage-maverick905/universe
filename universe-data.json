@@ -1,0 +1,13 @@
+{"format":"universe-export","schemaVersion":1,"collections":{
+"audit_log":[
+{"id":"aud_7226c6256d4bf848cb","at":"2026-10-07T15:32:38.916Z","actorId":null,"action":"bootstrap.admin_created","targetType":"user","targetId":"user_266ec9fe326c68ff9d","outcome":"success","meta":{},"ip":null,"createdAt":"2026-10-07T15:32:38.916Z","updatedAt":"2026-10-07T15:32:38.916Z"}
+],
+"roles":[
+{"id":"admin","name":"Admin","permissions":["*"],"system":true,"locked":true,"createdAt":"2026-10-07T15:32:38.182Z","updatedAt":"2026-10-07T15:32:38.182Z"},
+{"id":"resident","name":"Resident","permissions":["ai.use"],"system":true,"createdAt":"2026-10-07T15:32:38.183Z","updatedAt":"2026-10-07T15:32:38.183Z"},
+{"id":"guest","name":"Guest","permissions":[],"system":true,"createdAt":"2026-10-07T15:32:38.183Z","updatedAt":"2026-10-07T15:32:38.183Z"}
+],
+"users":[
+{"id":"user_266ec9fe326c68ff9d","email":"prosperufaruna@gmail.com","displayName":"Admin","passwordHash":"scrypt$32768$8$1$dW50tXP/tPIm7gIAuZY77A==$WpvI9LsFnp9jWh5ZyYrLTqyttQJ3bi5luZdNFJnl5dp/FVXnZuG91O3GHHdPnd4+gRd9DPYF/O3+78Q541psBg==","roleId":"admin","status":"active","grants":[],"denies":[],"profile":{"avatarUrl":null,"bio":""},"profileVisibility":{"displayName":{"level":"public","sharedWith":[]},"avatarUrl":{"level":"public","sharedWith":[]},"bio":{"level":"private","sharedWith":[]}},"lastLoginAt":null,"passwordChangedAt":"2026-10-07T15:32:38.916Z","createdAt":"2026-10-07T15:32:38.916Z","updatedAt":"2026-10-07T15:32:38.916Z"}
+]
+}}
