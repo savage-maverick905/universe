@@ -41,7 +41,19 @@
   "shortcuts": [
     {
       "name": "Add item",
+      "short_name": "Add",
       "url": "/apps/inventory/#/new",
+      "icons": [
+        {
+          "src": "icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Overview",
+      "short_name": "Overview",
+      "url": "/apps/inventory/#/overview",
       "icons": [
         {
           "src": "icons/icon-192.png",

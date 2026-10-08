@@ -7,7 +7,7 @@ export async function assistantView({ h, api, toast, shell, me }) {
   let currentId = null;
   const log = h('div', { class: 'chat-log', role: 'log', 'aria-live': 'polite' });
   const status = h('p', { class: 'err', role: 'alert' });
-  const input = h('textarea', { rows: 2, placeholder: `Message ${profile.name}`, 'aria-label': 'Message' });
+  const input = h('textarea', { rows: 1, enterkeyhint: 'send', placeholder: `Message ${profile.name}`, 'aria-label': 'Message' });
   const send = h('button', { class: 'btn', 'aria-label': 'Send message' }, icon('send'), h('span', { class: 'lbl' }, 'Send'));
   const select = h('select', { 'aria-label': 'Conversation', onchange: (e) => openConvo(e.target.value || null) });
 
@@ -16,7 +16,11 @@ export async function assistantView({ h, api, toast, shell, me }) {
     if (m.role === 'assistant' && m.toolCalls?.length) return h('div', { class: 'note' }, `${profile.name} looked something up: ${m.toolCalls.map((c) => c.name).join(', ')}`);
     return h('div', { class: `msg ${m.role}` }, m.content);
   };
-  const draw = (messages) => { log.replaceChildren(...(messages.length ? messages.map(bubble) : [h('p', { class: 'muted' }, `Say hello to ${profile.name}.`)])); log.scrollTop = log.scrollHeight; };
+  const ask = (text) => { input.value = text; submit(); };
+  const emptyState = () => h('div', { class: 'chat-empty' }, h('div', { class: 'orb' }, icon('sparkle')), h('h2', {}, `Say hello to ${profile.name}`), h('p', {}, 'Ask about your apps, or just think out loud.'),
+    h('div', { class: 'chips' }, ['What can you help me with?', 'Summarise my inventory'].map((t) => h('button', { type: 'button', class: 'chip', onclick: () => ask(t) }, t))));
+  const grow = () => { input.style.height = 'auto'; input.style.height = `${Math.min(input.scrollHeight, 128)}px`; };
+  const draw = (messages) => { log.replaceChildren(...(messages.length ? messages.map(bubble) : [emptyState()])); log.scrollTop = log.scrollHeight; };
   const drawList = () => select.replaceChildren(h('option', { value: '' }, 'New chat'), ...convos.map((c) => h('option', { value: c.id, selected: c.id === currentId ? '' : null }, c.title)));
   async function openConvo(id) {
     currentId = id; status.textContent = '';
@@ -25,14 +29,17 @@ export async function assistantView({ h, api, toast, shell, me }) {
   }
   async function refreshList() { convos = (await api('GET', '/api/ai/conversations')).conversations; drawList(); }
   async function submit() {
-    const message = input.value.trim(); if (!message) return;
+    const message = input.value.trim(); if (!message || send.disabled) return;
     send.disabled = true; status.textContent = '';
-    log.append(h('div', { class: 'msg user' }, message), h('div', { class: 'note', id: 'thinking' }, `${profile.name} is thinking…`)); log.scrollTop = log.scrollHeight;
-    try { const r = await api('POST', '/api/ai/chat', { message, conversationId: currentId }); input.value = ''; await openConvo(r.conversation.id); await refreshList(); }
-    catch (x) { status.textContent = x.message; document.getElementById('thinking')?.remove(); }
+    input.value = ''; grow(); // clear the box straight away; the message now lives in the chat
+    log.querySelector('.chat-empty')?.remove();
+    log.append(h('div', { class: 'msg user' }, message), h('div', { class: 'msg assistant typing', id: 'thinking', 'aria-label': `${profile.name} is thinking` }, h('i'), h('i'), h('i'))); log.scrollTop = log.scrollHeight;
+    try { const r = await api('POST', '/api/ai/chat', { message, conversationId: currentId }); await openConvo(r.conversation.id); await refreshList(); }
+    catch (x) { status.textContent = x.message; document.getElementById('thinking')?.remove(); if (!input.value) { input.value = message; grow(); } } // put the text back so nothing is lost
     send.disabled = false;
   }
   send.addEventListener('click', submit);
+  input.addEventListener('input', grow);
   input.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit(); } });
 
   const rename = async () => { if (!currentId) return; const t = prompt('Rename conversation', convos.find((c) => c.id === currentId)?.title); if (t) { await api('PATCH', `/api/ai/conversations/${currentId}`, { title: t }); await refreshList(); } };
@@ -71,7 +78,7 @@ export async function assistantView({ h, api, toast, shell, me }) {
   }
 
   shell('assistant', h('section', { class: 'chat' },
-    h('div', { class: 'row' }, select, h('button', { class: 'btn ghost small', onclick: rename }, 'Rename'), h('button', { class: 'btn ghost small danger', onclick: remove }, 'Delete'), h('button', { class: 'btn ghost small', onclick: settings }, icon('sliders'), 'Settings')),
+    h('div', { class: 'row' }, select, h('button', { class: 'btn ghost small', 'aria-label': 'Rename conversation', onclick: rename }, icon('pencil'), h('span', { class: 'lbl' }, 'Rename')), h('button', { class: 'btn ghost small danger', 'aria-label': 'Delete conversation', onclick: remove }, icon('trash'), h('span', { class: 'lbl' }, 'Delete')), h('button', { class: 'btn ghost small', 'aria-label': 'Assistant settings', onclick: settings }, icon('sliders'), h('span', { class: 'lbl' }, 'Settings'))),
     log, status, h('div', { class: 'composer' }, input, send)));
   drawList(); draw([]);
 }

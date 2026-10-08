@@ -40,7 +40,8 @@
   ],
   "shortcuts": [
     {
-      "name": "Assistant",
+      "name": "Ask Nebula",
+      "short_name": "Nebula",
       "url": "/dashboard/#/assistant",
       "icons": [
         {
@@ -50,7 +51,30 @@
       ]
     },
     {
+      "name": "Overview",
+      "short_name": "Overview",
+      "url": "/dashboard/#/",
+      "icons": [
+        {
+          "src": "icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Reports",
+      "short_name": "Reports",
+      "url": "/dashboard/#/reports",
+      "icons": [
+        {
+          "src": "icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
       "name": "Apps",
+      "short_name": "Apps",
       "url": "/dashboard/#/apps",
       "icons": [
         {

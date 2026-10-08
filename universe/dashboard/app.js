@@ -35,7 +35,7 @@ function shell(page, content) {
       h('div', { class: 'me' }, h('span', { class: 'who' }, me.user.displayName), install,
         h('button', { class: 'btn ghost small', 'aria-label': 'Sign out', title: 'Sign out', onclick: async () => { try { await api('POST', '/api/auth/logout'); } catch { /* already out */ } signOut(); } }, icon('logout'), h('span', { class: 'lbl' }, 'Sign out')))),
     h('main', { class: 'main' }, h('div', { class: 'wrap' }, content)));
-  window.scrollTo(0, 0);
+  document.body.dataset.page = page; window.scrollTo(0, 0);
 }
 
 function widgetCard(w) {

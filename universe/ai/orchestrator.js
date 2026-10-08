@@ -32,7 +32,9 @@ export class AiOrchestrator {
 
   // ---- personal profile ----
   async profileDoc(user) {
-    return (await this.profiles.get(user.id)) || { id: user.id, name: 'Assistant', instructions: '', style: 'balanced', preferences: '', keyMode: 'shared', provider: null, model: null, encryptedKey: null, keyLast4: null };
+    const saved = await this.profiles.get(user.id);
+    if (saved) return saved.name === 'Assistant' ? { ...saved, name: 'Nebula' } : saved; // the old default name becomes Nebula
+    return { id: user.id, name: 'Nebula', instructions: '', style: 'balanced', preferences: '', keyMode: 'shared', provider: null, model: null, encryptedKey: null, keyLast4: null };
   }
   static publicProfile(d) { const { encryptedKey, id, createdAt, updatedAt, ...rest } = d; return { ...rest, hasKey: !!encryptedKey }; }
   async saveProfile(user, patch) {

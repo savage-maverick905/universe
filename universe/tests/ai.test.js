@@ -44,7 +44,7 @@ test('argument validation rejects unknown, missing and out-of-range arguments', 
 
 test('profile: name and personality reach the system prompt; keys never returned or stored in plaintext', async () => {
   const { t, a, provider, chat } = await setup();
-  assert.equal((await t.request('GET', '/api/ai/profile', { cookie: a.cookie })).json.profile.name, 'Assistant');
+  assert.equal((await t.request('GET', '/api/ai/profile', { cookie: a.cookie })).json.profile.name, 'Nebula');
   assert.equal((await t.request('PUT', '/api/ai/profile', { cookie: a.cookie, body: { roleId: 'admin' } })).status, 400);
   assert.equal((await t.request('PUT', '/api/ai/profile', { cookie: a.cookie, body: { style: 'rude' } })).status, 400);
   await t.request('PUT', '/api/ai/profile', { cookie: a.cookie, body: { name: 'Nova', instructions: 'Speak like a pirate', style: 'concise' } });
