@@ -1,0 +1,25 @@
+{
+  "manifestVersion": 1,
+  "id": "tasks",
+  "name": "Tasks",
+  "version": "1.0.0",
+  "description": "A simple personal to-do list.",
+  "icon": "check",
+  "entry": "index.html",
+  "permissions": ["tasks.task.read", "tasks.task.write", "tasks.stats.read"],
+  "defaultRolePermissions": {
+    "admin": ["tasks.task.read", "tasks.task.write", "tasks.stats.read"],
+    "resident": ["tasks.task.read", "tasks.task.write", "tasks.stats.read"],
+    "guest": []
+  },
+  "dataResources": ["tasks_items"],
+  "widgets": [
+    { "id": "open", "title": "Tasks", "type": "stat", "dataEndpoint": "/api/apps/tasks/stats/summary", "requiredPermission": "tasks.stats.read" }
+  ],
+  "aiTools": [
+    { "name": "tasks.list", "description": "List the user's tasks, optionally only the open ones.", "access": "read", "requiredPermission": "tasks.task.read" }
+  ],
+  "reports": [
+    { "id": "tasks-overview", "title": "Tasks overview", "requiredPermission": "tasks.stats.read" }
+  ]
+}

@@ -1,0 +1,70 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Universe Application Manifest",
+  "type": "object",
+  "required": ["manifestVersion", "id", "name", "version", "description", "entry"],
+  "properties": {
+    "manifestVersion": { "const": 1 },
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9_-]{1,31}$" },
+    "name": { "type": "string" },
+    "version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "description": { "type": "string" },
+    "icon": { "type": ["string", "null"] },
+    "entry": { "type": "string", "description": "Path to index.html relative to the app folder" },
+    "permissions": {
+      "type": "array",
+      "description": "Permissions this app defines, e.g. inventory.item.read",
+      "items": { "type": "string", "pattern": "^[a-z]+(\\.[a-z_]+)+$" }
+    },
+    "defaultRolePermissions": {
+      "type": "object",
+      "description": "Role name -> permissions granted on install",
+      "additionalProperties": { "type": "array", "items": { "type": "string" } }
+    },
+    "dataResources": {
+      "type": "array",
+      "description": "Collections/tables this app owns. Prefixed with the app id.",
+      "items": { "type": "string" }
+    },
+    "widgets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "title", "type", "dataEndpoint"],
+        "properties": {
+          "id": { "type": "string" },
+          "title": { "type": "string" },
+          "type": { "enum": ["stat", "list", "chart"] },
+          "dataEndpoint": { "type": "string" },
+          "requiredPermission": { "type": "string" }
+        }
+      }
+    },
+    "aiTools": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "description", "access", "requiredPermission"],
+        "properties": {
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "access": { "enum": ["read", "write"] },
+          "requiredPermission": { "type": "string" }
+        }
+      }
+    },
+    "reports": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "title", "requiredPermission"],
+        "properties": {
+          "id": { "type": "string" },
+          "title": { "type": "string" },
+          "requiredPermission": { "type": "string" }
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}

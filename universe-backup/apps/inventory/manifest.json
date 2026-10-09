@@ -1,0 +1,99 @@
+{
+  "manifestVersion": 1,
+  "id": "inventory",
+  "name": "Inventory",
+  "version": "1.0.0",
+  "description": "Track the things you own or have access to.",
+  "icon": "box",
+  "entry": "index.html",
+  "permissions": [
+    "inventory.item.read",
+    "inventory.item.write",
+    "inventory.item.delete",
+    "inventory.category.manage",
+    "inventory.location.manage",
+    "inventory.stats.read"
+  ],
+  "defaultRolePermissions": {
+    "admin": [
+      "inventory.item.read",
+      "inventory.item.write",
+      "inventory.item.delete",
+      "inventory.category.manage",
+      "inventory.location.manage",
+      "inventory.stats.read"
+    ],
+    "resident": [
+      "inventory.item.read",
+      "inventory.item.write",
+      "inventory.item.delete",
+      "inventory.category.manage",
+      "inventory.location.manage",
+      "inventory.stats.read"
+    ],
+    "guest": []
+  },
+  "dataResources": [
+    "inventory_items",
+    "inventory_categories",
+    "inventory_locations",
+    "inventory_settings"
+  ],
+  "widgets": [
+    {
+      "id": "summary",
+      "title": "Inventory summary",
+      "type": "stat",
+      "dataEndpoint": "/api/apps/inventory/stats/summary",
+      "requiredPermission": "inventory.stats.read"
+    },
+    {
+      "id": "by-category",
+      "title": "Items by category",
+      "type": "chart",
+      "dataEndpoint": "/api/apps/inventory/stats/by-category",
+      "requiredPermission": "inventory.stats.read"
+    },
+    {
+      "id": "by-location",
+      "title": "Items by location",
+      "type": "chart",
+      "dataEndpoint": "/api/apps/inventory/stats/by-location",
+      "requiredPermission": "inventory.stats.read"
+    },
+    {
+      "id": "recent",
+      "title": "Recently added",
+      "type": "list",
+      "dataEndpoint": "/api/apps/inventory/stats/recent",
+      "requiredPermission": "inventory.item.read"
+    }
+  ],
+  "aiTools": [
+    {
+      "name": "inventory.search",
+      "description": "Search the user's inventory items.",
+      "access": "read",
+      "requiredPermission": "inventory.item.read"
+    },
+    {
+      "name": "inventory.getItem",
+      "description": "Get one inventory item by id.",
+      "access": "read",
+      "requiredPermission": "inventory.item.read"
+    },
+    {
+      "name": "inventory.getStatistics",
+      "description": "Get inventory statistics.",
+      "access": "read",
+      "requiredPermission": "inventory.stats.read"
+    }
+  ],
+  "reports": [
+    {
+      "id": "inventory-overview",
+      "title": "Inventory overview",
+      "requiredPermission": "inventory.stats.read"
+    }
+  ]
+}

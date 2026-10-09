@@ -1,0 +1,510 @@
+==============================================================================
+HOW TO ADD A NEW APPLICATION TO UNIVERSE
+==============================================================================
+Written for a developer who has never seen this project. Every statement here
+describes code that exists today. Things that do NOT exist yet are marked
+"PLANNED" so you are not misled. The example app ("Tasks") at the end is real
+code in docs/examples/tasks/, and tests/example-app.test.js runs that exact
+folder through the real ecosystem, so the example cannot silently go stale.
+
+You do NOT need to understand the whole project. An app is a folder plus a
+manifest. You never edit dashboard code, server code or a central app list.
+
+Requirements: Node 22.5+. No npm install needed (no dependencies).
+Useful commands:  npm run dev  (restarts on changes)   npm test
+
+
+------------------------------------------------------------------------------
+THE 25 STEPS
+------------------------------------------------------------------------------
+
+1. WHERE TO CREATE THE APPLICATION'S FOLDER
+   apps/<id>/        for example  apps/tasks/
+   One folder per app, inside the ONE repository. Never a separate repo.
+
+2. THE REQUIRED APPLICATION FILES
+   apps/<id>/
+     manifest.json      REQUIRED. Describes the app. Without it the folder is ignored.
+     index.html         The app's screen (the manifest "entry"). Loaded at /apps/<id>/
+     app.js, styles.css Your frontend (any files; see "what is served" below)
+     server/index.js    Your backend. Exports register(). Optional, but almost every app has one.
+     README.md          Describe your app (step 25)
+   Optional folders: components/, services/ (frontend code).
+   WHAT IS SERVED TO BROWSERS: files in apps/<id>/ with extensions html, css,
+   js, json, svg, png, jpg, webp, ico, woff2, and ONLY while the app is
+   installed and enabled. NEVER served: dotfiles, node_modules, and anything
+   inside a folder named "server". Put all backend code in server/.
+
+3. HOW TO CREATE THE MANIFEST
+   apps/<id>/manifest.json. Required: manifestVersion (always 1), id, name,
+   version, description, entry. Optional: icon, permissions,
+   defaultRolePermissions, dataResources, widgets, aiTools, reports.
+   The JSON Schema is core/schemas/app-manifest.schema.json. The real
+   validation (including the namespacing rules below) is in core/registry.js.
+   Rules enforced at startup (an app that breaks them is SKIPPED with a
+   warning in the server log, and nothing else is affected):
+     - id must equal the folder name, lowercase letters/digits/_/-, 2-32 chars
+     - version must look like 1.0.0
+     - every permission starts with "<id>."          (tasks.task.read)
+     - every data resource starts with "<id>_"       (tasks_items)
+     - every widget dataEndpoint starts with /api/apps/<id>/
+     - every widget requiredPermission starts with "<id>."
+     - every AI tool name starts with "<id>."        (tasks.list)
+     - entry is a relative path (no ".." and no leading "/")
+
+4. HOW TO CHOOSE THE APPLICATION ID AND VERSION
+   ID: short, lowercase, permanent. It becomes the folder name, the URL
+   (/apps/<id>/), the API prefix (/api/apps/<id>/), the permission prefix, the
+   data-collection prefix and the key of the installation record. Changing it
+   later orphans the app's data, so choose carefully.
+   VERSION: semantic version "major.minor.patch". Start at 1.0.0.
+
+5. HOW TO REGISTER THE APPLICATION WITH THE ECOSYSTEM
+   You do not register it by hand. Creating apps/<id>/manifest.json is the
+   registration. Restart the server (npm start). On startup core/registry.js
+   scans apps/*/manifest.json, validates each, registers the app's permissions,
+   and core/appLoader.js loads apps/<id>/server/index.js (if it exists).
+   New apps are NOT picked up while the server is running.
+
+6. HOW THE DASHBOARD DISCOVERS AVAILABLE APPLICATIONS
+   The Apps page calls GET /api/apps, which lists everything the registry
+   found, with its state: available / enabled / disabled. Nothing about
+   specific apps is hard-coded in dashboard/.
+
+7. HOW THE INSTALL BUTTON IS GENERATED
+   dashboard/app.js renders one card per app from that list. An app with no
+   installation record shows "Install" to admins (users who hold the
+   apps.manage permission) and "Ask an admin to install" to everyone else.
+   Once installed the button disappears and the card shows "Installed" plus
+   "Open" (and Disable / Uninstall for admins).
+
+8. WHAT HAPPENS WHEN AN APPLICATION IS INSTALLED
+   POST /api/apps/<id>/install (admin only) does, in one transaction:
+     a) writes a row in the app_installations collection (id, version,
+        enabled=true, installedBy, installedAt)
+     b) adds the manifest's defaultRolePermissions to the named roles. This is
+        ADDITIVE: it never removes permissions, and it skips the locked admin
+        role (which already has everything)
+   then writes an audit-log entry (app.install).
+   PLANNED, NOT BUILT: a per-app install hook for creating seed data or running
+   migrations. For now create what you need lazily the first time a user uses
+   the app (see apps/inventory/server/index.js, function seed()).
+   Permissions are resolved from the role on every request, so signed-in users
+   get access immediately (the dashboard UI reads them at page load, so users
+   may need to reload the page to see the new app).
+
+9. HOW TO DEFINE THE APPLICATION'S DATABASE / DATA STRUCTURES
+   Use the storage interface (documented at the top of database/storage.js);
+   never a database library directly. In server/index.js:
+       const col = services.storage.collection('tasks_items', { indexes: ['ownerId'] });
+   - Collections are named "<id>_<name>" and listed in manifest.dataResources.
+   - Documents are plain JSON objects with a string "id". Use newId('task')
+     from shared/ids.js. createdAt and updatedAt are added for you.
+   - Put an "ownerId" (the session user's id) on every user-owned record.
+   - Add "schemaVersion" to your documents (step 24).
+   - Query with equality or $lt/$lte/$gt/$gte/$in on top-level or dotted
+     fields. There is no full-text search or joins: filter in memory for
+     personal-scale data, as Inventory does.
+   - Keep documents JSON-compatible so data can be exported and moved to the
+     future home server.
+
+10. HOW TO CREATE API ENDPOINTS / SERVICES FOR THE APPLICATION
+    apps/<id>/server/index.js must export:
+        export function register({ router, services, app }) { ... }
+    Add routes with router.add(METHOD, PATH, handler). PATH must start with
+    /api/apps/<id>/ (anything else makes loading fail). Handler gets
+    { user, params, query, body, ip, services } and returns a plain object
+    (sent as JSON, status 200) or reply(status, body) from api/http.js.
+    Throw HttpError helpers from shared/errors.js (notFound, badRequest,
+    forbidden, conflict) for errors. Routes you register automatically answer
+    404 while your app is not installed AND enabled; you do not write that check.
+    Frontend rule: every POST/PUT/PATCH/DELETE must send the header
+    "X-Requested-With: universe" (CSRF protection) and JSON bodies.
+
+11. HOW TO IMPLEMENT AUTHENTICATION AND PERMISSIONS
+    Authentication is automatic: routes require a signed-in user by default and
+    "user" in your handler is the session user. (Public routes would need
+    { auth: false } and should almost never be used by an app.)
+    Permissions: declare them in the manifest ("tasks.task.read"). Check them
+    first thing in each handler:
+        await services.permissions.assert(user, 'tasks.task.read');
+    Naming convention: <app>.<resource>.<action>. Wildcards like "tasks.*"
+    can be granted by admins. Grant defaults to roles with
+    defaultRolePermissions (applied at install). Admins can change grants later
+    with the API: PATCH /api/roles/<roleId> (role permissions) or
+    PATCH /api/users/<userId> with {"grants": [...]} (one user).
+    NOTE: there is no admin screen for roles/users yet; use the API
+    (see README "Administering users"). Guests get nothing unless you or an
+    admin grants it.
+
+12. HOW TO PREVENT USERS FROM ACCESSING DATA THEY ARE NOT AUTHORIZED TO ACCESS
+    The checklist every handler must follow (copy the pattern from the example):
+      [ ] Check the permission before touching data.
+      [ ] Filter every query by the session user: where: { ownerId: user.id }.
+      [ ] When loading one record by id, check record.ownerId === user.id, and
+          answer 404 (not 403) otherwise, so other people's ids reveal nothing.
+      [ ] Never take an owner/user id from the request. Set it from "user".
+      [ ] Parse bodies with allowKeys(v.object(body), [...allowed fields]) so
+          unknown fields (ownerId, id, role...) are rejected, and validate
+          every field with the helpers in shared/validate.js.
+      [ ] Check that any referenced ids (category, parent...) also belong to
+          the same user.
+      [ ] Do not log or return secrets.
+    Frontend checks are cosmetic. Only the server checks count.
+    If your app ever shows one user's data to another, it MUST go through
+    auth/visibility.js (canView / viewProfile), the same check profiles use.
+
+13. HOW TO ADD THE APPLICATION TO DASHBOARD NAVIGATION
+    Automatic: once installed and enabled, the app appears under "Installed"
+    on the Apps page with an Open button linking to /apps/<id>/. The header
+    menu (Home, Assistant, Reports, Apps) is fixed. PLANNED: pinned app
+    shortcuts in the header. Your app's own page should link back to "/" (see
+    the example's index.html) and should redirect to "/" on a 401 response.
+    Use /shared/theme.css so it looks like the rest of Universe.
+
+14. HOW TO CREATE DASHBOARD WIDGETS / STATISTICS
+    Declare in manifest.widgets: { id, title, type, dataEndpoint,
+    requiredPermission }. type is "stat", "list" or "chart". Implement the
+    dataEndpoint (under /api/apps/<id>/) in server/index.js and check the
+    permission there. The dashboard shows a widget only if the app is active
+    and the user holds requiredPermission, then fetches the endpoint itself.
+    Required response shapes:
+        stat:   { "stats":  [ { "label": "Open", "value": 3 } ] }
+        list:   { "items":  [ { "title": "...", "subtitle": "..." } ] }
+        chart:  { "series": [ { "label": "Phones", "value": 5 } ] }   (horizontal bars)
+    If the endpoint fails, the dashboard shows "No data yet" for that widget.
+
+15. HOW TO EXPOSE SAFE AI TOOLS / FUNCTIONS
+    Two parts. (1) Declare in manifest.aiTools: { name, description, access,
+    requiredPermission } where access is "read" or "write" and name starts
+    with "<id>.". (2) Implement in server/index.js:
+        services.aiTools.registerApp('tasks', 'tasks.list', {
+          parameters: { properties: { openOnly: { type: 'boolean' } } },   // plus optional "required": [...]
+          handler: async (args, { user }) => ({ tasks: [...] }),
+        });
+    registerApp throws if the tool is not declared in your manifest, so a tool
+    cannot exist without a declared permission. Parameter types supported:
+    string (maxLength, enum), integer (minimum, maximum), boolean. Unknown
+    arguments are rejected automatically. Return small, plain JSON (output is
+    cut at about 6000 characters). Keep results compact: ids, names, a few fields.
+    Only "read" tools are used in practice today. A "write" tool is executed
+    with a permission check, argument validation and an audit-log entry
+    (ai.tool.write), but there is no confirmation step yet (PLANNED), so do
+    not add destructive write tools yet.
+
+16. HOW TO MAKE THOSE AI TOOLS RESPECT USER PERMISSIONS
+    The platform does this for you before your handler runs: the tool is only
+    offered to the model, and only executable, if (a) your app is installed and
+    enabled and (b) the signed-in user holds the manifest's requiredPermission.
+    Your handler gets { user } from the session, never from the model. You must
+    still do step 12 inside the handler: query only that user's records
+    (the example filters by ownerId). Never add a "userId" parameter. Never
+    return another user's data except through auth/visibility.js.
+
+17. HOW TO ADD REPORTS FOR THE APPLICATION
+    Declare in manifest.reports: { id, title, requiredPermission }, then:
+        services.reports.registerApp('tasks', 'tasks-overview', {
+          handler: async ({ user, range, filters }) => ({ title, sections: [...] }),
+        });
+    range is { from, to, label } (UTC dates, inclusive) already validated from
+    the period the user chose (daily, weekly, monthly, yearly, last N days or
+    custom). filters may contain "category" and "status"; ignore ones that
+    don't apply to your app. Return sections of these kinds (any combination):
+        { heading, text }
+        { heading, stats: [ { label, value } ] }
+        { heading, table: { columns: [...], rows: [[...]] } }
+    The report engine handles ecosystem-wide reports, saving, the Reports
+    screen and the AI tool reports.generate. Your report appears automatically
+    for users who hold requiredPermission while the app is active. Filter by
+    the session user, as always.
+
+18. HOW TO ADD CLOUDINARY / MEDIA SUPPORT IF NEEDED
+    Do not build an image backend. Copy the pattern from Inventory:
+      - Browser: apps/inventory/services/media.js (an uploader that posts to
+        Cloudinary with the public, unsigned preset; thumbUrl() for
+        transformations). Copy it into your app's services/ folder.
+      - Server: expose a /meta endpoint returning ONLY public settings
+        (cloudName, uploadPreset, a per-user folder like
+        universe/<id>/<userId>, size limit) from services.config.cloudinary.
+        Never return or store the API secret.
+      - Server validation: accept only metadata {publicId, secureUrl,
+        resourceType, width, height, format, uploadedAt}, and require
+        secureUrl to be https://res.cloudinary.com/<your cloud>/... See
+        parseImages() in apps/inventory/server/schema.js. (When a second app
+        needs this, move the shared pieces into shared/. PLANNED.)
+    Needs CLOUDINARY_CLOUD_NAME and CLOUDINARY_UPLOAD_PRESET in .env.
+
+19. HOW TO MAKE THE APPLICATION DISABLEABLE
+    Nothing to do. Admins can Disable/Enable/Uninstall any app from the Apps
+    page (or POST /api/apps/<id>/{disable,enable,uninstall}). While not
+    enabled: your API routes answer 404, your static files are not served,
+    your widgets, AI tools and reports disappear. Do not cache state that would
+    survive that.
+
+20. HOW APPLICATION INSTALLATION STATE IS STORED
+    Collection app_installations: one document per installed app,
+    { id: "<app id>", version, enabled, installedBy, installedAt }.
+    Available = no document. Installed = document. Disabled = enabled:false.
+    Uninstall deletes only that document. Your source code AND your users'
+    data are never deleted by uninstall; reinstalling brings the data back
+    (tested). Installation is ecosystem-wide and admin-controlled; there are
+    no per-user installs yet.
+
+21. HOW TO TEST THE APPLICATION
+    Look at tests/example-app.test.js. The pattern:
+      - startTestApp(overrides, { appsDir }) from tests/helpers.js boots a real
+        server on a random port with an in-memory database, using the apps
+        folder you give it.
+      - Log in as the bootstrap admin (admin@example.com /
+        correct-horse-battery), create users, install your app, then use
+        t.request(method, path, { cookie, body }) to call your API.
+    Minimum tests for a new app: (a) 404 before install, (b) 403 for a user
+    without the permission, (c) user B cannot read/modify/delete user A's
+    record (expect 404), (d) unknown body fields are rejected (400),
+    (e) widget/AI tool/report (if any) return only the caller's data,
+    (f) disabled app answers 404. Run:  npm test
+    (or: node --test tests/yourapp.test.js)
+    Frontend: there are no browser tests yet. Open the app manually.
+
+22. HOW TO PREVENT THE NEW APPLICATION FROM BREAKING EXISTING APPLICATIONS
+    The ecosystem helps:
+      - Namespacing is enforced: your permissions, data collections, routes,
+        widgets endpoints and AI tools must all start with your app id.
+      - A manifest that fails validation is skipped; a server module that
+        throws while loading is logged and skipped (tested). Other apps keep
+        working.
+      - Your routes cannot be registered outside /api/apps/<id>/.
+      - An unhandled error inside a handler returns a generic 500 for that
+        request only.
+    What the ecosystem cannot protect you from (be careful): code that
+    blocks the process (infinite loops, huge synchronous work) slows every
+    app because they share one Node process; reading another app's
+    collections directly (don't: only touch "<your id>_*" collections); changing
+    files outside your folder. Rule: apps never import from each other.
+    Before merging: run the whole suite (npm test), not just your tests.
+
+23. HOW TO UPDATE THE APPLICATION VERSION
+    Edit "version" in manifest.json (semantic versioning) and restart.
+    CURRENT BEHAVIOUR (important): the installation record keeps the version
+    that was installed; there is no automatic upgrade step yet (PLANNED). New
+    permissions you add in a new version ARE registered at startup, but they
+    are NOT automatically added to roles (defaultRolePermissions only applies at
+    install). After releasing a version with new permissions, grant them with
+    PATCH /api/roles/<roleId>. Keep changes backward compatible while that
+    gap exists, and use step 24 for data.
+
+24. HOW TO HANDLE DATABASE / DATA MIGRATIONS WHEN THE SCHEMA CHANGES
+    PLANNED, NOT BUILT: an automatic migration runner (database/migrations/ is
+    empty). Until then use this safe pattern:
+      - Put "schemaVersion": N on every document you create.
+      - Write a function migrate(doc) that upgrades an older document one
+        version at a time and returns the new shape, then call it when
+        reading:
+            const migrate = (d) => (d.schemaVersion === 1 ? { ...d, priority: 'normal', schemaVersion: 2 } : d);
+            const mine = async (user) => (await col.find({ where: { ownerId: user.id } })).map(migrate);
+        and write the upgraded document back when you next save it.
+      - Never remove or rename a field in one release; add the new field,
+        read both, remove the old one in a later release.
+      - Export/import files carry schemaVersion too (see Inventory import):
+        reject versions you do not understand.
+    Back up the database file before shipping a schema change.
+
+25. HOW TO DOCUMENT THE NEW APPLICATION
+    Write apps/<id>/README.md covering: what the app does; its collections and
+    document shape (with schemaVersion); its permissions and who gets them by
+    default; its API endpoints; widgets, AI tools and reports it provides;
+    required environment variables; what is not built yet. Mark each feature
+    Implemented, Partially implemented or Planned. Add your collections to
+    docs/DATA_MODEL.md and your tools to docs/AI_ARCHITECTURE.md section 3.
+    Update the docs whenever behaviour changes.
+
+
+------------------------------------------------------------------------------
+COMPLETE EXAMPLE: A "TASKS" APPLICATION
+------------------------------------------------------------------------------
+The files below are copied verbatim from docs/examples/tasks/. To try it for
+real:
+    cp -r docs/examples/tasks apps/tasks
+    npm start
+Then sign in as admin > Apps > Install on Tasks > Open. Resident users get
+access automatically (the manifest grants it at install); they may need to
+reload the page. (If you do not want Tasks in your ecosystem afterwards, delete apps/tasks
+and restart.)
+
+A. FOLDER CREATION (step 1, 2)
+    apps/tasks/
+      manifest.json
+      index.html
+      app.js
+      server/index.js
+      README.md
+
+B. MANIFEST (steps 3, 4, 11, 14, 15, 17). Folder name equals id "tasks".
+   Permissions are namespaced. Residents get all three by default; guests none.
+--- apps/tasks/manifest.json ---
+{
+  "manifestVersion": 1,
+  "id": "tasks",
+  "name": "Tasks",
+  "version": "1.0.0",
+  "description": "A simple personal to-do list.",
+  "icon": "check",
+  "entry": "index.html",
+  "permissions": ["tasks.task.read", "tasks.task.write", "tasks.stats.read"],
+  "defaultRolePermissions": {
+    "admin": ["tasks.task.read", "tasks.task.write", "tasks.stats.read"],
+    "resident": ["tasks.task.read", "tasks.task.write", "tasks.stats.read"],
+    "guest": []
+  },
+  "dataResources": ["tasks_items"],
+  "widgets": [
+    { "id": "open", "title": "Tasks", "type": "stat", "dataEndpoint": "/api/apps/tasks/stats/summary", "requiredPermission": "tasks.stats.read" }
+  ],
+  "aiTools": [
+    { "name": "tasks.list", "description": "List the user's tasks, optionally only the open ones.", "access": "read", "requiredPermission": "tasks.task.read" }
+  ],
+  "reports": [
+    { "id": "tasks-overview", "title": "Tasks overview", "requiredPermission": "tasks.stats.read" }
+  ]
+}
+
+C. REGISTRATION AND INSTALLATION (steps 5-8, 20)
+   There is nothing to register: restart the server. GET /api/apps now lists
+   {"id":"tasks","status":"available"}. The admin clicks Install (or sends
+   POST /api/apps/tasks/install with the session cookie and the header
+   X-Requested-With: universe). That creates the app_installations document
+   {id:"tasks", version:"1.0.0", enabled:true, ...} and adds the three tasks.*
+   permissions to the resident role.
+
+D. DATA MODEL (step 9). Collection tasks_items. Document:
+       { id: "task_...", ownerId: "<user id>", title: "Buy milk", done: false,
+         createdAt, updatedAt }
+   (A real app would also add schemaVersion: 1; the example omits it to stay
+   short.)
+
+E. BACKEND: API, PERMISSIONS, AI TOOL, REPORT, WIDGET DATA (steps 10-12, 14-17)
+--- apps/tasks/server/index.js ---
+// Backend of the example "Tasks" app. The ecosystem loads this file at startup and calls register().
+import { v, allowKeys } from '../../../shared/validate.js';
+import { notFound, badRequest } from '../../../shared/errors.js';
+import { newId } from '../../../shared/ids.js';
+import { reply } from '../../../api/http.js';
+
+const P = '/api/apps/tasks'; // routes MUST live under /api/apps/<app id>/
+
+export function register({ router, services: s }) {
+  // Data: your own collection, prefixed with the app id and declared in manifest.dataResources.
+  const col = s.storage.collection('tasks_items', { indexes: ['ownerId'] });
+  const can = (user, perm) => s.permissions.assert(user, `tasks.${perm}`);   // 403 if the user lacks it
+  const mine = (user) => col.find({ where: { ownerId: user.id }, limit: 10000 }); // ALWAYS filter by the session user
+  async function own(id, user) {                                               // other people's records look like they don't exist
+    const t = await col.get(id);
+    if (!t || t.ownerId !== user.id) throw notFound('Task not found');
+    return t;
+  }
+  const stats = async (user) => {
+    const all = await mine(user), open = all.filter((t) => !t.done).length;
+    return { stats: [{ label: 'Open', value: open }, { label: 'Done', value: all.length - open }] }; // the "stat" widget shape
+  };
+
+  router.add('GET', `${P}/items`, async ({ user }) => { await can(user, 'task.read'); return { items: await mine(user) }; });
+
+  router.add('POST', `${P}/items`, async ({ user, body }) => {
+    await can(user, 'task.write');
+    const b = allowKeys(v.object(body), ['title']);                  // unknown fields (ownerId, id, done...) are rejected
+    const item = await col.insert({ id: newId('task'), ownerId: user.id, title: v.string(b.title, 'title', { min: 1, max: 200 }), done: false });
+    return reply(201, { item });
+  });
+
+  router.add('PATCH', `${P}/items/:id`, async ({ user, params, body }) => {
+    await can(user, 'task.write');
+    const t = await own(params.id, user);
+    const b = allowKeys(v.object(body), ['title', 'done']), patch = {};
+    if ('title' in b) patch.title = v.string(b.title, 'title', { min: 1, max: 200 });
+    if ('done' in b) { if (typeof b.done !== 'boolean') throw badRequest('done must be true or false'); patch.done = b.done; }
+    return { item: await col.update(t.id, patch) };
+  });
+
+  router.add('DELETE', `${P}/items/:id`, async ({ user, params }) => {
+    await can(user, 'task.write');
+    await col.delete((await own(params.id, user)).id);
+    return { ok: true };
+  });
+
+  router.add('GET', `${P}/stats/summary`, async ({ user }) => { await can(user, 'stats.read'); return stats(user); }); // widget data
+
+  // AI tool (declared in the manifest). Runs only for users who hold tasks.task.read while the app is active.
+  s.aiTools?.registerApp('tasks', 'tasks.list', {
+    parameters: { properties: { openOnly: { type: 'boolean' } } },
+    handler: async (args, { user }) => ({ tasks: (await mine(user)).filter((t) => !args.openOnly || !t.done).slice(0, 50).map((t) => ({ id: t.id, title: t.title, done: t.done })) }),
+  });
+
+  // Report provider (declared in the manifest).
+  s.reports?.registerApp('tasks', 'tasks-overview', {
+    handler: async ({ user, range }) => {
+      const all = await mine(user), inRange = (d) => d >= range.from && d <= range.to;
+      return { title: 'Tasks overview', sections: [
+        { heading: 'Current', stats: (await stats(user)).stats },
+        { heading: `Created (${range.label})`, stats: [{ label: 'Tasks created', value: all.filter((t) => inRange(t.createdAt.slice(0, 10))).length }] },
+      ] };
+    },
+  });
+}
+
+F. DASHBOARD WIDGET (step 14). The manifest's widget "open" points at
+   GET /api/apps/tasks/stats/summary, which returns
+   {"stats":[{"label":"Open","value":2},{"label":"Done","value":5}]}.
+   After install, residents see a "Tasks" card on Home automatically.
+
+G. NAVIGATION (step 13). After install, Tasks shows under "Installed" on the
+   Apps page; Open goes to /apps/tasks/. The page links back to "/".
+
+H. FRONTEND
+--- apps/tasks/index.html ---
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tasks</title><link rel="stylesheet" href="/shared/theme.css"></head>
+<body><main class="wrap"><p><a href="/">Back to Universe</a></p><h1>Tasks</h1>
+<form id="f" style="display:flex;gap:.5rem;margin:1rem 0"><input id="t" placeholder="New task" aria-label="New task" required><button class="btn">Add</button></form>
+<ul id="list"></ul></main><script type="module" src="/apps/tasks/app.js"></script></body></html>
+
+--- apps/tasks/app.js ---
+// Frontend of the example. Same rules as everywhere: same-origin fetch, X-Requested-With header, textContent only.
+const B = '/api/apps/tasks';
+const api = async (method, path, body) => {
+  const r = await fetch(B + path, { method, headers: { 'X-Requested-With': 'universe', ...(body ? { 'Content-Type': 'application/json' } : {}) }, body: body ? JSON.stringify(body) : undefined });
+  if (r.status === 401) location.href = '/';
+  return r.json();
+};
+const list = document.getElementById('list');
+async function draw() {
+  const { items } = await api('GET', '/items');
+  list.replaceChildren(...items.map((t) => {
+    const box = Object.assign(document.createElement('input'), { type: 'checkbox', checked: t.done, onchange: async () => { await api('PATCH', `/items/${t.id}`, { done: box.checked }); draw(); } });
+    const del = Object.assign(document.createElement('button'), { className: 'btn ghost small', textContent: 'Delete', onclick: async () => { await api('DELETE', `/items/${t.id}`); draw(); } });
+    const li = document.createElement('li'); li.append(box, ' ', t.title, ' ', del); return li;
+  }));
+}
+document.getElementById('f').addEventListener('submit', async (e) => { e.preventDefault(); const i = document.getElementById('t'); await api('POST', '/items', { title: i.value }); i.value = ''; draw(); });
+draw();
+
+I. TESTING (step 21). tests/example-app.test.js does all of this against the
+   real code: 404 before install, install, create a task, a second user cannot
+   touch it (404), a guest gets 403, unknown fields rejected (400), the widget
+   returns the caller's numbers, the AI tool lists only the caller's tasks,
+   the report counts them, disabling makes everything answer 404, uninstalling
+   keeps the data, reinstalling brings it back, and a broken app next to it
+   does not affect it. Run:  npm test
+
+J. WHAT THE EXAMPLE DELIBERATELY LEAVES OUT
+   schemaVersion/migrations, media upload, a "list" or "chart" widget, write
+   AI tools, pagination, and a frontend test. See the steps above for each.
+
+MAKING YOUR APP INSTALLABLE (PWA)
+Copy these from apps/inventory and change the names, paths and colours:
+  app.webmanifest   name, start_url and scope = /apps/<your-id>/ (scopes must not overlap other apps), icons
+  sw.js             set prefix and the list of your files to keep for offline, then importScripts('/shared/sw-core.js')
+  icons/            icon-192.png, icon-512.png, maskable-512.png, apple-touch-icon.png, icon.svg
+In index.html add <link rel="manifest" href="/apps/<id>/app.webmanifest"> plus the icon and apple-mobile-web-app tags.
+In app.js call registerServiceWorker('/apps/<id>/sw.js', '/apps/<id>/') from /shared/pwa.js.
+Use /shared/auth.js (showAuth) for the sign-in screen and /shared/account.js (accountPanels) for Settings so your app
+is complete on its own and matches every other Hie app. Do not link back to the dashboard.
