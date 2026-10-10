@@ -17,6 +17,7 @@ export function validateManifest(m, folder) {
   if (typeof m.entry === 'string' && (m.entry.includes('..') || m.entry.startsWith('/'))) e.push('entry must be a relative path');
   for (const p of m.permissions || []) if (!String(p).startsWith(`${m.id}.`)) e.push(`permission "${p}" must start with "${m.id}."`);
   for (const r of m.dataResources || []) if (!String(r).startsWith(`${m.id}_`)) e.push(`dataResource "${r}" must start with "${m.id}_"`);
+  for (const r of m.preserveOnClear || []) if (!(m.dataResources || []).includes(r)) e.push(`preserveOnClear "${r}" must be one of dataResources`);
   for (const w of m.widgets || []) {
     if (!['stat', 'list', 'chart'].includes(w.type)) e.push(`widget "${w.id}" has an unknown type`);
     if (!String(w.dataEndpoint || '').startsWith(`/api/apps/${m.id}/`)) e.push(`widget "${w.id}" dataEndpoint must start with /api/apps/${m.id}/`);

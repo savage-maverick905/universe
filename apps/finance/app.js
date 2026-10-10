@@ -13,7 +13,7 @@ registerServiceWorker('/apps/finance/sw.js', '/apps/finance/');
 const brand = { name: 'Orbit', blurb: 'by Universe. Your money, in orbit.', mark: () => h('div', { class: 'mark orbit', 'aria-hidden': 'true' }, icon('wallet')) };
 
 const state = { me: null, unlocked: false, session: null, hiddenAt: 0 };
-const NAV = [['#/', 'Home', 'home', 'home'], ['#/activity', 'Activity', 'activity', 'swap'], ['#/assistant', 'Assistant', 'assistant', 'sparkle'], ['#/plan', 'Plan', 'plan', 'target'], ['#/more', 'More', 'more', 'more']];
+const NAV = [['#/', 'Home', 'home', 'home'], ['#/activity', 'Activity', 'activity', 'swap'], ['#/assistant', 'Nebula', 'assistant', 'sparkle'], ['#/plan', 'Plan', 'plan', 'target'], ['#/more', 'More', 'more', 'more']];
 const ROUTES = {}; // filled lazily so a locked app never even downloads the finance screens
 const load = { home: () => import('./views/home.js'), activity: () => import('./views/activity.js'), assistant: () => import('./views/assistant.js'), plan: () => import('./views/plan.js'),
   more: () => import('./views/settings.js'), accounts: () => import('./views/accounts.js'), categories: () => import('./views/categories.js'), reports: () => import('./views/reports.js'), settings: () => import('./views/settings.js') };

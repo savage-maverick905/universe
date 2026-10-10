@@ -1,13 +1,14 @@
 // Account settings panels (profile, password, install, sign out), shared by the dashboard Settings page
 // and every app's own Settings page, so each app is complete on its own.
-import { h, api, toast } from './ui.js';
+import { h, api, toast, dialog, closer } from './ui.js';
 import { icon } from './icons.js';
 import { isStandalone, isIos, canPromptInstall, promptInstall, onInstallChange } from './pwa.js';
 
 const panel = (title, ...kids) => h('section', { class: 'panel' }, h('h2', {}, title), ...kids);
 
 // session: the object from /api/auth/me or /api/auth/login (mutated when the name changes).
-export function accountPanels({ session, appName, onSignOut }) {
+// appId: an app's id to add a "Clear data" panel for that app, or 'all' for the Universe-wide one. note: extra sentence about what is kept.
+export function accountPanels({ session, appName, appId = null, note = '', onSignOut, onCleared = () => location.reload() }) {
   const u = session.user;
 
   // Profile
@@ -54,5 +55,29 @@ export function accountPanels({ session, appName, onSignOut }) {
   const session_ = panel('Session', h('div', { class: 'row', style: 'margin-top:0' },
     h('button', { class: 'btn ghost', onclick: async () => { try { await api('POST', '/api/auth/logout'); } catch { /* already signed out */ } onSignOut(); } }, icon('logout'), 'Sign out')));
 
-  return [profile, password, install, session_];
+  const panels = [profile, password, install, session_];
+  if (appId) panels.push(clearPanel({ appName, appId, note, onCleared }));
+  return panels;
+}
+
+// Danger panel: deletes only what the signed-in person saved. Needs their password, then reloads the app.
+function clearPanel({ appName, appId, note, onCleared }) {
+  const all = appId === 'all', what = all ? 'every app' : appName;
+  const open = () => {
+    const pw = h('input', { type: 'password', autocomplete: 'current-password', required: '', 'aria-label': 'Your password' });
+    const err = h('p', { class: 'err', role: 'alert' }), go = h('button', { class: 'btn danger', type: 'submit' }, 'Clear data');
+    const d = dialog(all ? 'Clear all app data?' : `Clear ${appName} data?`,
+      h('p', { class: 'sub' }, `This permanently deletes everything you saved in ${what}. It cannot be undone. Other people's data is not touched.`),
+      note ? h('p', { class: 'fine' }, note) : null,
+      h('form', { onsubmit: async (e) => {
+        e.preventDefault(); err.textContent = ''; go.disabled = true;
+        try { await api('POST', all ? '/api/apps/clear-all-data' : `/api/apps/${appId}/clear-data`, { password: pw.value }); d.close(); toast('Data cleared'); setTimeout(onCleared, 400); }
+        catch (x) { err.textContent = x.message; go.disabled = false; }
+      } }, h('label', {}, 'Enter your password to confirm', pw), err, h('div', { class: 'actions row' }, closer('Cancel'), go)));
+    pw.focus();
+  };
+  return panel('Clear data',
+    h('p', { class: 'sub' }, all ? 'Delete everything you saved in all Universe apps (Orbit, Inventory and any others), so you can start fresh.' : `Delete everything you saved in ${appName} and start fresh.`),
+    note ? h('p', { class: 'fine', style: 'text-align:left;margin-top:.3rem' }, note) : null,
+    h('div', { class: 'row' }, h('button', { class: 'btn ghost danger small', onclick: open }, icon('trash'), all ? 'Clear all app data' : `Clear ${appName} data`)));
 }

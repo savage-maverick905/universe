@@ -4,7 +4,7 @@ import { accountPanels } from '/shared/account.js';
 
 export async function settingsView({ me, shell, onSignOut }) {
   const can = (p) => me.isAdmin || me.permissions.includes(p);
-  const kids = [h('h1', { class: 'page-title' }, 'Settings'), ...accountPanels({ session: me, appName: 'Universe', onSignOut })];
+  const kids = [h('h1', { class: 'page-title' }, 'Settings'), ...accountPanels({ session: me, appName: 'Universe', appId: 'all', note: 'Your account, password, Finance PIN and Nebula settings are kept.', onSignOut })];
   let roles = [];
   if (can('users.read')) { try { roles = (await api('GET', '/api/roles')).roles; } catch { /* roles are optional here */ } }
   if (can('config.manage')) kids.push(await signupPanel(roles));

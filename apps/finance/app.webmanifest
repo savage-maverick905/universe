@@ -9,6 +9,6 @@
   ],
   "shortcuts": [
     { "name": "Add transaction", "short_name": "Add", "url": "/apps/finance/#/add", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
-    { "name": "Ask Orbit", "short_name": "Assistant", "url": "/apps/finance/#/assistant", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] }
+    { "name": "Ask Nebula", "short_name": "Nebula", "url": "/apps/finance/#/assistant", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] }
   ]
 }

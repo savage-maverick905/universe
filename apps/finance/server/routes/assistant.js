@@ -1,4 +1,4 @@
-// Orbit's assistant. The AI can only (1) PROPOSE a draft and (2) ASK for a read-only figure. It cannot write, change a balance,
+// Nebula, Orbit's assistant. The AI can only (1) PROPOSE a draft and (2) ASK for a read-only figure. It cannot write, change a balance,
 // or see anything while Orbit is locked. Saving happens only in /confirm, after the user reviews the exact draft, through
 // the same validated, idempotent code the forms use.
 import { v, allowKeys } from '../../../../shared/validate.js';
@@ -88,7 +88,7 @@ export function assistantRoutes({ router, s, store, txn, guard, P }) {
       accounts: ctx.accounts.filter((a) => !a.archived).map((a) => ({ name: a.name, kind: a.kind, currency: a.currency })), incomeCategories: paths('income'), expenseCategories: paths('expense'),
       openDebts: ctx.debts.filter((d) => !d.archived && debtState(d, ctx.txns, ctx.today).status === 'open').map((d) => ({ person: d.counterparty, direction: d.direction })),
       currentDraft: draft?.status === 'open' ? Object.fromEntries(Object.entries(draft.fields).filter(([k]) => !k.endsWith('Id'))) : null };
-    return [`You are Orbit's assistant inside the personal finance app of ${user.displayName}. You help record transactions and answer questions about the user's recorded finances.`,
+    return [`You are Nebula, the assistant, working inside Orbit, the personal finance app of ${user.displayName}. You help record transactions and answer questions about the user's recorded finances.`,
       'RULES:',
       '- You cannot save anything. To record something, call propose_transaction with ONLY what the user said. The app shows the user a review card and only they can confirm it.',
       '- Never invent an amount, account, person, date or category. If something is missing or unclear, leave it out of the tool call; the app will ask the user.',

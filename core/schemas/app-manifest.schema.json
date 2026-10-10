@@ -26,6 +26,11 @@
       "description": "Collections/tables this app owns. Prefixed with the app id.",
       "items": { "type": "string" }
     },
+    "preserveOnClear": {
+      "type": "array",
+      "description": "Collections (from dataResources) that 'Clear data' must keep, such as security settings.",
+      "items": { "type": "string" }
+    },
     "widgets": {
       "type": "array",
       "items": {

@@ -106,8 +106,8 @@ function settingsPage() {
     h('div', { class: 'row', style: 'margin-top:0' },
       h('a', { class: 'btn ghost small', href: `${B}/export`, download: 'universe-inventory.json' }, icon('download'), 'Export JSON'),
       h('button', { class: 'btn ghost small', onclick: () => importInput.click() }, icon('upload'), 'Import JSON'), importInput));
-  const [profile, password, install, session] = accountPanels({ session: me, appName: 'Inventory', onSignOut: signOut });
-  frame('settings', h('div', { class: 'settings' }, h('h1', { class: 'page-title' }, 'Settings'), profile, password, data, install, session));
+  const [profile, password, install, session, clear] = accountPanels({ session: me, appName: 'Inventory', appId: 'inventory', note: 'Photos you uploaded may remain in your Cloudinary account.', onSignOut: signOut });
+  frame('settings', h('div', { class: 'settings' }, h('h1', { class: 'page-title' }, 'Settings'), profile, password, data, install, session, clear));
 }
 
 // ---------- view ----------
