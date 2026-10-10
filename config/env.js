@@ -27,6 +27,7 @@ export function loadConfig(env = process.env, overrides = {}) {
     ai: { defaultProvider: env.AI_DEFAULT_PROVIDER || 'groq', defaultModel: env.AI_DEFAULT_MODEL || '', sharedKeys: { groq: env.GROQ_API_KEY || '' },
       keyEncryptionSecret: env.KEY_ENCRYPTION_SECRET || '', groqBaseUrl: env.GROQ_BASE_URL || 'https://api.groq.com/openai/v1' },
     session: { ttlHours: int(env.SESSION_TTL_HOURS, 168) },
+    finance: { secret: env.FINANCE_SECRET || "" }, // optional; Orbit falls back to KEY_ENCRYPTION_SECRET
     // Public sign-up. New accounts get SIGNUP_ROLE and, unless SIGNUP_ALLOW_AI=true, no access to the shared AI key.
     signup: { enabled: env.SIGNUP_ENABLED !== 'false', roleId: env.SIGNUP_ROLE || 'resident', allowAi: env.SIGNUP_ALLOW_AI === 'true' },
     bootstrap: { email: env.BOOTSTRAP_ADMIN_EMAIL || '', password: env.BOOTSTRAP_ADMIN_PASSWORD || '' },

@@ -1,0 +1,14 @@
+{
+  "id": "/apps/finance/", "name": "Orbit — by Universe", "short_name": "Orbit", "description": "Your money, in orbit: accounts, budgets, debts and an AI assistant behind a PIN.",
+  "start_url": "/apps/finance/", "scope": "/apps/finance/", "display": "standalone", "background_color": "#0D0D0D", "theme_color": "#0D0D0D", "categories": ["finance", "productivity"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ],
+  "shortcuts": [
+    { "name": "Add transaction", "short_name": "Add", "url": "/apps/finance/#/add", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Ask Orbit", "short_name": "Assistant", "url": "/apps/finance/#/assistant", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] }
+  ]
+}

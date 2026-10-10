@@ -44,10 +44,10 @@ test('install lifecycle: available -> installed -> disabled -> uninstalled, sour
   assert.equal(await rawGet(t, '/apps/inventory/'), 200);
   await t.request('POST', '/api/apps/inventory/disable', { cookie: admin.cookie });
   assert.equal(await rawGet(t, '/apps/inventory/'), 404);
-  assert.equal((await t.request('GET', '/api/apps', { cookie: res.cookie })).json.apps[0].status, 'disabled');
+  assert.equal((await t.request('GET', '/api/apps', { cookie: res.cookie })).json.apps.find((a) => a.id === 'inventory').status, 'disabled');
   await t.request('POST', '/api/apps/inventory/enable', { cookie: admin.cookie });
   await t.request('POST', '/api/apps/inventory/uninstall', { cookie: admin.cookie });
-  assert.equal((await t.request('GET', '/api/apps', { cookie: res.cookie })).json.apps[0].status, 'available');
+  assert.equal((await t.request('GET', '/api/apps', { cookie: res.cookie })).json.apps.find((a) => a.id === 'inventory').status, 'available');
   assert.ok(existsSync(new URL('../apps/inventory/manifest.json', import.meta.url)));
   assert.equal((await t.request('POST', '/api/apps/inventory/enable', { cookie: admin.cookie })).status, 409);
   await t.close();

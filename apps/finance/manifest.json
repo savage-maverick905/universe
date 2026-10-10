@@ -1,0 +1,47 @@
+{
+  "manifestVersion": 1,
+  "id": "finance",
+  "name": "Orbit",
+  "version": "1.0.0",
+  "description": "Orbit \u2014 by Universe. Accounts, transactions, budgets, debts, goals and an AI assistant, behind a Finance PIN.",
+  "icon": "wallet",
+  "entry": "index.html",
+  "permissions": [
+    "finance.access",
+    "finance.export",
+    "finance.ai"
+  ],
+  "defaultRolePermissions": {
+    "admin": [
+      "finance.access",
+      "finance.export",
+      "finance.ai"
+    ],
+    "resident": [],
+    "guest": []
+  },
+  "dataResources": [
+    "finance_accounts",
+    "finance_categories",
+    "finance_transactions",
+    "finance_budgets",
+    "finance_debts",
+    "finance_goals",
+    "finance_recurring",
+    "finance_networth",
+    "finance_settings",
+    "finance_security",
+    "finance_idempotency",
+    "finance_audit",
+    "finance_chats"
+  ],
+  "widgets": [
+    {
+      "id": "summary",
+      "title": "Orbit",
+      "type": "stat",
+      "dataEndpoint": "/api/apps/finance/widget/summary",
+      "requiredPermission": "finance.access"
+    }
+  ]
+}

@@ -47,3 +47,18 @@ whois google.com
 dig google.com
 # Look at the raw request
 curl -I https://google.com
+cd ~
+git clone https://github.com/savage-maverick905/universe
+git rm -rf .
+unzip ~/storage/downloads/universe-code.zip -d .
+unzip ~/storage/downloads/universe-code.zip -d .ls ~/storage/downloads
+cd ls ~/storage
+cd ~/storage/downloads
+unzip universe-code.zip -d ~/REPO
+pkg update
+pkg install git unzip
+termux-setup-storage
+unzip ~/storage/downloads/universe-code.zip -d .
+git add -A
+git commit -m "Universe for Vercel"
+git push
