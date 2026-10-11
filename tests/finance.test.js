@@ -350,3 +350,14 @@ test('storage failure: a rejected write never reports success and leaves no half
   assert.equal((await u.call('GET', '/transactions')).json.total, 0); // the transaction row was rolled back
   const bal = Object.fromEntries((await u.call('GET', '/accounts')).json.accounts.map((x) => [x.name, x.balanceMinor])); assert.deepEqual(bal, { A: 100000, B: 0 });
 });
+
+test('AI: a stray "direction" on income/expense is ignored, so the draft still saves', async () => {
+  const script = [];
+  const { t, admin, unlockedUser } = await setup({ ai: () => script.shift() || { content: 'ok', toolCalls: [], usage: null } });
+  const u = await unlockedUser(admin), { mk } = await basics(u); await mk('Moniepoint', '0');
+  script.push(call('propose_transaction', { type: 'income', amount: '250,000', account: 'Moniepoint', category: 'Salary', direction: 'increase' }));
+  const r = await u.call('POST', '/assistant/chat', { message: 'Salary of 250k came into Moniepoint' }); assert.equal(r.json.draft.ready, true, r.text);
+  assert.ok(!r.json.draft.lines.some((l) => l[0] === 'Direction'));
+  const ok = await u.call('POST', `/assistant/drafts/${r.json.chatId}/confirm`, { version: r.json.draft.version, confirm: true }); assert.equal(ok.status, 200, ok.text);
+  assert.equal((await u.call('GET', '/transactions')).json.total, 1);
+});

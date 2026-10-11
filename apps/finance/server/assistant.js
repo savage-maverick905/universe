@@ -114,7 +114,7 @@ export function resolveDraft(fields, ctx) {
   const description = clean(f.description, 200);
   const payload = amountMinor && acct && date ? { type: type === 'lend' ? 'loan_out' : type === 'borrow' ? 'loan_in' : type === 'repay_received' ? 'repay_in' : type === 'repay_made' ? 'repay_out' : type,
     accountId: acct.id, amountMinor, date, ...(clean(f.time, 5) ? { time: clean(f.time, 5) } : {}), description, counterparty, notes: clean(f.notes, 1000),
-    tags: clean(f.tags, 200).split(/[\s,;#]+/).filter(Boolean).slice(0, 20), ...(category ? { categoryId: category.id } : {}), ...(to ? { toAccountId: to.id } : {}), ...(feeMinor ? { feeMinor } : {}), ...(f.toAmount && type === 'transfer' ? { toAmount: f.toAmount } : {}), ...(f.direction ? { direction: f.direction } : {}) } : null;
+    tags: clean(f.tags, 200).split(/[\s,;#]+/).filter(Boolean).slice(0, 20), ...(category ? { categoryId: category.id } : {}), ...(to ? { toAccountId: to.id } : {}), ...(feeMinor ? { feeMinor } : {}), ...(f.toAmount && type === 'transfer' ? { toAmount: f.toAmount } : {}), ...(type === 'adjustment' && f.direction ? { direction: f.direction } : {}) } : null;
   return finish(v, f, ctx, { acct, to, category, debt, amountMinor, date, payload, counterparty, description, feeMinor, cur });
 }
 
@@ -131,7 +131,7 @@ function finish(v, f, ctx, r = {}) {
   if (r.counterparty) lines.push([t === 'income' ? 'From' : ['lend', 'borrow', 'repay_received', 'repay_made'].includes(t) ? 'Person' : 'Payee', r.counterparty]);
   if (r.date) lines.push(['Date', r.date]);
   if (r.description) lines.push(['Description', r.description]);
-  if (f.direction) lines.push(['Direction', f.direction]);
+  if (t === 'adjustment' && f.direction) lines.push(['Direction', f.direction]);
   return { ...v, ready, lines, accounting: ACCOUNTING[t] || null, fields: f,
     resolved: { accountId: r.acct?.id ?? null, toAccountId: r.to?.id ?? null, categoryId: r.category?.id ?? null, debtId: r.debt?.id ?? null },
     amountText: r.amountMinor ? toDecimal(r.amountMinor, r.cur, custom) : '', payload: ready ? r.payload : null, debt: r.debt ?? null };

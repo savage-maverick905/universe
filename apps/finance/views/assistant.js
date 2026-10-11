@@ -43,7 +43,7 @@ export async function render({ frame, goto }) {
     const cancel = h('button', { class: 'btn ghost', type: 'button' }, 'Cancel');
     confirm.addEventListener('click', () => confirmDraft(confirm, err));
     cancel.addEventListener('click', async () => { try { await api('POST', `/assistant/drafts/${chatId}/cancel`, {}); draft = null; showDraft(); say('bot', 'Cancelled. Nothing was saved.'); } catch (e) { if (e.status !== 423) { err.textContent = e.message; toast(e.message); } } });
-    draftEl = h('div', { class: 'nrow card' }, h('div', { class: 'ncard draft' },
+    draftEl = h('div', { class: 'nrow cardrow' }, h('div', { class: 'ncard draft' },
       h('div', { class: 'ncard-head' }, h('h3', {}, 'Review draft'), h('span', { class: 'badge warn' }, 'Not saved')), lines,
       draft.assumed.length ? h('p', { class: 'fine' }, `Assumed: ${draft.assumed.join(', ')}. Change it if that is wrong.`) : null,
       draft.notes.map((n) => h('p', { class: 'fine' }, n)), draft.warnings.map((n) => h('p', { class: 'fine' }, n)),
@@ -66,7 +66,7 @@ export async function render({ frame, goto }) {
       // Do not just trust "saved": look the record up again so a silent failure can never look like success.
       if (r.result?.kind === 'transaction') { try { await api('GET', `/transactions/${r.result.id}`); } catch (e) { if (e.status === 404) throw new Error('The server said it saved, but I cannot find the transaction. Please check Activity before trying again.'); } }
       draft = null; draftEl?.remove(); draftEl = null;
-      draftEl = h('div', { class: 'nrow card' }, h('div', { class: 'ncard ok' }, h('div', { class: 'ncard-head' }, h('h3', {}, 'Saved'), h('span', { class: 'nok' }, icon('check'))),
+      draftEl = h('div', { class: 'nrow cardrow' }, h('div', { class: 'ncard ok' }, h('div', { class: 'ncard-head' }, h('h3', {}, 'Saved'), h('span', { class: 'nok' }, icon('check'))),
         r.summary.map((s) => h('p', { class: 'fine', style: 'text-align:left;margin:.15rem 0' }, s)),
         h('div', { class: 'acts' }, h('a', { class: 'btn ghost primary', href: '#/activity' }, 'View in Activity'))));
       thread.append(draftEl); draftEl = null; scroll(); toast('Saved');
@@ -96,7 +96,7 @@ export async function render({ frame, goto }) {
     try {
       const r = await api('POST', '/assistant/chat', { message: text, chatId });
       chatId = r.chatId; mem.set(chatId); draft = r.draft; typing.remove(); say('bot', r.reply);
-      if (r.facts) row('card', h('div', { class: 'ncard' }, h('h3', {}, 'Figures from your records'), r.facts.facts.map((x) => h('div', { class: 'line' }, h('span', {}, x.label), h('b', {}, x.value))), r.facts.caveats.map((c) => h('p', { class: 'fine' }, c)), h('p', { class: 'fine' }, 'Calculated by Orbit from recorded transactions, not by the AI.')));
+      if (r.facts) row('cardrow', h('div', { class: 'ncard' }, h('h3', {}, 'Figures from your records'), r.facts.facts.map((x) => h('div', { class: 'line' }, h('span', {}, x.label), h('b', {}, x.value))), r.facts.caveats.map((c) => h('p', { class: 'fine' }, c)), h('p', { class: 'fine' }, 'Calculated by Orbit from recorded transactions, not by the AI.')));
       showDraft();
     } catch (e) { typing.remove(); if (e.status !== 423) say('bot', e.message, true); }
     busy = false; refreshSend(); input.focus();
