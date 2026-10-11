@@ -44,8 +44,14 @@ export class ToolRegistry {
     for (const t of this.tools.values()) if (await this._allowed(user, t)) out.push({ name: t.name, description: t.description, parameters: t.parameters });
     return out;
   }
+  // Per-app rules (manifest `aiGuidance`) for every app whose tools this user's assistant can use right now.
+  async guidance(user) {
+    const ids = new Set();
+    for (const t of this.tools.values()) if (t.appId && (await this._allowed(user, t))) ids.add(t.appId);
+    return [...ids].map((id) => this.apps.get(id)?.aiGuidance).filter(Boolean);
+  }
   // The model only ever *requests* a call. This function decides whether it happens.
-  async execute(user, name, rawArgs, services) {
+  async execute(user, name, rawArgs, services, extra = {}) {
     const t = this.tools.get(name);
     if (!t || !(await this._allowed(user, t))) return { ok: false, error: `Tool "${name}" is not available` };
     let args;
@@ -54,11 +60,11 @@ export class ToolRegistry {
     if (problem) return { ok: false, error: `Invalid arguments: ${problem}` };
     try {
       if (t.access === 'write') await this.audit.record({ actorId: user.id, action: 'ai.tool.write', meta: { tool: name, args } });
-      let text = JSON.stringify(await t.handler(args, { user, services }));
+      let text = JSON.stringify(await t.handler(args, { user, services, ...extra }));
       if (text.length > MAX_RESULT_CHARS) text = JSON.stringify({ truncated: true, partial: text.slice(0, MAX_RESULT_CHARS) });
       return { ok: true, result: JSON.parse(text) };
     } catch (e) {
-      return { ok: false, error: e instanceof HttpError ? e.message : 'The tool failed' };
+      return { ok: false, error: e instanceof HttpError ? e.message : 'The tool failed', code: e instanceof HttpError ? e.code : undefined, appId: t.appId };
     }
   }
 }

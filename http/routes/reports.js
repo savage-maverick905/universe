@@ -12,7 +12,7 @@ export function reportRoutes(router, s) {
 
   router.add('GET', '/api/reports/available', async ({ user }) => ({ reports: await reports.available(user), periods: PERIODS }));
 
-  router.add('POST', '/api/reports/run', async ({ user, body }) => {
+  router.add('POST', '/api/reports/run', async ({ user, body, req, res, session }) => {
     const b = allowKeys(v.object(body), ['report', 'app', 'period', 'days', 'from', 'to', 'filters', 'save']);
     const f = allowKeys(v.object(b.filters ?? {}, 'filters'), ['category', 'status'], 'filters');
     const filters = {};
@@ -20,9 +20,11 @@ export function reportRoutes(router, s) {
     if (f.status != null && f.status !== '') filters.status = v.string(f.status, 'filters.status', { max: 40 });
     const range = resolveRange({ period: b.period, from: b.from, to: b.to, days: b.days });
     const result = await reports.run(user, { report: b.report == null ? 'all' : v.string(b.report, 'report', { max: 80 }),
-      appId: b.app == null ? null : v.id(b.app, 'app'), range, filters, services: s });
+      appId: b.app == null ? null : v.id(b.app, 'app'), range, filters, services: s, request: { req, res, session } });
     if (b.save === true) {
-      const doc = await saved.insert({ id: newId('rep'), userId: user.id, title: result.title, request: { report: b.report ?? 'all', period: b.period }, result });
+      // Sections protected by an app's PIN (marked sensitive) are shown now but never stored.
+      const stored = { ...result, sections: result.sections.map((x) => (x.sensitive && !x.gate ? { heading: x.heading, text: 'Not saved: this section is protected by your Finance PIN.', source: x.source } : x)) };
+      const doc = await saved.insert({ id: newId('rep'), userId: user.id, title: result.title, request: { report: b.report ?? 'all', period: b.period }, result: stored });
       const mine = await saved.find({ where: { userId: user.id }, orderBy: { field: 'createdAt', dir: 'desc' }, limit: 1000 });
       for (const old of mine.slice(MAX_SAVED)) await saved.delete(old.id); // keep the newest 50
       return reply(200, { ...result, savedId: doc.id });

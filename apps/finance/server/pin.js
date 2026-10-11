@@ -20,6 +20,10 @@ import { parseCookies, serializeCookie } from '../../../http/http.js';
 const scryptAsync = promisify(scrypt);
 const N = 32768, R = 8, P = 1, KEYLEN = 64, MAXMEM = 128 * N * R * 2;
 export const COOKIE = 'orbit_unlock';
+// Two unlock scopes. 'orbit' is the Orbit app itself. 'hub' is Universe (Nebula, home stats, reports): a separate cookie, so
+// unlocking one never silently unlocks the other. Both die together when you lock or change the PIN (revokedBefore).
+export const HUB_COOKIE = 'orbit_hub';
+const SCOPES = { orbit: { name: COOKIE, path: '/api/apps/finance', maxHours: Infinity }, hub: { name: HUB_COOKIE, path: '/api', maxHours: 4 } };
 export const PIN_RE = /^\d{6,12}$/;
 export const DEFAULTS = { idleMinutes: 5, maxSessionHours: 12, lockWhenHiddenSec: 0 };
 
@@ -138,25 +142,27 @@ export class PinService {
     if (got.length !== want.length || !timingSafeEqual(got, want)) return null;
     try { return JSON.parse(Buffer.from(body, 'base64url').toString('utf8')); } catch { return null; }
   }
-  cookie(payload, maxAgeSec) { return serializeCookie(COOKIE, this.sign(payload), { maxAge: maxAgeSec, httpOnly: true, secure: this.prod, sameSite: 'Strict', path: '/api/apps/finance' }); }
-  clearCookie() { return serializeCookie(COOKIE, '', { maxAge: 0, httpOnly: true, secure: this.prod, sameSite: 'Strict', path: '/api/apps/finance' }); }
-  issue(res, user, session, d) {
+  cookie(payload, maxAgeSec, scope = 'orbit') { const c = SCOPES[scope]; return serializeCookie(c.name, this.sign(payload), { maxAge: maxAgeSec, httpOnly: true, secure: this.prod, sameSite: 'Strict', path: c.path }); }
+  clearCookie(scope = 'orbit') { const c = SCOPES[scope]; return serializeCookie(c.name, '', { maxAge: 0, httpOnly: true, secure: this.prod, sameSite: 'Strict', path: c.path }); }
+  clearAll() { return [this.clearCookie('orbit'), this.clearCookie('hub')]; }
+  issue(res, user, session, d, scope = 'orbit') {
     const now = Math.max(Date.now(), (d.revokedBefore || 0) + 1); // always strictly after a revocation
-    res.setHeader('Set-Cookie', this.cookie({ v: 1, u: user.id, s: session.id, iat: now, seen: now }, Math.floor((d.maxSessionHours ?? DEFAULTS.maxSessionHours) * 3600)));
+    const hours = Math.min(d.maxSessionHours ?? DEFAULTS.maxSessionHours, SCOPES[scope].maxHours);
+    res.setHeader('Set-Cookie', this.cookie({ v: 1, k: scope, u: user.id, s: session.id, iat: now, seen: now }, Math.floor(hours * 3600), scope));
   }
   // Called on EVERY sensitive request. Returns the security doc, or throws 423 (locked).
-  async authorize(req, res, user, session) {
+  async authorize(req, res, user, session, scope = 'orbit') {
     const locked = (why) => new HttpError(423, 'Orbit is locked. Enter your Finance PIN.', 'locked', { 'X-Orbit-Reason': why });
     const d = await this.get(user.id);
     if (!d?.pinHash) throw new HttpError(423, 'Create a Finance PIN to use Orbit.', 'no_pin');
-    const tok = this.unsign(parseCookies(req.headers.cookie)[COOKIE]);
-    if (!tok || tok.v !== 1) throw locked('no_session');
-    const now = Date.now(), idle = (d.idleMinutes ?? DEFAULTS.idleMinutes) * 60_000, max = (d.maxSessionHours ?? DEFAULTS.maxSessionHours) * 3600_000;
+    const tok = this.unsign(parseCookies(req.headers.cookie)[SCOPES[scope].name]);
+    if (!tok || tok.v !== 1 || (tok.k || 'orbit') !== scope) throw locked('no_session'); // a token only works in the scope it was issued for
+    const now = Date.now(), idle = (d.idleMinutes ?? DEFAULTS.idleMinutes) * 60_000, max = Math.min(d.maxSessionHours ?? DEFAULTS.maxSessionHours, SCOPES[scope].maxHours) * 3600_000;
     if (tok.u !== user.id || tok.s !== session.id) throw locked('wrong_session');
     if (!(tok.iat > (d.revokedBefore || 0)) || tok.iat < (d.pinSetAt || 0)) throw locked('revoked');
     if (now - tok.seen > idle) throw locked('idle');
     if (now - tok.iat > max) throw locked('expired');
-    if (now - tok.seen > 15_000) res.setHeader('Set-Cookie', this.cookie({ ...tok, seen: now }, Math.max(60, Math.floor((max - (now - tok.iat)) / 1000)))); // slide the idle window; no database write
+    if (now - tok.seen > 15_000) res.setHeader('Set-Cookie', this.cookie({ ...tok, seen: now }, Math.max(60, Math.floor((max - (now - tok.iat)) / 1000)), scope)); // slide the idle window; no database write
     return d;
   }
 }

@@ -74,14 +74,14 @@ export function aiRoutes(router, s) {
     return { ok: true };
   });
 
-  router.add('POST', '/api/ai/chat', async ({ user, body }) => {
+  router.add('POST', '/api/ai/chat', async ({ user, body, req, res, session }) => {
     await use(user);
     const rl = s.limiters.ai.hit(user.id); if (!rl.allowed) throw tooMany(rl.retryAfterSec);
     const b = allowKeys(v.object(body), ['conversationId', 'message']);
     const message = v.string(b.message, 'message', { min: 1, max: 4000 });
     const conversationId = b.conversationId == null ? null : v.anyId(b.conversationId, 'conversationId');
-    const r = await o.chat(user, { conversationId, message });
-    return { conversation: { id: r.conversation.id, title: r.conversation.title }, reply: { id: r.reply.id, content: r.reply.content, provider: r.reply.provider, model: r.reply.model }, toolsUsed: r.toolsUsed };
+    const r = await o.chat(user, { conversationId, message, request: { req, res, session } });
+    return { conversation: { id: r.conversation.id, title: r.conversation.title }, reply: { id: r.reply.id, content: r.reply.content, provider: r.reply.provider, model: r.reply.model }, toolsUsed: r.toolsUsed, gates: r.gates };
   });
 
   // ---- admin defaults ----

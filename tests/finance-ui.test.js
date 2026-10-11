@@ -42,7 +42,7 @@ test('every Orbit screen renders against the real API without runtime errors', a
   assert.match(await run('home'), /Total balance[\s\S]*₦7,000\.00/); assert.match(await run('home'), /Rice|Recent/);
   assert.match(await run('activity'), /Activity/); assert.match(await run('accounts'), /OPay[\s\S]*PalmPay/); assert.match(await run('categories'), /Groceries/);
   for (const tab of ['budgets', 'debts', 'goals', 'bills', 'networth']) { await run('plan', { rest: [tab] }); await new Promise((r) => setImmediate(r)); await new Promise((r) => setImmediate(r)); }
-  assert.match(await run('reports'), /Reports/); assert.match(await run('assistant'), /Nebula/); assert.match(await run('settings', { page: 'settings' }), /Settings/); assert.match(await run('settings', { page: 'more' }), /Accounts/);
+  assert.match(await run('reports'), /Reports/); assert.match(await run('settings', { page: 'settings' }), /Settings/); assert.match(await run('settings', { page: 'more' }), /Accounts/);
   await run('accounts', { rest: [a.id] });
   globalThis.fetch = realFetch;
 });

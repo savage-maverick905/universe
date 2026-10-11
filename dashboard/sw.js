@@ -1,6 +1,6 @@
-self.UNIVERSE_SW = { prefix: 'universe-dashboard', version: 'v3', shell: [
+self.UNIVERSE_SW = { prefix: 'universe-dashboard', version: 'v4', shell: [
   '/dashboard/', '/dashboard/app.js', '/dashboard/assistant.js', '/dashboard/reports.js', '/dashboard/settings.js', '/dashboard/styles.css',
-  '/shared/theme.css', '/shared/icons.js', '/shared/ui.js', '/shared/auth.js', '/shared/account.js', '/shared/pwa.js', '/shared/widgets.js',
+  '/shared/theme.css', '/shared/icons.js', '/shared/ui.js', '/shared/auth.js', '/shared/account.js', '/shared/pwa.js', '/shared/widgets.js', '/shared/pin-gate.js',
   '/dashboard/icons/icon-192.png', '/dashboard/icons/icon.svg',
 ] };
 importScripts('/shared/sw-core.js');

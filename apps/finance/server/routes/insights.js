@@ -72,14 +72,5 @@ export function insightRoutes({ router, s, store, pins, guard, P }) {
     return { debts: debts.map((d) => ({ ...strip(d), ...debtState(d, txns, today) })) };
   }));
 
-  // Dashboard widget. It lives outside the PIN check on purpose so the home page can say "Locked"; it never returns money while locked
-  // and, even when unlocked, shows nothing unless the user turned the widget on in Orbit settings.
-  router.add('GET', `${P}/widget/summary`, guard('finance.access', async ({ user, req, res, session }) => {
-    try { await pins.authorize(req, res, user, session); } catch (e) { if (e instanceof HttpError && e.status === 423) return { stats: [{ label: 'Orbit', value: 'Locked' }] }; throw e; }
-    const st = await col.settings.get(user.id); if (!st.showOnDashboard) return { stats: [{ label: 'Orbit', value: 'Hidden' }] };
-    const [accounts, txns] = await Promise.all([all(col.accounts, user.id), all(col.txns, user.id)]), bal = accountBalances(accounts, txns), cur = st.currency;
-    const total = accounts.filter((a) => !a.archived && a.currency === cur).reduce((x, a) => x + (bal.get(a.id) || 0), 0);
-    const m = summarize(txns, { range: namedRange('this_month', todayIn(st.timezone)) })[cur] || { income: 0, netExpense: 0 };
-    return { stats: [{ label: 'Balance', value: formatMoney(total, cur, st.customCurrencies) }, { label: 'Spent this month', value: formatMoney(m.netExpense, cur, st.customCurrencies) }] };
-  }, { open: true, setup: false }));
+  // The Universe home-screen widget now lives in hub.js (it needs the Universe unlock).
 }

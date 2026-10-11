@@ -13,9 +13,9 @@ registerServiceWorker('/apps/finance/sw.js', '/apps/finance/');
 const brand = { name: 'Orbit', blurb: 'by Universe. Your money, in orbit.', mark: () => h('div', { class: 'mark orbit', 'aria-hidden': 'true' }, icon('wallet')) };
 
 const state = { me: null, unlocked: false, session: null, hiddenAt: 0 };
-const NAV = [['#/', 'Home', 'home', 'home'], ['#/activity', 'Activity', 'activity', 'swap'], ['#/assistant', 'Nebula', 'assistant', 'sparkle'], ['#/plan', 'Plan', 'plan', 'target'], ['#/more', 'More', 'more', 'more']];
+const NAV = [['#/', 'Home', 'home', 'home'], ['#/activity', 'Activity', 'activity', 'swap'], ['#/reports', 'Reports', 'reports', 'chart'], ['#/plan', 'Plan', 'plan', 'target'], ['#/more', 'More', 'more', 'more']];
 const ROUTES = {}; // filled lazily so a locked app never even downloads the finance screens
-const load = { home: () => import('./views/home.js'), activity: () => import('./views/activity.js'), assistant: () => import('./views/assistant.js'), plan: () => import('./views/plan.js'),
+const load = { home: () => import('./views/home.js'), activity: () => import('./views/activity.js'), plan: () => import('./views/plan.js'),
   more: () => import('./views/settings.js'), accounts: () => import('./views/accounts.js'), categories: () => import('./views/categories.js'), reports: () => import('./views/reports.js'), settings: () => import('./views/settings.js') };
 
 export function frame(page, ...content) {
@@ -45,7 +45,7 @@ function showLock(mode, notice = '') {
 async function route() {
   if (!state.unlocked) return;
   const [path, ...rest] = (location.hash || '#/').replace(/^#\/?/, '').split('/'), page = path || 'home';
-  const key = ({ '': 'home', home: 'home', activity: 'activity', assistant: 'assistant', plan: 'plan', more: 'more', accounts: 'accounts', categories: 'categories', reports: 'reports', settings: 'settings', add: 'activity' })[page] || 'home';
+  const key = ({ '': 'home', home: 'home', activity: 'activity', plan: 'plan', more: 'more', accounts: 'accounts', categories: 'categories', reports: 'reports', settings: 'settings', add: 'activity' })[page] || 'home';
   try {
     const mod = await load[key]();
     if (page === 'add') { history.replaceState(null, '', '#/activity'); await mod.render({ frame, goto, state, rest: [], openAdd: true }); return; }

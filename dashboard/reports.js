@@ -1,5 +1,6 @@
 // Reports screen: pick a report and period, run it, optionally save it. DOM built with textContent only.
 import { icon } from '/shared/icons.js';
+import { askFinancePin, unlockOrbit } from '/shared/pin-gate.js';
 export async function reportsView({ h, api, toast, shell }) {
   const avail = await api('GET', '/api/reports/available');
   const saved = (await api('GET', '/api/reports/saved')).reports;
@@ -16,6 +17,7 @@ export async function reportsView({ h, api, toast, shell }) {
   function render(r) {
     out.replaceChildren(h('h2', {}, r.title), h('p', { class: 'sub' }, `${r.range.label} (${r.range.from} to ${r.range.to})`),
       ...r.sections.map((s) => h('article', { class: 'card', style: 'margin-top:1rem' }, h('h3', {}, s.heading), s.text ? h('p', {}, s.text) : null,
+        s.gate === 'finance' ? h('button', { class: 'btn small', type: 'button', onclick: async () => { if (await askFinancePin({ title: 'Unlock Orbit', note: 'Adds your Orbit figures to this report. They are shown now but never saved with the report.', action: unlockOrbit(api) })) run(false); } }, icon('lock'), 'Unlock with PIN') : null,
         s.stats ? h('div', { class: 'stats' }, s.stats.map((x) => h('div', { class: 'stat' }, h('b', {}, String(x.value)), h('span', {}, x.label)))) : null,
         s.table ? (s.table.rows.length ? h('div', { style: 'overflow-x:auto;margin-top:.7rem' }, h('table', { class: 'tbl' }, h('thead', {}, h('tr', {}, s.table.columns.map((c) => h('th', {}, c)))),
           h('tbody', {}, s.table.rows.map((row) => h('tr', {}, row.map((c) => h('td', {}, String(c)))))))) : h('p', { class: 'muted' }, 'Nothing to show.')) : null)));

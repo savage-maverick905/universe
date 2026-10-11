@@ -317,10 +317,10 @@ test('app integration: installs from the registry, hides until installed, widget
   assert.ok(!(await t.request('GET', '/api/ai/conversations', { cookie: admin.cookie })).text.includes('finance')); // Nebula never sees Orbit chats
 });
 
-test('widget: only shows figures when unlocked AND the user switched it on', async () => {
-  const { unlockedUser, admin } = await setup(); const u = await unlockedUser(admin), { mk } = await basics(u); await mk('Cash', '1,234');
-  assert.deepEqual((await u.call('GET', '/widget/summary')).json.stats, [{ label: 'Orbit', value: 'Hidden' }]);
-  await u.call('PATCH', '/settings', { showOnDashboard: true }); assert.equal((await u.call('GET', '/widget/summary')).json.stats[0].value, '₦1,234.00');
+test('widget: shows Locked until unlocked, then real figures (no hidden switch any more)', async () => {
+  const { unlockedUser, admin, t } = await setup(); const u = await unlockedUser(admin), { mk } = await basics(u); await mk('Cash', '1,234');
+  assert.equal((await u.call('GET', '/widget/summary')).json.stats[0].value, '₦1,234.00');
+  const locked = await t.request('GET', `${B}/widget/summary`, { cookie: admin.cookie }); assert.deepEqual(locked.json.stats, [{ label: 'Orbit', value: 'Locked' }]); assert.equal(locked.json.gate, 'finance');
 });
 
 test('recurring: due items are posted once per occurrence, however many times it is tapped', async () => {

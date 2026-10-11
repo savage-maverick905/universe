@@ -9,7 +9,7 @@ const tile = (href, ic, t, s) => h('a', { class: 'tile', href }, icon(ic), h('sp
 export async function render({ frame, goto, state, page }) {
   if (page === 'settings') return settings({ frame, goto, state });
   frame('more', h('div', { class: 'page-head' }, h('h1', {}, 'More')), h('div', { class: 'tiles' },
-    tile('#/accounts', 'wallet', 'Accounts', 'Cash, banks, mobile money'), tile('#/categories', 'folder', 'Categories', 'Nested, editable'), tile('#/reports', 'chart', 'Reports', 'Totals, trends, export'), tile('#/settings', 'settings', 'Settings', 'PIN, lock, import, backup')));
+    tile('#/accounts', 'wallet', 'Accounts', 'Cash, banks, mobile money'), tile('#/categories', 'folder', 'Categories', 'Nested, editable'), h('a', { class: 'tile', href: '/dashboard/#/assistant' }, icon('sparkle'), h('span', {}, h('b', {}, 'Nebula'), h('small', {}, 'Ask about your money in Universe'))), tile('#/settings', 'settings', 'Settings', 'PIN, lock, import, backup')));
 }
 const num = (v) => h('input', { type: 'number', min: '0', value: String(v) });
 
@@ -23,11 +23,10 @@ async function settings({ frame, goto, state }) {
   const lockPanel = h('section', { class: 'panel' }, h('h2', {}, 'Auto-lock'), h('p', { class: 'sub' }, 'The server enforces these limits on every request, so a stolen tab cannot keep reading your data.'),
     field('Lock after this many idle minutes (1-60)', idle), field('Lock when I leave the app for this many seconds (0 = immediately)', away),
     h('div', { class: 'row' }, h('button', { class: 'btn small', onclick: async () => { try { const r = await api('PUT', '/lock-settings', { idleMinutes: Number(idle.value), lockWhenHiddenSec: Number(away.value) }); state.session = { ...state.session, ...r }; toast('Saved'); } catch (x) { toast(x.message); } } }, 'Save'), h('button', { class: 'btn small ghost', onclick: () => document.querySelector('.me .btn')?.click() }, icon('lock'), 'Lock now')));
-  const currency = select(S.meta.currencies.map((c) => ({ value: c.code, label: `${c.code} ${c.symbol}` })), set.currency), tz = h('input', { type: 'text', value: set.timezone, list: 'tzs' }), wk = select([{ value: '1', label: 'Monday' }, { value: '0', label: 'Sunday' }, { value: '6', label: 'Saturday' }], String(set.weekStartsOn)), show = h('input', { type: 'checkbox' });
-  show.checked = !!set.showOnDashboard;
+  const currency = select(S.meta.currencies.map((c) => ({ value: c.code, label: `${c.code} ${c.symbol}` })), set.currency), tz = h('input', { type: 'text', value: set.timezone, list: 'tzs' }), wk = select([{ value: '1', label: 'Monday' }, { value: '0', label: 'Sunday' }, { value: '6', label: 'Saturday' }], String(set.weekStartsOn));
   const prefs = h('section', { class: 'panel' }, h('h2', {}, 'Preferences'), h('datalist', { id: 'tzs' }, ['Africa/Lagos', 'Africa/Accra', 'Africa/Nairobi', 'Europe/London', 'America/New_York'].map((z) => h('option', { value: z }))),
-    field('Main currency', currency), field('Time zone', tz), field('Week starts on', wk), h('label', { class: 'check' }, show, 'Show balances on the Universe home widget (hidden by default)'),
-    h('div', { class: 'row' }, h('button', { class: 'btn small', onclick: async () => { try { await api('PATCH', '/settings', { currency: currency.value, timezone: tz.value, weekStartsOn: Number(wk.value), showOnDashboard: show.checked }); await loadBase(); toast('Saved'); } catch (x) { toast(x.message); } } }, 'Save')));
+    field('Main currency', currency), field('Time zone', tz), field('Week starts on', wk),
+    h('div', { class: 'row' }, h('button', { class: 'btn small', onclick: async () => { try { await api('PATCH', '/settings', { currency: currency.value, timezone: tz.value, weekStartsOn: Number(wk.value) }); await loadBase(); toast('Saved'); } catch (x) { toast(x.message); } } }, 'Save')));
   const data = h('section', { class: 'panel' }, h('h2', {}, 'Import & backup'), h('p', { class: 'sub' }, 'Your data is stored in your private GitHub repository. Every save is also a commit there, so history exists even beyond these exports.'),
     h('div', { class: 'row' }, h('button', { class: 'btn small', onclick: importSheet }, icon('upload'), 'Import CSV'), h('button', { class: 'btn small ghost', onclick: backup }, icon('download'), 'Download backup'), h('button', { class: 'btn small ghost', onclick: restore }, 'Restore backup')));
   frame('more', h('div', { class: 'page-head' }, h('h1', {}, 'Settings')), h('div', { class: 'settings' }, pinPanel, lockPanel, prefs, data, ...accountPanels({ session: state.me, appName: 'Orbit', appId: 'finance', note: 'Your Finance PIN is kept.', onSignOut: () => location.reload() })), h('a', { href: '#/more' }, '← Back'));

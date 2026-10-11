@@ -36,7 +36,7 @@ export function securityRoutes({ router, s, store, pins, guard, ipLimit, tooMany
 
   // Locking works even with an expired cookie. It revokes every device's unlock, not just this one.
   router.add('POST', `${P}/lock`, use(async ({ user, res }) => {
-    await pins.lockEverywhere(user.id); res.setHeader('Set-Cookie', pins.clearCookie());
+    await pins.lockEverywhere(user.id); res.setHeader('Set-Cookie', pins.clearAll());
     return { ok: true, unlocked: false };
   }, { open: true, setup: false }));
 

@@ -48,15 +48,15 @@ export class ReportRegistry {
     return out;
   }
   // report: "all" (everything this user may run, optionally limited to one app) or a specific key.
-  async run(user, { report = 'all', appId = null, range, filters = {}, services }) {
+  async run(user, { report = 'all', appId = null, range, filters = {}, services, request = null }) {
     const avail = await this.available(user);
     let chosen = report === 'all' ? avail.filter((r) => !appId || r.appId === appId) : avail.filter((r) => r.key === report);
     if (report !== 'all' && !chosen.length) throw notFound('That report is not available');
     if (report === 'all' && appId && !chosen.length) throw notFound('No report is available for that app');
     const sections = [];
     for (const r of chosen) {
-      const out = await this.providers.get(r.key).handler({ user, range, filters, services });
-      for (const s of out.sections) sections.push({ ...s, heading: chosen.length > 1 ? `${r.appName}: ${s.heading}` : s.heading, source: r.key });
+      const out = await this.providers.get(r.key).handler({ user, range, filters, services, request });
+      for (const s of out.sections) sections.push({ ...s, heading: chosen.length > 1 ? `${r.appName}: ${s.heading}` : s.heading, source: r.key, ...(this.providers.get(r.key).sensitive ? { sensitive: true } : {}) });
     }
     if (!sections.length) sections.push({ heading: 'Nothing to report', text: 'No installed app has a report you are allowed to run.' });
     const title = chosen.length === 1 ? chosen[0].title : appId ? `${chosen[0]?.appName ?? ''} report` : 'Ecosystem report';

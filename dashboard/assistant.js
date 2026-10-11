@@ -1,5 +1,7 @@
 // Assistant screen: chat, conversation list, settings. DOM built with textContent only.
 import { icon } from '/shared/icons.js';
+import { askFinancePin, unlockOrbit } from '/shared/pin-gate.js';
+const FIN = '/api/apps/finance';
 export async function assistantView({ h, api, toast, shell, me }) {
   if (!me.permissions.includes('ai.use')) return shell('assistant', h('div', { class: 'card' }, h('p', {}, 'The assistant is not enabled for your account. Ask an admin.')));
   let profile = (await api('GET', '/api/ai/profile')).profile;
@@ -17,28 +19,56 @@ export async function assistantView({ h, api, toast, shell, me }) {
     return h('div', { class: `msg ${m.role}` }, m.content);
   };
   const ask = (text) => { input.value = text; submit(); };
+  const money = me.permissions.includes('finance.ai');
+  let lastText = '';
+
+  // Orbit sits behind the Finance PIN. Nebula asks for it here (never in the chat text), then carries on.
+  function gateCard(gates, onUnlocked) {
+    const noPin = gates.some((g) => g.code === 'no_pin');
+    const card = h('div', { class: 'gate-card' }, icon('lock'), h('p', {}, noPin ? 'Create a Finance PIN in Orbit first.' : 'Orbit is locked.'),
+      noPin ? h('a', { class: 'btn small', href: '/apps/finance/' }, 'Open Orbit')
+        : h('button', { class: 'btn small', type: 'button', onclick: async () => { if (await askFinancePin({ title: 'Unlock Orbit for Nebula', note: `${profile.name} can then read your Orbit figures for a few minutes. Your PIN is checked by the server and is never stored in the chat.`, action: unlockOrbit(api) })) { card.remove(); onUnlocked(); } } }, 'Enter Finance PIN'));
+    log.append(card); log.scrollTop = log.scrollHeight;
+  }
+  // The draft Nebula prepared. Saving needs the PIN typed again, every time.
+  async function showDraft(id) {
+    let d; try { d = (await api('GET', `${FIN}/hub/draft/${id}`)).draft; } catch (x) { if (x.status === 423) gateCard([{ code: x.code }], () => showDraft(id)); return; }
+    if (!d) return;
+    const need = [...d.errors, ...d.missing.map((m) => m.question), ...d.ambiguous.map((a) => `${a.question} ${a.options.join(' / ')}`)];
+    const card = h('div', { class: 'draft-card' }, h('div', { class: 'row' }, h('h3', {}, 'Review draft'), h('span', { class: 'badge warn' }, 'Not saved')),
+      d.lines.map(([k, v]) => h('div', { class: 'line' }, h('span', {}, k), h('b', {}, v))), d.accounting ? h('p', { class: 'fine' }, d.accounting) : null,
+      need.length ? h('p', { class: 'err' }, `Still needed: ${need.join(' ')}`) : null,
+      h('div', { class: 'row actions' },
+        h('button', { class: 'btn', type: 'button', disabled: d.ready ? null : '', onclick: async () => {
+          const r = await askFinancePin({ title: 'Confirm with your Finance PIN', note: 'This saves the transaction to Orbit.', label: 'Confirm and save', action: (pin) => api('POST', `${FIN}/hub/draft/${id}/confirm`, { pin, version: d.version }) });
+          if (r) { card.replaceWith(h('div', { class: 'draft-card ok' }, h('div', { class: 'row' }, h('h3', {}, 'Saved'), icon('check')), r.summary.map((t) => h('p', { class: 'fine' }, t)), h('a', { class: 'btn ghost small', href: '/apps/finance/#/activity' }, 'View in Orbit'))); toast('Saved to Orbit'); }
+        } }, icon('check'), 'Confirm with PIN'),
+        h('button', { class: 'btn ghost', type: 'button', onclick: async () => { try { await api('POST', `${FIN}/hub/draft/${id}/cancel`, {}); card.remove(); toast('Draft cancelled'); } catch (x) { toast(x.message); } } }, 'Cancel')));
+    log.append(card); log.scrollTop = log.scrollHeight;
+  }
   const emptyState = () => h('div', { class: 'chat-empty' }, h('div', { class: 'orb' }, icon('sparkle')), h('h2', {}, `Say hello to ${profile.name}`), h('p', {}, 'Ask about your apps, or just think out loud.'),
-    h('div', { class: 'chips' }, ['What can you help me with?', 'Summarise my inventory'].map((t) => h('button', { type: 'button', class: 'chip', onclick: () => ask(t) }, t))));
+    h('div', { class: 'chips' }, ['What can you help me with?', 'Summarise my inventory', ...(money ? ['How much did I spend this month?', 'I spent ₦3,500 on data from OPay'] : [])].map((t) => h('button', { type: 'button', class: 'chip', onclick: () => ask(t) }, t))));
   const grow = () => { input.style.height = 'auto'; input.style.height = `${Math.min(input.scrollHeight, 128)}px`; };
   const draw = (messages) => { log.replaceChildren(...(messages.length ? messages.map(bubble) : [emptyState()])); log.scrollTop = log.scrollHeight; };
   const drawList = () => select.replaceChildren(h('option', { value: '' }, 'New chat'), ...convos.map((c) => h('option', { value: c.id, selected: c.id === currentId ? '' : null }, c.title)));
   async function openConvo(id) {
     currentId = id; status.textContent = '';
-    draw(id ? (await api('GET', `/api/ai/conversations/${id}`)).messages : []);
-    drawList();
+    const messages = id ? (await api('GET', `/api/ai/conversations/${id}`)).messages : [];
+    draw(messages); drawList();
+    if (id && money && messages.some((m) => m.toolCalls?.some((c) => c.name === 'finance.propose'))) await showDraft(id); // a draft still waiting for review comes back
   }
   async function refreshList() { convos = (await api('GET', '/api/ai/conversations')).conversations; drawList(); }
-  async function submit() {
-    const message = input.value.trim(); if (!message || send.disabled) return;
-    send.disabled = true; status.textContent = '';
-    input.value = ''; grow(); // clear the box straight away; the message now lives in the chat
+  async function submit(retryText) {
+    const message = retryText ?? input.value.trim(); if (!message || send.disabled) return;
+    send.disabled = true; status.textContent = ''; lastText = message;
+    if (retryText === undefined) { input.value = ''; grow(); } // clear the box straight away; the message now lives in the chat
     log.querySelector('.chat-empty')?.remove();
-    log.append(h('div', { class: 'msg user' }, message), h('div', { class: 'msg assistant typing', id: 'thinking', 'aria-label': `${profile.name} is thinking` }, h('i'), h('i'), h('i'))); log.scrollTop = log.scrollHeight;
-    try { const r = await api('POST', '/api/ai/chat', { message, conversationId: currentId }); await openConvo(r.conversation.id); await refreshList(); }
+    log.append(...(retryText === undefined ? [h('div', { class: 'msg user' }, message)] : []), h('div', { class: 'msg assistant typing', id: 'thinking', 'aria-label': `${profile.name} is thinking` }, h('i'), h('i'), h('i'))); log.scrollTop = log.scrollHeight;
+    try { const r = await api('POST', '/api/ai/chat', { message, conversationId: currentId }); await openConvo(r.conversation.id); await refreshList(); if (r.gates?.length) gateCard(r.gates, () => submit(lastText)); }
     catch (x) { status.textContent = x.message; document.getElementById('thinking')?.remove(); if (!input.value) { input.value = message; grow(); } } // put the text back so nothing is lost
     send.disabled = false;
   }
-  send.addEventListener('click', submit);
+  send.addEventListener('click', () => submit());
   input.addEventListener('input', grow);
   input.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit(); } });
 

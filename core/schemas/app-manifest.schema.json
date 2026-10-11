@@ -26,6 +26,7 @@
       "description": "Collections/tables this app owns. Prefixed with the app id.",
       "items": { "type": "string" }
     },
+    "aiGuidance": { "type": "string", "description": "Rules for the assistant that apply whenever it can use this app's tools." },
     "preserveOnClear": {
       "type": "array",
       "description": "Collections (from dataResources) that 'Clear data' must keep, such as security settings.",

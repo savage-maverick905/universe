@@ -84,3 +84,8 @@ body[data-page=assistant] .main { padding-bottom: calc(4.5rem + var(--safe-b)); 
   .chat { max-width: 44rem; margin: 0 auto; }
   .chat-log { flex: none; min-height: 40vh; max-height: calc(100dvh - 15rem); }
 }
+
+/* Orbit through Nebula: PIN prompt card and the draft awaiting review */
+.gate-card { align-self: center; display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; justify-content: center; padding: .6rem .9rem; font-size: .875rem; color: var(--dim); background: var(--card); border: 1px dashed var(--line-strong); border-radius: 14px; } .gate-card p { margin: 0; } .gate-card .icon { width: 1rem; height: 1rem; }
+.draft-card { align-self: flex-start; width: min(100%, 26rem); padding: .9rem 1rem; background: var(--card); border: 1px solid rgba(237,102,39,.55); border-radius: 18px; } .draft-card.ok { border-color: rgba(61,214,140,.5); } .draft-card h3 { margin: 0; flex: 1; font-size: .95rem; }
+.draft-card .line { display: flex; justify-content: space-between; gap: 1rem; padding: .3rem 0; font-size: .9rem; } .draft-card .line span { flex: none; white-space: nowrap; color: var(--dim); } .draft-card .line b { text-align: right; font-weight: 600; } .draft-card .actions { margin-top: .75rem; }

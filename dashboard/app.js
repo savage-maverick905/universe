@@ -7,6 +7,7 @@ import { settingsView } from './settings.js';
 import { h, api as rawApi, toast } from '/shared/ui.js';
 import { showAuth } from '/shared/auth.js';
 import { renderWidget } from '/shared/widgets.js';
+import { askFinancePin, unlockOrbit } from '/shared/pin-gate.js';
 import { registerServiceWorker, canPromptInstall, promptInstall, onInstallChange, isStandalone } from '/shared/pwa.js';
 
 const root = document.getElementById('root');
@@ -39,9 +40,11 @@ function shell(page, content) {
 }
 
 function widgetCard(w) {
-  const body = h('p', { class: 'muted' }, 'Loading…');
-  api('GET', w.dataEndpoint).then((d) => body.replaceWith(renderWidget(w.type, d)))
+  const body = h('div', {}, h('p', { class: 'muted' }, 'Loading…'));
+  const load = () => api('GET', w.dataEndpoint).then((d) => body.replaceChildren(renderWidget(w.type, d),
+    ...(d.gate === 'finance' ? [h('button', { class: 'btn small', type: 'button', style: 'margin-top:.6rem', onclick: async () => { if (await askFinancePin({ title: 'Unlock Orbit', note: 'Shows your Orbit figures here for a few minutes.', action: unlockOrbit(api) })) load(); } }, icon('lock'), 'Unlock with PIN')] : [])))
     .catch(() => { body.textContent = 'No data yet. This app has not provided data for this widget.'; });
+  load();
   return h('article', { class: 'card' }, h('h3', {}, w.title), h('div', { class: 'sub' }, w.appName), body);
 }
 
