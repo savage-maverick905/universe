@@ -1,3 +1,13 @@
+// The browser's own replaceChildren/append/prepend turn an ARRAY argument into the text "[object HTMLDivElement]".
+// Screens often pass lists of elements (list.map(...)), so flatten arrays and skip null/false for every app that loads this file.
+if (typeof Element !== 'undefined' && !Element.prototype.__flatKids) {
+  for (const m of ['replaceChildren', 'append', 'prepend']) {
+    const native = Element.prototype[m];
+    Element.prototype[m] = function (...kids) { return native.apply(this, kids.flat(Infinity).filter((k) => k != null && k !== false)); };
+  }
+  Element.prototype.__flatKids = true;
+}
+
 // Small DOM helpers shared by the dashboard and the apps. Text goes in as text nodes, never innerHTML,
 // so data from the server cannot inject markup.
 export function h(tag, props = {}, ...kids) {
@@ -38,3 +48,4 @@ export function dialog(title, ...content) {
 export const closer = (label = 'Close') => h('button', { type: 'button', class: 'btn ghost', onclick: (e) => e.currentTarget.closest('dialog').close() }, label);
 
 export const initial = (name) => (String(name || '?').trim()[0] || '?').toUpperCase();
+      
