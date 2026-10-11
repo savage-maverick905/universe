@@ -1,6 +1,7 @@
 // Assistant screen: chat, conversation list, settings. DOM built with textContent only.
 import { icon } from '/shared/icons.js';
 import { askFinancePin, unlockOrbit } from '/shared/pin-gate.js';
+import { renderMarkdown } from '/shared/markdown.js';
 const FIN = '/api/apps/finance';
 export async function assistantView({ h, api, toast, shell, me }) {
   if (!me.permissions.includes('ai.use')) return shell('assistant', h('div', { class: 'card' }, h('p', {}, 'The assistant is not enabled for your account. Ask an admin.')));
@@ -16,7 +17,7 @@ export async function assistantView({ h, api, toast, shell, me }) {
   const bubble = (m) => {
     if (m.role === 'tool') return null;
     if (m.role === 'assistant' && m.toolCalls?.length) return h('div', { class: 'note' }, `${profile.name} looked something up: ${m.toolCalls.map((c) => c.name).join(', ')}`);
-    return h('div', { class: `msg ${m.role}` }, m.content);
+    return m.role === 'assistant' ? h('div', { class: 'msg assistant rich' }, renderMarkdown(m.content, h)) : h('div', { class: `msg ${m.role}` }, m.content);
   };
   const ask = (text) => { input.value = text; submit(); };
   const money = me.permissions.includes('finance.ai');
