@@ -72,3 +72,7 @@ Every conversation query filters by the session user; another user's conversatio
 1. In `.env`: `GROQ_API_KEY`, `AI_DEFAULT_MODEL` (a current Groq model id), `KEY_ENCRYPTION_SECRET`.
 2. Sign in, open Assistant, send "hello", then (with Inventory installed and some items) "what phones do I own?".
 3. If you get "The AI provider rejected the request", check the model name; if "rejected the shared key", check `GROQ_API_KEY`.
+
+
+### Nova tools (`apps/nova`)
+Read tools `nova.overview`, `nova.listTasks`, `nova.listProjects`, `nova.getProject` (permissions `nova.task.read` / `nova.project.read`). `nova.propose` (`nova.ai.use`) only stores a draft in `nova_proposals`; the change is applied by `POST /api/apps/nova/proposals/:id/confirm` after the person clicks Confirm in the assistant's review card (`dashboard/assistant.js`) and the server re-checks permission and validation. This is the confirmation pattern for write actions.

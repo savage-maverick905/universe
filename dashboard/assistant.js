@@ -3,6 +3,7 @@ import { icon } from '/shared/icons.js';
 import { askFinancePin, unlockOrbit } from '/shared/pin-gate.js';
 import { renderMarkdown } from '/shared/markdown.js';
 const FIN = '/api/apps/finance';
+const NOVA = '/api/apps/nova';
 export async function assistantView({ h, api, toast, shell, me }) {
   if (!me.permissions.includes('ai.use')) return shell('assistant', h('div', { class: 'card' }, h('p', {}, 'The assistant is not enabled for your account. Ask an admin.')));
   let profile = (await api('GET', '/api/ai/profile')).profile;
@@ -47,8 +48,25 @@ export async function assistantView({ h, api, toast, shell, me }) {
         h('button', { class: 'btn ghost', type: 'button', onclick: async () => { try { await api('POST', `${FIN}/hub/draft/${id}/cancel`, {}); card.remove(); toast('Draft cancelled'); } catch (x) { toast(x.message); } } }, 'Cancel')));
     log.append(card); log.scrollTop = log.scrollHeight;
   }
+  // Changes Nova prepared. Nothing is saved until the person confirms here; the server re-checks permissions and validates again.
+  async function showNovaProposals(conversationId) {
+    let list; try { list = (await api('GET', `${NOVA}/proposals?conversationId=${conversationId}`)).proposals; } catch { return; }
+    for (const p of list) {
+      const card = h('div', { class: 'draft-card' }, h('div', { class: 'row' }, h('h3', {}, 'Review change in Nova'), h('span', { class: 'badge warn' }, 'Not saved')),
+        p.lines.map(([k, v]) => h('div', { class: 'line' }, h('span', {}, k), h('b', {}, v))),
+        h('p', { class: 'err', role: 'alert' }),
+        h('div', { class: 'row actions' },
+          h('button', { class: 'btn', type: 'button', onclick: async (e) => {
+            const b = e.currentTarget; b.disabled = true;
+            try { await api('POST', `${NOVA}/proposals/${p.id}/confirm`, {}); card.replaceWith(h('div', { class: 'draft-card ok' }, h('div', { class: 'row' }, h('h3', {}, 'Saved'), icon('check')), p.lines.map(([k, v]) => h('p', { class: 'fine' }, `${k}: ${v}`)), h('a', { class: 'btn ghost small', href: '/apps/nova/' }, 'Open Nova'))); toast('Saved to Nova'); }
+            catch (x) { card.querySelector('.err').textContent = x.message; b.disabled = false; }
+          } }, icon('check'), 'Confirm'),
+          h('button', { class: 'btn ghost', type: 'button', onclick: async () => { try { await api('POST', `${NOVA}/proposals/${p.id}/dismiss`, {}); card.remove(); toast('Change dismissed'); } catch (x) { toast(x.message); } } }, 'Dismiss')));
+      log.append(card); log.scrollTop = log.scrollHeight;
+    }
+  }
   const emptyState = () => h('div', { class: 'chat-empty' }, h('div', { class: 'orb' }, icon('sparkle')), h('h2', {}, `Say hello to ${profile.name}`), h('p', {}, 'Ask about your apps, or just think out loud.'),
-    h('div', { class: 'chips' }, ['What can you help me with?', 'Summarise my inventory', ...(money ? ['How much did I spend this month?', 'I spent ₦3,500 on data from OPay'] : [])].map((t) => h('button', { type: 'button', class: 'chip', onclick: () => ask(t) }, t))));
+    h('div', { class: 'chips' }, ['What can you help me with?', 'Summarise my inventory', ...(money ? ['How much did I spend this month?', 'I spent ₦3,500 on data from OPay'] : []), ...(me.permissions.includes('nova.task.read') ? ['What needs my attention in Nova?'] : [])].map((t) => h('button', { type: 'button', class: 'chip', onclick: () => ask(t) }, t))));
   const grow = () => { input.style.height = 'auto'; input.style.height = `${Math.min(input.scrollHeight, 128)}px`; };
   const draw = (messages) => { log.replaceChildren(...(messages.length ? messages.map(bubble) : [emptyState()])); log.scrollTop = log.scrollHeight; };
   const drawList = () => select.replaceChildren(h('option', { value: '' }, 'New chat'), ...convos.map((c) => h('option', { value: c.id, selected: c.id === currentId ? '' : null }, c.title)));
@@ -57,6 +75,7 @@ export async function assistantView({ h, api, toast, shell, me }) {
     const messages = id ? (await api('GET', `/api/ai/conversations/${id}`)).messages : [];
     draw(messages); drawList();
     if (id && money && messages.some((m) => m.toolCalls?.some((c) => c.name === 'finance.propose'))) await showDraft(id); // a draft still waiting for review comes back
+    if (id && me.permissions.includes('nova.ai.use') && messages.some((m) => m.toolCalls?.some((c) => c.name === 'nova.propose'))) await showNovaProposals(id);
   }
   async function refreshList() { convos = (await api('GET', '/api/ai/conversations')).conversations; drawList(); }
   async function submit(retryText) {

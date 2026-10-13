@@ -14,6 +14,7 @@ Status labels used below: **Implemented** (built and covered by automated tests)
 | Dashboard: sign-in, Home with widgets, Apps (install/enable/disable/uninstall), Assistant, Reports | Implemented, but never exercised in a real browser by the automated tests: expect UI rough edges |
 | Inventory app (items, categories, locations, history, relationships, search/filter/sort, photos, JSON export/import) | Implemented (API); screens as above. Photo upload: Unverified (needs your Cloudinary account) |
 | Personal AI (name, personality, stored conversations, read-only tools, shared or own API key) | Implemented against a fake provider and a mock Groq server. **Unverified against real Groq**: see `docs/AI_ARCHITECTURE.md`, "First real run" |
+| Nova app (projects, tasks, milestones, recurring tasks, dependencies, board, calendar, overview, AI drafting/breakdown/summary, assistant tools with confirm-before-save) | Implemented. See `apps/nova/README.md`. Real Groq calls: Unverified |
 | Reports (daily, weekly, monthly, yearly, last N days, custom range; per app or ecosystem-wide; saved reports) | Implemented. Inventory is the first source |
 | Data export/import for moving to a home server | Implemented and tested with a real database round trip |
 | Deployment to a cloud host or a home server | Unverified (instructions below are untested) |
@@ -40,7 +41,7 @@ ai/           orchestrator, provider interface + Groq (ai/providers/), tool regi
 core/         app registry, installer, app loader, report engine, manifest schema
 database/     storage interface, SQLite driver (database/drivers/), migrations/ (empty)
 dashboard/    the dashboard UI (index.html, app.js, assistant.js, reports.js, styles.css)
-apps/         one folder per application (only inventory/ today)
+apps/         one folder per application (inventory/, finance/ (Orbit), nova/)
 shared/       design tokens (theme.css), validators, errors, ids
 config/       environment loading
 scripts/      export-data.js, import-data.js

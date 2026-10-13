@@ -48,4 +48,3 @@ export function dialog(title, ...content) {
 export const closer = (label = 'Close') => h('button', { type: 'button', class: 'btn ghost', onclick: (e) => e.currentTarget.closest('dialog').close() }, label);
 
 export const initial = (name) => (String(name || '?').trim()[0] || '?').toUpperCase();
-      

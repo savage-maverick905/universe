@@ -58,3 +58,7 @@ An app only touches its own `<appid>_*` collections and exposes data to the rest
 ## Export / import (Implemented)
 - System level: `npm run export -- file.json` and `npm run import -- file.json [--replace]` (wrap `storage.exportAll()` / `importAll()`; all collections except sessions; the file contains password hashes and encrypted API keys, so keep it secret; merge mode upserts by id). For migrating or backing up the whole ecosystem; tested with a real database round trip.
 - Inventory, per user: `GET /api/apps/inventory/export` and `POST /api/apps/inventory/import` (limits: 2000 items, 500 categories, 500 locations, 5 MB). Import validates every record like a normal save, assigns **new ids** owned by the importer (it can never overwrite anyone's data), and remaps references. It always adds; it does not merge or deduplicate. Documents with unknown fields are rejected.
+
+
+## Nova (`apps/nova`)
+Collections `nova_projects`, `nova_tasks`, `nova_milestones`, `nova_settings`, `nova_proposals`. Every document has `id`, `ownerId`, `schemaVersion` (1), `createdAt`, `updatedAt`. Dates are `YYYY-MM-DD` calendar dates. Field lists are in `apps/nova/README.md`. No migrations: collections are created on first use.
