@@ -12,6 +12,7 @@ Folder: `apps/nova/` (no core files were changed to register it: `manifest.json`
 | Milestones with their own progress (from linked tasks) | Implemented |
 | Dependencies (no self-reference, no loops, a task cannot be finished before what it depends on) | Implemented |
 | Recurring tasks (daily/weekly with weekdays/monthly/yearly, every N, end date or count) | Implemented |
+| Schedule: events and activities (event/activity/meeting/appointment/reminder) with date, start/end time or all day, multi-day, place, project, repeat (daily/weekly/monthly/yearly, every N, end date or count), clash warnings | Implemented |
 | Views: overview ("what needs attention"), task list (search, filter, sort), Kanban board, month calendar, project pages | Implemented |
 | Dashboard widgets (summary, needs attention) and a report ("Nova overview") | Implemented |
 | Assistant tools (read) and propose-then-confirm changes | Implemented |
@@ -33,6 +34,7 @@ Folder: `apps/nova/` (no core files were changed to register it: `manifest.json`
 | `nova_projects` | `name, description, icon, color, status, priority, startDate, deadline, tags[], archived` |
 | `nova_tasks` | `title, description, projectId, milestoneId, status, priority, startDate, dueDate, assigneeId, tags[], notes, subtasks[{id,title,done}], dependsOn[], recurrence{freq,interval,byDay,until,remaining,anchor}, seriesId, spawnedNextId, archived, completedAt` |
 | `nova_milestones` | `projectId, title, description, dueDate, completed, completedAt` |
+| `nova_events` | `title, description, location, kind, date, endDate, allDay, startTime, endTime, projectId, recurrence{freq,interval,until,remaining,anchor}` (repeats are expanded on read, not copied) |
 | `nova_settings` | one per user: `timezone` |
 | `nova_proposals` | drafts the assistant prepared: `action, taskId, input, lines, status (pending/applying/applied/dismissed/expired), expiresAt` (1 hour) |
 
@@ -44,13 +46,14 @@ Plain JSON through the storage interface, so SQLite and the GitHub driver both w
 ## API (all under `/api/apps/nova`, session required, every record scoped to the signed-in user, other people's ids answer 404)
 `GET /meta`, `GET|PUT /settings`, `GET /overview`, `GET /calendar?from&to`;
 `GET|POST /projects`, `GET|PATCH /projects/:id`, `DELETE /projects/:id?confirm=true`, `POST /projects/:id/milestones`, `PATCH|DELETE /milestones/:id`;
+`GET /events?from&to` (max 92 days), `POST /events`, `GET|PATCH|DELETE /events/:id` (same permissions as tasks);
 `GET|POST /tasks` (filters `q project milestone status priority tag due from to open archived sort dir limit offset`), `POST /tasks/batch`, `GET|PATCH|DELETE /tasks/:id`, `POST /tasks/:id/complete|reopen`;
 `GET /widget/summary|attention`;
 AI: `POST /ai/draft-task|breakdown|summary`, `GET /proposals`, `POST /proposals/:id/confirm|dismiss`.
 Request bodies reject unknown fields. Writes need the `X-Requested-With: universe` header like everywhere else.
 
 ## Assistant
-Read tools: `nova.overview`, `nova.listTasks`, `nova.listProjects`, `nova.getProject`. Change tool: `nova.propose` (create task, update task, mark done, create project). It never saves: it stores a draft and the assistant shows a **Review change in Nova** card; only the person's Confirm click applies it, through the same validated code as the forms, after re-checking permissions. Drafts expire after an hour. `nova.propose` is declared `read` access because it changes no tasks or projects; it only stores the draft.
+Read tools: `nova.listEvents`, `nova.overview`, `nova.listTasks`, `nova.listProjects`, `nova.getProject`. Change tool: `nova.propose` (create task, update task, mark done, create project, add event). It never saves: it stores a draft and the assistant shows a **Review change in Nova** card; only the person's Confirm click applies it, through the same validated code as the forms, after re-checking permissions. Drafts expire after an hour. `nova.propose` is declared `read` access because it changes no tasks or projects; it only stores the draft.
 
 In-app AI reuses Universe's provider, default model and personal API key settings (nothing is configured in Nova). Generated text is parsed, cut down to known fields and re-validated; it only fills a form or a checklist you review. If the provider fails you get a clear message and everything else keeps working.
 

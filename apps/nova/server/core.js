@@ -2,10 +2,10 @@
 // data follows the same rules: ownership checks, validation of references, dependencies, recurrence and progress.
 import { badRequest, conflict, notFound } from '../../../shared/errors.js';
 import { newId, nowIso } from '../../../shared/ids.js';
-import { addDays, diffDays, isDate, nextOccurrence, todayIn, toMs, validTimeZone } from './dates.js';
-import { SCHEMA_VERSION, projectDefaults, taskDefaults } from './schema.js';
+import { addDays, diffDays, expandDates, isDate, minutes, nextOccurrence, todayIn, toMs, validTimeZone } from './dates.js';
+import { SCHEMA_VERSION, eventDefaults, projectDefaults, taskDefaults } from './schema.js';
 
-export const LIMITS = { projects: 300, tasks: 10_000, milestonesPerProject: 50 };
+export const LIMITS = { projects: 300, tasks: 10_000, milestonesPerProject: 50, events: 5000 };
 const PRIORITY_RANK = { urgent: 0, high: 1, medium: 2, low: 3 };
 const STATUS_RANK = { blocked: 0, in_progress: 1, todo: 2, backlog: 3, done: 4 };
 const strip = ({ ownerId, ...d }) => d;
@@ -17,13 +17,14 @@ export function makeCore(s) {
   const milestones = s.storage.collection('nova_milestones', { indexes: ['ownerId'] });
   const settings = s.storage.collection('nova_settings', { indexes: ['ownerId'] });
   const proposals = s.storage.collection('nova_proposals', { indexes: ['ownerId'] });
-  const cols = { projects, tasks, milestones, settings, proposals };
+  const events = s.storage.collection('nova_events', { indexes: ['ownerId'] });
+  const cols = { projects, tasks, milestones, settings, proposals, events };
 
   // ---- Who owns what. Another person's id looks exactly like an id that does not exist (404). ----
   const mineOf = (col) => (user) => col.find({ where: { ownerId: user.id }, limit: 20000 });
   const allProjects = mineOf(projects), allTasks = mineOf(tasks), allMilestones = mineOf(milestones);
   const ownOf = (col, label) => async (id, user) => { const d = id ? await col.get(id) : null; if (!d || d.ownerId !== user.id) throw notFound(`${label} not found`); return d; };
-  const ownProject = ownOf(projects, 'Project'), ownTask = ownOf(tasks, 'Task'), ownMilestone = ownOf(milestones, 'Milestone');
+  const ownEvent = ownOf(events, 'Event'), ownProject = ownOf(projects, 'Project'), ownTask = ownOf(tasks, 'Task'), ownMilestone = ownOf(milestones, 'Milestone');
 
   // ---- Settings and "today" ----
   async function getSettings(user) {
@@ -120,7 +121,8 @@ export function makeCore(s) {
     const activeProjects = ctx.ps.filter((p) => !p.archived && p.status !== 'completed').map((p) => projectView(p, by.get(p.id) || [], t0));
     const upcomingMilestones = ctx.ms.filter((m) => !m.completed && m.dueDate && ctx.ps.some((p) => p.id === m.projectId && !p.archived)).sort((a, b) => a.dueDate.localeCompare(b.dueDate)).slice(0, 5)
       .map((m) => ({ ...strip(m), projectName: ctx.pname.get(m.projectId) }));
-    return { today: t0, counts: { open: open.length, overdue: overdue.length, dueToday: dueToday.length, dueSoon: dueSoon.length, blocked: blocked.length, projects: activeProjects.length,
+    const evs = eventsIn(await mineOf(events)(user), t0, addDays(t0, 7), ctx.pname), todayEvents = evs.filter((e) => e.occurrenceDate <= t0), upcomingEvents = evs.filter((e) => e.occurrenceDate > t0).slice(0, 10);
+    return { today: t0, todayEvents, upcomingEvents, counts: { eventsToday: todayEvents.length, open: open.length, overdue: overdue.length, dueToday: dueToday.length, dueSoon: dueSoon.length, blocked: blocked.length, projects: activeProjects.length,
         doneLast7Days: live.filter((t) => t.completedAt && t.completedAt.slice(0, 10) >= weekAgo).length, total: ctx.ts.filter((t) => !t.archived).length },
       overdue: overdue.slice(0, 20).map(view), dueToday: dueToday.slice(0, 20).map(view), dueSoon: dueSoon.slice(0, 20).map(view), blocked: blocked.slice(0, 20).map(view),
       projects: activeProjects, upcomingMilestones };
@@ -133,8 +135,56 @@ export function makeCore(s) {
     return { today: ctx.today, from, to,
       tasks: ctx.ts.filter((t) => !t.archived && !gone.has(t.projectId) && inR(t.dueDate)).map((t) => taskView(t, ctx)),
       milestones: ctx.ms.filter((m) => inR(m.dueDate) && !gone.has(m.projectId)).map((m) => ({ ...strip(m), projectName: ctx.pname.get(m.projectId) })),
-      deadlines: ctx.ps.filter((p) => !p.archived && inR(p.deadline)).map((p) => ({ id: p.id, name: p.name, deadline: p.deadline, status: p.status })) };
+      deadlines: ctx.ps.filter((p) => !p.archived && inR(p.deadline)).map((p) => ({ id: p.id, name: p.name, deadline: p.deadline, status: p.status })),
+      events: eventsIn(await mineOf(events)(user), from, to, ctx.pname) };
   }
+
+
+  // ---- Events and activities (the schedule) ----
+  // An event has a date and, unless it is all day, a start time. Repeating events expand on read, so editing one edits the whole series.
+  function eventsIn(all, from, to, pname) {
+    const occ = [];
+    for (const e of all) for (const d of expandDates(e, from, to)) occ.push({ ...strip(e), occurrenceDate: d, projectName: pname.get(e.projectId) ?? null, clash: false });
+    const byDay = Map.groupBy(occ.filter((o) => !o.allDay && o.startTime && !o.endDate), (o) => o.occurrenceDate);
+    for (const list of byDay.values()) for (const a of list) for (const b of list) {
+      if (a === b) continue;
+      const aS = minutes(a.startTime), aE = minutes(a.endTime) ?? aS + 60, bS = minutes(b.startTime), bE = minutes(b.endTime) ?? bS + 60;
+      if (aS < bE && bS < aE) a.clash = true;
+    }
+    return occ.sort((a, b) => a.occurrenceDate.localeCompare(b.occurrenceDate) || (a.allDay ? 0 : 1) - (b.allDay ? 0 : 1) || (a.startTime || '').localeCompare(b.startTime || '') || a.title.localeCompare(b.title));
+  }
+  async function listEvents(user, from, to) {
+    if (!isDate(from) || !isDate(to) || toMs(to) < toMs(from) || diffDays(from, to) > 92) throw badRequest('from and to must be dates at most 92 days apart');
+    const [all, ps] = await Promise.all([mineOf(events)(user), allProjects(user)]);
+    return { from, to, events: eventsIn(all, from, to, new Map(ps.map((p) => [p.id, p.name]))) };
+  }
+  async function checkEvent(user, doc) {
+    if (doc.projectId) await ownProject(doc.projectId, user);
+    if (doc.endDate && doc.endDate < doc.date) throw badRequest('The end date must not be before the start date');
+    if (doc.allDay) { doc.startTime = null; doc.endTime = null; }
+    else if (!doc.startTime) throw badRequest('Give a start time, or mark the event as all day');
+    if (doc.endTime && !doc.startTime) throw badRequest('An end time needs a start time');
+    if (doc.endTime && doc.startTime && (!doc.endDate || doc.endDate === doc.date) && doc.endTime <= doc.startTime) throw badRequest('The end time must be after the start time');
+    if (doc.recurrence) {
+      if (doc.endDate && doc.endDate !== doc.date) throw badRequest('A repeating event cannot span several days');
+      if (doc.recurrence.until && doc.recurrence.until < doc.date) throw badRequest('The repeat end date must not be before the event date');
+      doc.recurrence = { ...doc.recurrence, anchor: doc.date };
+    }
+  }
+  async function createEvent(user, input) {
+    if ((await events.count({ ownerId: user.id })) >= LIMITS.events) throw conflict(`You can have at most ${LIMITS.events} events`, 'limit');
+    const doc = { ...eventDefaults(), ...input }; await checkEvent(user, doc);
+    return strip(await events.insert({ id: newId('evt'), ownerId: user.id, schemaVersion: SCHEMA_VERSION, ...doc }));
+  }
+  async function updateEvent(user, id, patch) {
+    const e = await ownEvent(id, user), merged = { ...e, ...patch };
+    if ('allDay' in patch && !patch.allDay === false) { /* switching to all day clears times in checkEvent */ }
+    await checkEvent(user, merged);
+    const { id: _i, ownerId: _o, createdAt: _c, updatedAt: _u, schemaVersion: _s, ...fields } = merged;
+    return strip(await events.update(e.id, fields));
+  }
+  async function deleteEvent(user, id) { const e = await ownEvent(id, user); await events.delete(e.id); return { ok: true }; }
+  async function getEvent(user, id) { return strip(await ownEvent(id, user)); }
 
   // ---- Checks shared by create and update ----
   async function checkRefs(user, doc, selfId, ctx) {
@@ -182,6 +232,7 @@ export function makeCore(s) {
     await s.storage.transaction(async () => {
       removedTasks = await tasks.deleteWhere({ ownerId: user.id, projectId: p.id });
       await milestones.deleteWhere({ ownerId: user.id, projectId: p.id });
+      for (const e of await events.find({ where: { ownerId: user.id, projectId: p.id }, limit: 20000 })) await events.update(e.id, { projectId: null });
       await projects.delete(p.id);
     });
     await s.audit.record({ actorId: user.id, action: 'nova.project.delete', targetType: 'nova_project', targetId: p.id, meta: { tasksRemoved: removedTasks }, ip });
@@ -278,5 +329,5 @@ export function makeCore(s) {
   }
 
   return { cols, getSettings, saveSettings, today, ownProject, ownTask, ownMilestone, listProjects, getProject, createProject, updateProject, deleteProject,
-    createMilestone, updateMilestone, deleteMilestone, listTasks, getTask, createTask, updateTask, deleteTask, overview, calendar, context, liveTasks, progressOf, strip };
+    createMilestone, updateMilestone, deleteMilestone, listEvents, getEvent, createEvent, updateEvent, deleteEvent, listTasks, getTask, createTask, updateTask, deleteTask, overview, calendar, context, liveTasks, progressOf, strip };
 }

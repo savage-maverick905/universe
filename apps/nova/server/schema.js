@@ -85,6 +85,29 @@ export function taskIn(body, { partial = false } = {}) {
 }
 export const taskDefaults = () => ({ description: '', projectId: null, milestoneId: null, status: 'todo', priority: 'medium', startDate: null, dueDate: null, assignedToMe: true, tags: [], notes: '', subtasks: [], dependsOn: [], recurrence: null, archived: false });
 
+export const EVENT_KINDS = [['event', 'Event'], ['activity', 'Activity'], ['meeting', 'Meeting'], ['appointment', 'Appointment'], ['reminder', 'Reminder']];
+export const EVENT_KIND_IDS = EVENT_KINDS.map(([id]) => id);
+const time = (x, name) => { if (typeof x !== 'string' || !/^([01]\d|2[0-3]):[0-5]\d$/.test(x)) throw badRequest(`${name} must be a time like 14:30`); return x; };
+const EVENT_KEYS = ['title', 'description', 'location', 'kind', 'date', 'endDate', 'allDay', 'startTime', 'endTime', 'projectId', 'recurrence'];
+export function eventIn(body, { partial = false } = {}) {
+  const b = allowKeys(v.object(body), EVENT_KEYS), o = {};
+  if (!partial && !('title' in b)) throw badRequest('title is required');
+  if (!partial && !('date' in b)) throw badRequest('date is required');
+  if ('title' in b) o.title = v.string(b.title, 'title', { min: 1, max: 200 });
+  if ('description' in b) o.description = v.string(b.description, 'description', { max: 4000 });
+  if ('location' in b) o.location = v.string(b.location, 'location', { max: 200 });
+  if ('kind' in b) o.kind = v.enum(b.kind, 'kind', EVENT_KIND_IDS);
+  if ('date' in b) o.date = date(b.date, 'date');
+  if ('endDate' in b) o.endDate = nullable(b.endDate, (x) => date(x, 'endDate'));
+  if ('allDay' in b) { if (typeof b.allDay !== 'boolean') throw badRequest('allDay must be true or false'); o.allDay = b.allDay; }
+  if ('startTime' in b) o.startTime = nullable(b.startTime, (x) => time(x, 'startTime'));
+  if ('endTime' in b) o.endTime = nullable(b.endTime, (x) => time(x, 'endTime'));
+  if ('projectId' in b) o.projectId = nullable(b.projectId, (x) => v.anyId(x, 'projectId'));
+  if ('recurrence' in b) o.recurrence = recurrenceIn(b.recurrence);
+  return o;
+}
+export const eventDefaults = () => ({ description: '', location: '', kind: 'event', endDate: null, allDay: false, startTime: null, endTime: null, projectId: null, recurrence: null });
+
 export function milestoneIn(body, { partial = false } = {}) {
   const b = allowKeys(v.object(body), ['title', 'description', 'dueDate', 'completed']), o = {};
   if (!partial && !('title' in b)) throw badRequest('title is required');

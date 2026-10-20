@@ -3,6 +3,7 @@ import { icon } from '/shared/icons.js';
 import { S, fmtDate, progressBar, empty, badge } from '../lib.js';
 import { taskRow, quickAdd, openTask } from './taskui.js';
 import { openProject } from './projects.js';
+import { eventRow, openEvent } from './eventui.js';
 
 export async function overviewView({ frame, redraw }) {
   const o = await api('GET', '/overview');
@@ -18,14 +19,16 @@ export async function overviewView({ frame, redraw }) {
   } }, icon('sparkle'), 'Summarise my progress') : null;
 
   frame('overview',
-    h('div', { class: 'page-head' }, h('div', {}, h('h1', {}, 'Overview'), h('p', { class: 'sub' }, fmtDate(o.today, true))), h('div', { class: 'row tight' }, summaryBtn, h('button', { class: 'btn', onclick: () => openTask(null, { onChange: redraw }) }, icon('plus'), 'New task'))),
+    h('div', { class: 'page-head' }, h('div', {}, h('h1', {}, 'Overview'), h('p', { class: 'sub' }, fmtDate(o.today, true))), h('div', { class: 'row tight' }, summaryBtn, S.meta.canWriteTasks ? h('button', { class: 'btn ghost', onclick: () => openEvent(null, { onChange: redraw }) }, icon('calendar'), h('span', { class: 'lbl' }, 'Event')) : null, h('button', { class: 'btn', onclick: () => openTask(null, { onChange: redraw }) }, icon('plus'), 'New task'))),
     summaryBox,
     brandNew ? h('section', { class: 'card onboard' }, h('h2', {}, 'Welcome to Nova'), h('p', { class: 'sub' }, 'Nova turns ideas into plans and plans into finished work. Start small:'),
       h('ol', { class: 'steps' }, h('li', {}, 'Create a project for something you want to finish.'), h('li', {}, 'Add the first few tasks, with due dates if they have them.'), h('li', {}, 'Come back here to see what needs attention.')),
       h('div', { class: 'row' }, h('button', { class: 'btn', onclick: () => openProject(null, { onChange: redraw }) }, icon('plus'), 'Create a project'), h('button', { class: 'btn ghost', onclick: () => openTask(null, { onChange: redraw }) }, 'Just add a task')))
     : [quickAdd({ onChange: redraw }),
-      h('div', { class: 'stat-grid' }, stat(c.overdue, 'Overdue', c.overdue ? 'bad' : ''), stat(c.dueToday, 'Due today'), stat(c.dueSoon, 'Next 7 days'), stat(c.blocked, 'Blocked or waiting'), stat(c.doneLast7Days, 'Done this week')),
-      !c.overdue && !c.dueToday && !c.dueSoon && !c.blocked ? empty('check', c.open ? 'Nothing is due this week. Nice and calm.' : 'All clear. Add a task to get going.') : null,
+      h('div', { class: 'stat-grid' }, stat(c.overdue, 'Overdue', c.overdue ? 'bad' : ''), stat(c.eventsToday, 'Events today'), stat(c.dueToday, 'Due today'), stat(c.dueSoon, 'Next 7 days'), stat(c.blocked, 'Blocked or waiting'), stat(c.doneLast7Days, 'Done this week')),
+      !c.overdue && !c.dueToday && !c.dueSoon && !c.blocked && !o.upcomingEvents.length && !o.todayEvents.length ? empty('check', c.open ? 'Nothing is due this week. Nice and calm.' : 'All clear. Add a task to get going.') : null,
+      o.todayEvents.length || o.upcomingEvents.length ? h('section', { class: 'card' }, h('div', { class: 'row between' }, h('h3', {}, o.todayEvents.length ? 'On today' : 'Coming up'), h('a', { class: 'btn ghost small', href: '#/schedule' }, 'Full schedule')),
+        h('div', { class: 'tasks' }, [...o.todayEvents, ...(o.todayEvents.length ? [] : o.upcomingEvents.slice(0, 4))].map((e) => h('div', {}, e.occurrenceDate !== o.today && !o.todayEvents.length ? h('small', { class: 'ev-day' }, fmtDate(e.occurrenceDate)) : null, eventRow(e, redraw))))) : null,
       h('div', { class: 'grid' }, section('Overdue', o.overdue, 'attn'), section('Due today', o.dueToday), section('Next 7 days', o.dueSoon), section('Blocked or waiting', o.blocked)),
       h('section', {}, h('div', { class: 'page-head sub-head' }, h('h2', {}, 'Projects'), h('a', { class: 'btn ghost small', href: '#/projects' }, 'All projects')),
         o.projects.length ? h('div', { class: 'grid' }, o.projects.slice(0, 6).map((p) => projectCard(p))) : empty('target', 'No active projects yet.', h('button', { class: 'btn small', onclick: () => openProject(null, { onChange: redraw }) }, icon('plus'), 'Create a project'))),

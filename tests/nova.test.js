@@ -226,7 +226,7 @@ test('widgets, report, limits and batch create', async () => {
   assert.equal((await A('GET', `/tasks?project=${p.id}`)).json.total, 2); // all or nothing
   assert.equal((await A('POST', '/tasks/batch', { projectId: p.id, tasks: [] })).status, 400);
   assert.equal((await A('POST', '/tasks/batch', { projectId: 'prj_missing', tasks: [{ title: 'x' }] })).status, 404);
-  const w = await A('GET', '/widget/summary'); assert.deepEqual(w.json.stats.map((x) => x.label), ['Open tasks', 'Overdue', 'Due this week', 'Projects']); assert.equal(w.json.stats[0].value, 2);
+  const w = await A('GET', '/widget/summary'); assert.deepEqual(w.json.stats.map((x) => x.label), ['Open tasks', 'Overdue', 'Due this week', 'Events today', 'Projects']); assert.equal(w.json.stats[0].value, 2);
   assert.ok((await t.request('GET', '/api/dashboard/widgets', { cookie: a.cookie })).json.widgets.some((x) => x.appId === 'nova' || String(x.id).includes('nova')));
   const rep = await t.request('POST', '/api/reports/run', { cookie: a.cookie, body: { app: 'nova', period: 'weekly' } });
   assert.equal(rep.status, 200, rep.text); assert.ok(rep.text.includes('Open tasks'));
@@ -343,4 +343,31 @@ test('in-app AI: drafting, breakdown and summary are proposals, validated, and f
   // no AI permission, no AI
   assert.equal((await G('POST', '/ai/draft-task', { text: 'hello there' })).status, 403);
   assert.ok(g);
+});
+
+test('events and activities: validation, repeats, clashes, calendar, overview, privacy', async () => {
+  const { A, Bq, G } = await setup();
+  const today = (await A('GET', '/meta')).json.today;
+  const d = (n) => new Date(Date.parse(`${today}T00:00:00Z`) + n * 864e5).toISOString().slice(0, 10);
+  assert.equal((await A('POST', '/events', { title: 'x', date: d(1) })).status, 400); // needs a start time or all day
+  assert.equal((await A('POST', '/events', { title: 'x', date: d(1), startTime: '10:00', endTime: '09:00' })).status, 400);
+  assert.equal((await A('POST', '/events', { title: 'x', date: d(1), startTime: '25:00' })).status, 400);
+  assert.equal((await A('POST', '/events', { title: 'x', date: d(1), allDay: true, bogus: 1 })).status, 400);
+  const e1 = (await A('POST', '/events', { title: 'Dentist', kind: 'appointment', date: d(1), startTime: '09:00', endTime: '10:00', location: 'Clinic' })).json.event;
+  await A('POST', '/events', { title: 'Call', date: d(1), startTime: '09:30', endTime: '10:30' });
+  await A('POST', '/events', { title: 'Football', kind: 'activity', date: d(0), startTime: '17:00', recurrence: { freq: 'weekly', count: 3 } });
+  await A('POST', '/events', { title: 'Holiday', date: d(2), endDate: d(4), allDay: true });
+  const list = (await A('GET', `/events?from=${d(0)}&to=${d(30)}`)).json.events;
+  assert.equal(list.filter((e) => e.title === 'Football').length, 3);
+  assert.deepEqual(list.filter((e) => e.date === d(1) && e.occurrenceDate === d(1)).map((e) => e.clash), [true, true]);
+  assert.equal(list.filter((e) => e.title === 'Holiday').length, 1);
+  assert.equal((await A('GET', `/events?from=${d(3)}&to=${d(3)}`)).json.events[0].title, 'Holiday'); // multi-day shows on every day
+  assert.equal((await A('PATCH', `/events/${e1.id}`, { startTime: '11:00', endTime: '12:00' })).json.event.startTime, '11:00');
+  assert.equal((await A('GET', `/events?from=${d(1)}&to=${d(1)}`)).json.events.every((e) => !e.clash), true);
+  const cal = (await A('GET', `/calendar?from=${d(0)}&to=${d(10)}`)).json; assert.ok(cal.events.length === 5);
+  const ov = (await A('GET', '/overview')).json; assert.equal(ov.todayEvents[0].title, 'Football'); assert.ok(ov.upcomingEvents.length);
+  assert.equal((await Bq('GET', `/events/${e1.id}`)).status, 404); assert.equal((await Bq('DELETE', `/events/${e1.id}`)).status, 404);
+  assert.deepEqual((await Bq('GET', `/events?from=${d(0)}&to=${d(30)}`)).json.events, []);
+  assert.equal((await G('GET', '/events')).status, 403);
+  assert.equal((await A('DELETE', `/events/${e1.id}`)).status, 200);
 });

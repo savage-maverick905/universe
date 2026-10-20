@@ -8,11 +8,11 @@ import { badRequest, HttpError, notFound, conflict } from '../../../shared/error
 import { newId, nowIso } from '../../../shared/ids.js';
 import { tooMany } from '../../../http/middleware.js';
 import { addDays, isDate } from './dates.js';
-import { PRIORITY_IDS, STATUS_IDS, taskIn, projectIn } from './schema.js';
+import { PRIORITY_IDS, STATUS_IDS, taskIn, projectIn, eventIn } from './schema.js';
 
 const PROPOSAL_TTL_MS = 60 * 60_000, MAX_PENDING = 10;
-const ACTIONS = ['create_task', 'update_task', 'complete_task', 'create_project'];
-const ACTION_PERM = { create_task: 'task.write', update_task: 'task.write', complete_task: 'task.write', create_project: 'project.write' };
+const ACTIONS = ['create_event', 'create_task', 'update_task', 'complete_task', 'create_project'];
+const ACTION_PERM = { create_event: 'task.write', create_task: 'task.write', update_task: 'task.write', complete_task: 'task.write', create_project: 'project.write' };
 const norm = (x) => String(x || '').trim().toLowerCase();
 
 export function makeAi(s, core) {
@@ -104,6 +104,12 @@ export function makeAi(s, core) {
         const r = await core.listTasks(user, f);
         return { total: r.total, tasks: r.tasks.map(compactTask) };
       } });
+    reg('nova.listEvents', { parameters: { properties: { from: { type: 'string', maxLength: 10, description: 'YYYY-MM-DD, default today' }, to: { type: 'string', maxLength: 10, description: 'YYYY-MM-DD, default 14 days after from' } } },
+      handler: async (a, { user }) => {
+        const from = isDate(a.from) ? a.from : await core.today(user), to = isDate(a.to) ? a.to : addDays(from, 14);
+        const r = await core.listEvents(user, from, to);
+        return { from, to, events: r.events.slice(0, 40).map((e) => ({ id: e.id, title: e.title, kind: e.kind, date: e.occurrenceDate, startTime: e.startTime, endTime: e.endTime, allDay: e.allDay, location: e.location || undefined, project: e.projectName, clash: e.clash || undefined })) };
+      } });
     reg('nova.listProjects', { parameters: { properties: {} }, handler: async (_a, { user }) => ({ projects: (await core.listProjects(user)).map((p) => ({ id: p.id, name: p.name, status: p.status, priority: p.priority, deadline: p.deadline, ...p.progress })) }) });
     reg('nova.getProject', { parameters: { properties: { name: str } , required: ['name'] }, handler: async ({ name }, { user }) => {
       const p = await core.getProject(user, (await projectByName(user, name)).id), t = await core.listTasks(user, { projectId: p.id, open: true, limit: 25 });
@@ -113,7 +119,7 @@ export function makeAi(s, core) {
     reg('nova.propose', { parameters: { required: ['action'], properties: { action: { type: 'string', enum: ACTIONS }, taskId: { type: 'string', maxLength: 100, description: 'Id from a Nova tool result; needed for update_task and complete_task' },
         title: str, description: { type: 'string', maxLength: 1000 }, project: { ...str, description: 'Name of an existing project to put the task in' }, status: { type: 'string', enum: STATUS_IDS }, priority: { type: 'string', enum: PRIORITY_IDS },
         startDate: { type: 'string', maxLength: 10, description: 'YYYY-MM-DD' }, dueDate: { type: 'string', maxLength: 10, description: 'YYYY-MM-DD' }, tags: { type: 'string', maxLength: 200, description: 'Comma separated' },
-        name: { ...str, description: 'Project name, for create_project' }, deadline: { type: 'string', maxLength: 10, description: 'Project deadline YYYY-MM-DD, for create_project' } } },
+        name: { ...str, description: 'Project name, for create_project' }, date: { type: 'string', maxLength: 10, description: 'Event date YYYY-MM-DD, for create_event' }, startTime: { type: 'string', maxLength: 5, description: 'HH:MM 24-hour, for create_event' }, endTime: { type: 'string', maxLength: 5, description: 'HH:MM 24-hour, for create_event' }, location: str, kind: { type: 'string', enum: ['event', 'activity', 'meeting', 'appointment', 'reminder'] }, allDay: { type: 'boolean' }, deadline: { type: 'string', maxLength: 10, description: 'Project deadline YYYY-MM-DD, for create_project' } } },
       handler: async (a, { user, conversationId }) => propose(user, a, conversationId) });
   }
 
@@ -121,7 +127,15 @@ export function makeAi(s, core) {
   async function propose(user, a, conversationId = null) {
     await can(user, ACTION_PERM[a.action]);
     const lines = [], input = {}; let taskId = null;
-    if (a.action === 'create_project') {
+    if (a.action === 'create_event') {
+      if (!a.title) throw badRequest('An event needs a title'); if (!a.date) throw badRequest('An event needs a date');
+      const body = { title: a.title, date: a.date, ...(a.startTime ? { startTime: a.startTime } : {}), ...(a.endTime ? { endTime: a.endTime } : {}), ...(a.location ? { location: a.location } : {}), ...(a.kind ? { kind: a.kind } : {}), ...(a.description ? { description: a.description } : {}) };
+      if (a.allDay || !a.startTime) body.allDay = true;
+      if (a.project) body.projectId = (await projectByName(user, a.project)).id;
+      Object.assign(input, eventIn(body));
+      lines.push(['Action', 'Add to schedule'], ['Title', input.title], ['Date', input.date], ['Time', input.allDay ? 'All day' : `${input.startTime}${input.endTime ? `–${input.endTime}` : ''}`]);
+      if (input.location) lines.push(['Where', input.location]);
+    } else if (a.action === 'create_project') {
       if (!a.name) throw badRequest('A project needs a name');
       Object.assign(input, projectIn({ name: a.name, ...(a.description ? { description: a.description } : {}), ...(a.priority ? { priority: a.priority } : {}), ...(a.deadline ? { deadline: a.deadline } : {}), ...(a.startDate ? { startDate: a.startDate } : {}), ...(csv(a.tags) ? { tags: csv(a.tags) } : {}) }));
       lines.push(['Action', 'Create project'], ['Name', input.name]);
@@ -166,7 +180,8 @@ export function makeAi(s, core) {
     if (!claimed) throw conflict('This change was already applied', 'not_pending');
     try {
       let result;
-      if (p.action === 'create_project') result = { project: await core.createProject(user, p.input) };
+      if (p.action === 'create_event') result = { event: await core.createEvent(user, p.input) };
+      else if (p.action === 'create_project') result = { project: await core.createProject(user, p.input) };
       else if (p.action === 'create_task') result = { task: await core.createTask(user, p.input) };
       else result = { task: await core.updateTask(user, p.taskId, p.input) };
       await cols.proposals.update(p.id, { status: 'applied', appliedAt: nowIso() });

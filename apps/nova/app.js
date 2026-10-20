@@ -7,6 +7,7 @@ import { registerServiceWorker, canPromptInstall, promptInstall, onInstallChange
 import { S } from './lib.js';
 import { overviewView } from './views/overview.js';
 import { tasksView, boardView } from './views/tasks.js';
+import { scheduleView } from './views/schedule.js';
 import { calendarView } from './views/calendar.js';
 import { projectsView, projectView } from './views/projects.js';
 import { settingsView } from './views/settings.js';
@@ -18,7 +19,7 @@ const brand = { name: 'Nova', blurb: 'Turn ideas into plans, and plans into fini
 setUnauthorizedHandler(() => { if (S.me) { S.me = null; boot('Your session ended. Sign in again.'); } });
 const signOut = () => { S.me = null; boot(); };
 
-const NAV = [['#/', 'Overview', 'overview', 'home'], ['#/tasks', 'Tasks', 'tasks', 'check'], ['#/board', 'Board', 'board', 'columns'], ['#/calendar', 'Calendar', 'calendar', 'calendar'], ['#/projects', 'Projects', 'projects', 'target'], ['#/settings', 'Settings', 'settings', 'settings']];
+const NAV = [['#/', 'Overview', 'overview', 'home'], ['#/tasks', 'Tasks', 'tasks', 'check'], ['#/schedule', 'Schedule', 'schedule', 'calendar'], ['#/board', 'Board', 'board', 'columns'], ['#/calendar', 'Calendar', 'calendar', 'calendar'], ['#/projects', 'Projects', 'projects', 'target'], ['#/settings', 'Settings', 'settings', 'settings']];
 let lastHash = null, keepY = null;
 function frame(page, ...content) {
   const link = ([href, text, id, ic]) => h('a', { href, 'aria-current': page === id ? 'page' : null }, icon(ic), h('span', {}, text));
@@ -45,6 +46,7 @@ async function route() {
     S.projects = (await api('GET', '/projects')).projects;
     if (page === 'tasks') await tasksView(ctx);
     else if (page === 'board') await boardView(ctx);
+    else if (page === 'schedule') await scheduleView(ctx);
     else if (page === 'calendar') await calendarView(ctx);
     else if (page === 'projects') await projectsView(ctx);
     else if (page === 'project' && arg) await projectView(arg, ctx);

@@ -4,7 +4,7 @@ import { v, allowKeys } from '../../../shared/validate.js';
 import { badRequest } from '../../../shared/errors.js';
 import { reply } from '../../../http/http.js';
 import { addDays, isDate } from './dates.js';
-import { PRIORITIES, PRIORITY_IDS, PROJECT_ICONS, PROJECT_STATUSES, PROJECT_STATUS_IDS, STATUS_IDS, TASK_STATUSES, milestoneIn, projectIn, settingsIn, taskIn } from './schema.js';
+import { EVENT_KINDS, PRIORITIES, PRIORITY_IDS, PROJECT_ICONS, PROJECT_STATUSES, PROJECT_STATUS_IDS, STATUS_IDS, TASK_STATUSES, eventIn, milestoneIn, projectIn, settingsIn, taskIn } from './schema.js';
 import { LIMITS } from './core.js';
 
 export const P = '/api/apps/nova';
@@ -19,7 +19,7 @@ export function routes({ router, s, core, ai }) {
 
   route('GET', '/meta', 'task.read', async ({ user }) => {
     const [settings, today] = [await core.getSettings(user), await core.today(user)];
-    return { statuses: TASK_STATUSES.map(([id, label]) => ({ id, label })), priorities: PRIORITIES.map(([id, label]) => ({ id, label })), projectStatuses: PROJECT_STATUSES.map(([id, label]) => ({ id, label })),
+    return { statuses: TASK_STATUSES.map(([id, label]) => ({ id, label })), priorities: PRIORITIES.map(([id, label]) => ({ id, label })), projectStatuses: PROJECT_STATUSES.map(([id, label]) => ({ id, label })), eventKinds: EVENT_KINDS.map(([id, label]) => ({ id, label })),
       icons: PROJECT_ICONS, limits: LIMITS, settings, today, canWriteProjects: await s.permissions.can(user, 'nova.project.write'), canWriteTasks: await s.permissions.can(user, 'nova.task.write'),
       canDeleteTasks: await s.permissions.can(user, 'nova.task.delete'), canDeleteProjects: await s.permissions.can(user, 'nova.project.delete'), ai: await s.permissions.can(user, 'nova.ai.use') && await s.permissions.can(user, 'ai.use') };
   });
@@ -66,9 +66,16 @@ export function routes({ router, s, core, ai }) {
   route('POST', '/tasks/:id/reopen', 'task.write', async ({ user, params }) => { const { next, ...task } = await core.updateTask(user, params.id, { status: 'todo' }); return { task }; });
   route('DELETE', '/tasks/:id', 'task.delete', ({ user, params }) => core.deleteTask(user, params.id));
 
+  // ---- Events and activities (same permissions as tasks) ----
+  route('GET', '/events', 'task.read', ({ user, query }) => { const from = query.get('from'); return core.listEvents(user, from, query.get('to') || (isDate(from) ? addDays(from, 41) : null)); });
+  route('POST', '/events', 'task.write', async ({ user, body }) => reply(201, { event: await core.createEvent(user, eventIn(body)) }));
+  route('GET', '/events/:id', 'task.read', async ({ user, params }) => ({ event: await core.getEvent(user, params.id) }));
+  route('PATCH', '/events/:id', 'task.write', async ({ user, params, body }) => ({ event: await core.updateEvent(user, params.id, eventIn(body, { partial: true })) }));
+  route('DELETE', '/events/:id', 'task.delete', ({ user, params }) => core.deleteEvent(user, params.id));
+
   // ---- Dashboard widgets ----
   route('GET', '/widget/summary', 'stats.read', async ({ user }) => { const { counts } = await core.overview(user);
-    return { stats: [{ label: 'Open tasks', value: counts.open }, { label: 'Overdue', value: counts.overdue }, { label: 'Due this week', value: counts.dueToday + counts.dueSoon }, { label: 'Projects', value: counts.projects }] }; });
+    return { stats: [{ label: 'Open tasks', value: counts.open }, { label: 'Overdue', value: counts.overdue }, { label: 'Due this week', value: counts.dueToday + counts.dueSoon }, { label: 'Events today', value: counts.eventsToday }, { label: 'Projects', value: counts.projects }] }; });
   route('GET', '/widget/attention', 'task.read', async ({ user }) => { const o = await core.overview(user);
     return { items: [...o.overdue, ...o.dueToday, ...o.dueSoon].slice(0, 6).map((t) => ({ title: t.title, subtitle: `${t.overdue ? 'Overdue · ' : ''}${t.dueDate}${t.projectName ? ` · ${t.projectName}` : ''}` })) }; });
 

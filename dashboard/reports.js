@@ -1,5 +1,6 @@
 // Reports screen: pick a report and period, run it, optionally save it. DOM built with textContent only.
 import { icon } from '/shared/icons.js';
+import { downloadPdf } from '/shared/pdf.js';
 import { askFinancePin, unlockOrbit } from '/shared/pin-gate.js';
 export async function reportsView({ h, api, toast, shell }) {
   const avail = await api('GET', '/api/reports/available');
@@ -14,8 +15,17 @@ export async function reportsView({ h, api, toast, shell }) {
   const custom = h('div', { class: 'row', hidden: '' }, from, to);
   const category = h('input', { placeholder: 'Only this category (optional), e.g. Electronics', 'aria-label': 'Category filter' });
 
+  let current = null;
+  const pdfBtn = h('button', { class: 'btn small', type: 'button', hidden: '', onclick: () => {
+    if (!current) return;
+    downloadPdf({ title: current.title, subtitle: `${current.range.label} (${current.range.from} to ${current.range.to})`, brand: 'Universe', footer: `Universe report  |  Generated ${new Date().toISOString().slice(0, 10)}`,
+      sections: current.sections.map((x) => ({ heading: x.heading, text: x.text, stats: x.stats?.map((t) => ({ label: t.label, value: String(t.value) })), table: x.table })) },
+      `universe-report-${current.range.from}-to-${current.range.to}.pdf`);
+    toast('PDF downloaded');
+  } }, icon('download'), 'Download PDF');
   function render(r) {
-    out.replaceChildren(h('h2', {}, r.title), h('p', { class: 'sub' }, `${r.range.label} (${r.range.from} to ${r.range.to})`),
+    current = r; pdfBtn.hidden = false;
+    out.replaceChildren(h('div', { class: 'row between' }, h('h2', {}, r.title), pdfBtn),  h('p', { class: 'sub' }, `${r.range.label} (${r.range.from} to ${r.range.to})`),
       ...r.sections.map((s) => h('article', { class: 'card', style: 'margin-top:1rem' }, h('h3', {}, s.heading), s.text ? h('p', {}, s.text) : null,
         s.gate === 'finance' ? h('button', { class: 'btn small', type: 'button', onclick: async () => { if (await askFinancePin({ title: 'Unlock Orbit', note: 'Adds your Orbit figures to this report. They are shown now but never saved with the report.', action: unlockOrbit(api) })) run(false); } }, icon('lock'), 'Unlock with PIN') : null,
         s.stats ? h('div', { class: 'stats' }, s.stats.map((x) => h('div', { class: 'stat' }, h('b', {}, String(x.value)), h('span', {}, x.label)))) : null,

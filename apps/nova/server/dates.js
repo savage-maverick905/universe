@@ -65,3 +65,17 @@ export function nextOccurrence(rec, due, today) {
   if (rec.until && toMs(out) > toMs(rec.until)) return null;
   return out;
 }
+
+// Every date an event (or a repeating event) falls on inside [from, to]. Events repeat on their own: nothing is copied into storage.
+export function expandDates(ev, from, to) {
+  const out = [], span = ev.endDate ? diffDays(ev.date, ev.endDate) : 0, rec = ev.recurrence;
+  if (!rec) { if (ev.date <= to && addDays(ev.date, span) >= from) out.push(ev.date); return out; }
+  const total = rec.remaining != null ? rec.remaining + 1 : Infinity;
+  let d = ev.date, n = 1;
+  for (let guard = 0; d && n <= total && d <= to && guard < 5000 && out.length < 400; guard++, n++) {
+    if (addDays(d, span) >= from) out.push(d);
+    d = nextOccurrence({ ...rec, remaining: null }, d, d);
+  }
+  return out;
+}
+export const minutes = (t) => (t ? +t.slice(0, 2) * 60 + +t.slice(3, 5) : null);

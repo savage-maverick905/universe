@@ -8,6 +8,14 @@ export function money(minor, code = 'NGN', { sign = false, compact = false } = {
   const whole = Math.floor(abs / scale), frac = abs % scale;
   return `${neg ? '-' : sign && minor > 0 ? '+' : ''}${sym}${group(String(whole))}${exp ? `.${String(frac).padStart(exp, '0')}` : ''}`;
 }
+// Short label for chart axes and bar tops: no symbol, "1.2k", "3.4M". Display only.
+export function axisMoney(minor, code = 'NGN') {
+  const v = Math.abs(minor) / 10 ** (EXP[code] ?? 2), sign = minor < 0 ? '-' : '', t = (n) => String(n).replace(/\.0$/, '');
+  if (v >= 1e9) return `${sign}${t((v / 1e9).toFixed(1))}B`; if (v >= 1e6) return `${sign}${t((v / 1e6).toFixed(1))}M`;
+  if (v >= 1e4) return `${sign}${Math.round(v / 1e3)}k`; if (v >= 1e3) return `${sign}${t((v / 1e3).toFixed(1))}k`;
+  return `${sign}${Math.round(v)}`;
+}
+export const symbolOf = (code) => SYM[code] || code;
 // minor units -> a plain decimal string for editing in an input ("3500.50")
 export function decimal(minor, code = 'NGN') { const exp = EXP[code] ?? 2, abs = Math.abs(minor), s = 10 ** exp; return `${minor < 0 ? '-' : ''}${Math.floor(abs / s)}${exp ? `.${String(abs % s).padStart(exp, '0')}` : ''}`; }
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'], DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
