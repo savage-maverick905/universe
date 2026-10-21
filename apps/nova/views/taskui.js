@@ -3,6 +3,7 @@
 import { api, h, toast } from '../services/api.js';
 import { icon } from '/shared/icons.js';
 import { dialog, closer } from '/shared/ui.js';
+import { checkCelebrate } from './celebrate.js';
 import { S, label, dueText, badge, prioBadge, select, field, projectOptions, confirmBox, todayStr, addDays, fmtDate } from '../lib.js';
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -11,7 +12,7 @@ export async function toggleDone(t, onChange) {
   try {
     const r = await api('POST', `/tasks/${t.id}/${t.status === 'done' ? 'reopen' : 'complete'}`);
     if (r.next) toast(`Done. Next one is due ${fmtDate(r.next.dueDate)}`); else if (t.status !== 'done') toast('Task completed');
-    onChange();
+    onChange(); if (t.status !== 'done') setTimeout(checkCelebrate, 350);
   } catch (x) { toast(x.message); onChange(); }
 }
 

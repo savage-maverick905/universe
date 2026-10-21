@@ -143,3 +143,9 @@ input[type=color] { height: 2.5rem; padding: .2rem; }
 @media (max-width: 640px) { .chip.ev { background: var(--blue); } .ev-time { width: 3.8rem; } }
 
 .daytimes { margin: .2rem 0 .6rem; padding: .7rem .8rem; background: var(--raise); border-radius: 12px; } .daytimes h3 { margin: 0 0 .2rem; } .dt-row { display: grid; grid-template-columns: 4.5rem 1fr; gap: .4rem .6rem; align-items: center; padding: .35rem 0; border-top: 1px solid var(--line); } .dt-row .row { grid-column: 2; } .dt-row select, .dt-row input { min-width: 0; }
+
+/* Day cleared */
+.party { text-align: center; padding: .4rem .2rem 0; } .party h2 { margin: .2rem 0; font-size: 1.5rem; } .party p { margin: .3rem 0; color: var(--dim); }
+.party-emoji { font-size: 3.4rem; line-height: 1.1; animation: pop .6s cubic-bezier(.2,1.6,.4,1) both; } .party-stats { display: flex; justify-content: center; gap: 2rem; margin: 1rem 0 .6rem; } .party-stats b { display: block; font-size: 2rem; color: var(--orange); font-variant-numeric: tabular-nums; } .party-stats small { color: var(--mute); }
+.party-mark { color: var(--orange) !important; font-weight: 600; } .party .actions { justify-content: center; margin-top: 1rem; }
+@keyframes pop { from { transform: scale(.2) rotate(-20deg); opacity: 0; } to { transform: none; opacity: 1; } } @media (prefers-reduced-motion: reduce) { .party-emoji { animation: none; } }

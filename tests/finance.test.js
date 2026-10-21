@@ -200,6 +200,7 @@ test('budgets: create, progress, duplicate prevention', async () => {
   assert.equal((await u.call('POST', '/budgets', { categoryId: food, period: 'monthly', amount: '1' })).status, 409);
   await u.call('POST', '/transactions', { type: 'expense', amount: '6,000', accountId: a.id, categoryId: cat('Groceries'), idempotencyKey: key() });
   const st = (await u.call('GET', '/budgets')).json.budgets[0].status; assert.equal(st.spentMinor, 600000); assert.equal(st.state, 'warning'); assert.equal(st.remainingMinor, 400000);
+  const nudges = (await u.call('GET', '/notifications')).json.items; assert.ok(nudges.some((i) => /60% used/.test(i.title)), JSON.stringify(nudges)); assert.ok(nudges.every((i) => !/\d,\d{3}/.test(i.title + i.body))); // no amounts on a lock screen
 });
 
 test('csv: export is injection-safe; import previews, detects duplicates, needs confirmation and cannot be replayed', async () => {

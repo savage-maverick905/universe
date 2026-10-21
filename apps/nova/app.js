@@ -4,6 +4,7 @@ import { icon } from '/shared/icons.js';
 import { api as rootApi } from '/shared/ui.js';
 import { showAuth } from '/shared/auth.js';
 import { registerServiceWorker, canPromptInstall, promptInstall, onInstallChange, isStandalone } from '/shared/pwa.js';
+import { startNotifier } from '/shared/notify.js';
 import { S } from './lib.js';
 import { overviewView } from './views/overview.js';
 import { tasksView, boardView } from './views/tasks.js';
@@ -73,7 +74,7 @@ async function boot(note = '') {
   if (!S.meta.settings.configured && S.meta.canWriteTasks) {
     try { S.meta.settings = (await api('PUT', '/settings', { timezone: Intl.DateTimeFormat().resolvedOptions().timeZone })).settings; } catch { /* stays UTC until set in Settings */ }
   }
-  await route();
+  await route(); startNotifier(['/api/apps/nova/notifications']);
 }
 addEventListener('hashchange', () => S.me && S.meta && route());
 addEventListener('keydown', (e) => { // "n" opens a new task, unless you are typing

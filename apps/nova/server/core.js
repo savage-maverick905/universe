@@ -197,6 +197,31 @@ export function makeCore(s) {
   async function deleteEvent(user, id) { const e = await ownEvent(id, user); await events.delete(e.id); return { ok: true }; }
   async function getEvent(user, id) { return strip(await ownEvent(id, user)); }
 
+
+  // ---- Nudges and streaks ----
+  // Things worth a notification right now. Each item has a stable id, so a phone shows it once.
+  async function notifications(user) {
+    const st = await getSettings(user), parts = new Intl.DateTimeFormat('en-GB', { timeZone: validTimeZone(st.timezone) ? st.timezone : 'UTC', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date()), nowMin = minutes(parts);
+    const ctx = await context(user), t0 = ctx.today, items = [];
+    for (const e of eventsIn(await mineOf(events)(user), t0, t0, ctx.pname).filter((x) => !x.allDay && x.startTime)) {
+      const until = minutes(e.startTime) - nowMin;
+      if (until >= 0 && until <= 60) items.push({ id: `ev:${e.id}:${t0}:${e.startTime}`, title: until <= 1 ? `${e.title} is starting now` : `${e.title} in ${until} min`, body: [`${e.startTime}${e.endTime ? `–${e.endTime}` : ''}`, e.location].filter(Boolean).join(' · '), url: '/apps/nova/#/schedule' });
+    }
+    const due = liveTasks(ctx).filter((t) => t.status !== 'done' && t.dueDate && t.dueDate <= t0).sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+    if (nowMin >= 7 * 60 && due.length) {
+      const late = due.filter((t) => t.dueDate < t0).length;
+      items.push({ id: `digest:${t0}`, title: `${due.length} task${due.length === 1 ? '' : 's'} need${due.length === 1 ? 's' : ''} you today`, body: `${due.slice(0, 3).map((t) => t.title).join(', ')}${due.length > 3 ? ` and ${due.length - 3} more` : ''}${late ? ` (${late} overdue)` : ''}`, url: '/apps/nova/#/' });
+    }
+    return { items };
+  }
+  // Consecutive days (ending today, or yesterday if nothing is done yet today) on which at least one task was finished.
+  async function streak(user) {
+    const st = await getSettings(user), ctx = await context(user), t0 = ctx.today, tz = (iso) => todayIn(st.timezone, new Date(iso));
+    const counts = new Map(); for (const t of ctx.ts) if (t.completedAt) { const d = tz(t.completedAt); counts.set(d, (counts.get(d) || 0) + 1); }
+    let d = counts.has(t0) ? t0 : addDays(t0, -1), days = 0; while (counts.has(d) && days < 3650) { days++; d = addDays(d, -1); }
+    return { today: t0, days, doneToday: counts.get(t0) || 0, remaining: liveTasks(ctx).filter((t) => t.status !== 'done' && t.dueDate && t.dueDate <= t0).length };
+  }
+
   // ---- Checks shared by create and update ----
   async function checkRefs(user, doc, selfId, ctx) {
     if (doc.projectId) await ownProject(doc.projectId, user);
@@ -340,5 +365,5 @@ export function makeCore(s) {
   }
 
   return { cols, getSettings, saveSettings, today, ownProject, ownTask, ownMilestone, listProjects, getProject, createProject, updateProject, deleteProject,
-    createMilestone, updateMilestone, deleteMilestone, listEvents, getEvent, createEvent, updateEvent, deleteEvent, listTasks, getTask, createTask, updateTask, deleteTask, overview, calendar, context, liveTasks, progressOf, strip };
+    createMilestone, updateMilestone, deleteMilestone, notifications, streak, listEvents, getEvent, createEvent, updateEvent, deleteEvent, listTasks, getTask, createTask, updateTask, deleteTask, overview, calendar, context, liveTasks, progressOf, strip };
 }

@@ -3,6 +3,7 @@ import { api, h, toast, setHooks, lockNow } from './lib/api.js';
 import { S, loadBase } from './lib/forms.js';
 import { setCurrencies } from './lib/fmt.js';
 import { lockScreen } from './views/lock.js';
+import { startNotifier } from '/shared/notify.js';
 import { icon } from '/shared/icons.js';
 import { showAuth } from '/shared/auth.js';
 import { api as rootApi } from '/shared/ui.js';
@@ -85,6 +86,6 @@ async function boot(note = '') {
   try { const me = await rootApi('GET', '/api/auth/me'); state.me = me; } catch { state.me = null; }
   if (!state.me) { state.me = await showAuth({ root, brand, note }); }
   document.title = 'Orbit — by Universe';
-  try { await start(); } catch (e) { root.replaceChildren(h('main', { class: 'auth' }, h('h1', {}, 'Orbit'), h('p', { class: 'err' }, e.status === 403 ? 'Your account does not have access to Orbit. Ask an admin to grant the finance permissions.' : e.status === 404 ? 'Orbit is not installed. An admin can install it from the Universe dashboard.' : e.message))); }
+  try { await start(); startNotifier(['/api/apps/finance/notifications']); } catch (e) { root.replaceChildren(h('main', { class: 'auth' }, h('h1', {}, 'Orbit'), h('p', { class: 'err' }, e.status === 403 ? 'Your account does not have access to Orbit. Ask an admin to grant the finance permissions.' : e.status === 404 ? 'Orbit is not installed. An admin can install it from the Universe dashboard.' : e.message))); }
 }
 boot();

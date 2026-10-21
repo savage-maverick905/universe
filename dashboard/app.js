@@ -8,6 +8,7 @@ import { h, api as rawApi, toast } from '/shared/ui.js';
 import { showAuth } from '/shared/auth.js';
 import { renderWidget } from '/shared/widgets.js';
 import { askFinancePin, unlockOrbit } from '/shared/pin-gate.js';
+import { startNotifier } from '/shared/notify.js';
 import { registerServiceWorker, canPromptInstall, promptInstall, onInstallChange, isStandalone } from '/shared/pwa.js';
 
 const root = document.getElementById('root');
@@ -101,6 +102,7 @@ async function boot(note = '') {
   try { me = await api('GET', '/api/auth/me'); }
   catch { me = await showAuth({ root, brand, note }); }
   await route();
+  try { const { apps } = await api('GET', '/api/apps'); startNotifier(apps.filter((a) => a.status === 'enabled' && ['nova', 'finance'].includes(a.id)).map((a) => `/api/apps/${a.id}/notifications`)); } catch { /* nudges are optional */ }
 }
 addEventListener('hashchange', () => me && route());
 boot();

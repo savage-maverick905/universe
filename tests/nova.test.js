@@ -377,3 +377,18 @@ test('events and activities: validation, repeats, clashes, calendar, overview, p
   assert.equal((await G('GET', '/events')).status, 403);
   assert.equal((await A('DELETE', `/events/${e1.id}`)).status, 200);
 });
+
+test('nudges and streaks', async () => {
+  const { A, Bq, G } = await setup();
+  const today = (await A('GET', '/meta')).json.today;
+  assert.deepEqual((await A('GET', '/streak')).json, { today, days: 0, doneToday: 0, remaining: 0 });
+  const t1 = (await A('POST', '/tasks', { title: 'Pay rent', dueDate: today })).json.task, t2 = (await A('POST', '/tasks', { title: 'Call mum', dueDate: today })).json.task;
+  assert.equal((await A('GET', '/streak')).json.remaining, 2);
+  await A('POST', `/tasks/${t1.id}/complete`); let s = (await A('GET', '/streak')).json;
+  assert.deepEqual([s.days, s.doneToday, s.remaining], [1, 1, 1]);
+  await A('POST', `/tasks/${t2.id}/complete`); s = (await A('GET', '/streak')).json;
+  assert.deepEqual([s.days, s.doneToday, s.remaining], [1, 2, 0]); // day cleared
+  const n = (await A('GET', '/notifications')).json; assert.ok(Array.isArray(n.items)); // digest depends on the clock; the shape is what matters
+  assert.deepEqual((await Bq('GET', '/streak')).json, { today, days: 0, doneToday: 0, remaining: 0 }); // private to each user
+  assert.equal((await G('GET', '/notifications')).status, 403);
+});

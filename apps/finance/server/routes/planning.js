@@ -34,6 +34,16 @@ export function planningRoutes({ router, s, store, txn, guard, P }) {
     return { summary, budgets: live.map((b) => ({ ...strip(b), categoryPath: b.categoryId ? pathOf(map, b.categoryId) : 'All spending', status: statuses.get(b.id) })) };
   }
   router.add('GET', `${P}/budgets`, use(async ({ user }) => budgetViews(user)));
+  // Nudges for phones. No amounts in the text, so nothing private shows on a lock screen. Ids repeat only once per budget period or day.
+  router.add('GET', `${P}/notifications`, use(async ({ user }) => {
+    const [{ budgets }, { debts }, st] = await Promise.all([budgetViews(user), debtViews(user), col.settings.get(user.id)]), today = todayIn(st.timezone), items = [];
+    for (const b of budgets) { const x = b.status; if (x.state === 'ok' || !x.period) continue; const name = b.name || b.categoryPath;
+      items.push({ id: `bud:${b.id}:${x.state}:${x.period.from}`, title: x.state === 'over' ? `Over budget: ${name}` : `${name} budget is ${Math.round(x.percent)}% used`, body: x.daysLeft ? `${x.daysLeft} day${x.daysLeft === 1 ? '' : 's'} left in this period.` : 'This period has ended.', url: '/apps/finance/#/plan' }); }
+    for (const d of debts) { if (d.status !== 'open' || !d.dueDate) continue; const days = Math.round((Date.parse(`${d.dueDate}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`)) / 864e5);
+      if (days > 3) continue; const who = d.counterparty || 'Someone', verb = d.direction === 'lent' ? `${who} owes you` : `You owe ${who}`;
+      items.push({ id: `debt:${d.id}:${today}`, title: days < 0 ? `Overdue: ${verb}` : days === 0 ? `Due today: ${verb}` : `Due in ${days} day${days === 1 ? '' : 's'}: ${verb}`, body: 'Open Orbit to see the details.', url: '/apps/finance/#/more' }); }
+    return { items };
+  }));
   function parseBudget(b, st, cats, existing) {
     const o = {};
     if ('name' in b) o.name = v.string(b.name ?? '', 'name', { max: 60 });

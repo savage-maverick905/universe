@@ -32,3 +32,9 @@ self.addEventListener('fetch', (event) => {
     return new Response('You are offline.', { status: 503, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
   }));
 });
+
+// Tapping a notification opens (or focuses) the app page it points to.
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close(); const url = e.notification.data?.url || '/dashboard/';
+  e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => { const hit = list.find((c) => new URL(c.url).pathname === new URL(url, self.location.origin).pathname); if (hit) { hit.navigate?.(url); return hit.focus(); } return self.clients.openWindow(url); }));
+});

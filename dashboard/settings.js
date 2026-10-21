@@ -1,10 +1,12 @@
 // Settings page: your account for everyone; sign-up rules and people for admins.
+import { notifyCard } from '/shared/notify.js';
 import { h, api, toast, dialog, closer, initial } from '/shared/ui.js';
 import { accountPanels } from '/shared/account.js';
 
 export async function settingsView({ me, shell, onSignOut }) {
   const can = (p) => me.isAdmin || me.permissions.includes(p);
   const kids = [h('h1', { class: 'page-title' }, 'Settings'), ...accountPanels({ session: me, appName: 'Universe', appId: 'all', note: 'Your account, password, Finance PIN and Nebula settings are kept.', onSignOut })];
+  kids.splice(1, 0, notifyCard());
   let roles = [];
   if (can('users.read')) { try { roles = (await api('GET', '/api/roles')).roles; } catch { /* roles are optional here */ } }
   if (can('config.manage')) kids.push(await signupPanel(roles));

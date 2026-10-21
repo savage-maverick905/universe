@@ -26,6 +26,8 @@ export function routes({ router, s, core, ai }) {
   route('GET', '/settings', 'task.read', async ({ user }) => ({ settings: await core.getSettings(user) }));
   route('PUT', '/settings', 'task.write', async ({ user, body }) => ({ settings: await core.saveSettings(user, settingsIn(body)) }));
   route('GET', '/overview', 'task.read', ({ user }) => core.overview(user));
+  route('GET', '/notifications', 'task.read', ({ user }) => core.notifications(user));
+  route('GET', '/streak', 'task.read', ({ user }) => core.streak(user));
   route('GET', '/calendar', 'task.read', ({ user, query }) => {
     const from = query.get('from'), to = query.get('to') || (isDate(from) ? addDays(from, 41) : null);
     return core.calendar(user, from, to);
