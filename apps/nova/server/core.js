@@ -144,8 +144,19 @@ export function makeCore(s) {
   // An event has a date and, unless it is all day, a start time. Repeating events expand on read, so editing one edits the whole series.
   function eventsIn(all, from, to, pname) {
     const occ = [];
-    for (const e of all) for (const d of expandDates(e, from, to)) occ.push({ ...strip(e), occurrenceDate: d, projectName: pname.get(e.projectId) ?? null, clash: false });
-    const byDay = Map.groupBy(occ.filter((o) => !o.allDay && o.startTime && !o.endDate), (o) => o.occurrenceDate);
+    for (const e of all) {
+      if (e.endDate && e.endDate > e.date && !e.recurrence) { // a multi-day event is one entry per day, each with its own times if set
+        const count = diffDays(e.date, e.endDate) + 1;
+        for (let i = 0; i < count; i++) {
+          const day = addDays(e.date, i); if (day < from || day > to) continue;
+          const dt = e.dayTimes?.[day], own = dt ? { allDay: !!dt.allDay, startTime: dt.allDay ? null : dt.startTime ?? null, endTime: dt.allDay ? null : dt.endTime ?? null } : {};
+          occ.push({ ...strip(e), ...own, occurrenceDate: day, dayIndex: i + 1, dayCount: count, ownTimes: !!dt, projectName: pname.get(e.projectId) ?? null, clash: false });
+        }
+        continue;
+      }
+      for (const d of expandDates(e, from, to)) occ.push({ ...strip(e), occurrenceDate: d, projectName: pname.get(e.projectId) ?? null, clash: false });
+    }
+    const byDay = Map.groupBy(occ.filter((o) => !o.allDay && o.startTime), (o) => o.occurrenceDate);
     for (const list of byDay.values()) for (const a of list) for (const b of list) {
       if (a === b) continue;
       const aS = minutes(a.startTime), aE = minutes(a.endTime) ?? aS + 60, bS = minutes(b.startTime), bE = minutes(b.endTime) ?? bS + 60;
@@ -165,6 +176,7 @@ export function makeCore(s) {
     else if (!doc.startTime) throw badRequest('Give a start time, or mark the event as all day');
     if (doc.endTime && !doc.startTime) throw badRequest('An end time needs a start time');
     if (doc.endTime && doc.startTime && (!doc.endDate || doc.endDate === doc.date) && doc.endTime <= doc.startTime) throw badRequest('The end time must be after the start time');
+    if (doc.endDate && doc.endDate > doc.date && !doc.recurrence && doc.dayTimes) { for (const k of Object.keys(doc.dayTimes)) if (k < doc.date || k > doc.endDate) delete doc.dayTimes[k]; } else doc.dayTimes = {};
     if (doc.recurrence) {
       if (doc.endDate && doc.endDate !== doc.date) throw badRequest('A repeating event cannot span several days');
       if (doc.recurrence.until && doc.recurrence.until < doc.date) throw badRequest('The repeat end date must not be before the event date');
@@ -178,7 +190,6 @@ export function makeCore(s) {
   }
   async function updateEvent(user, id, patch) {
     const e = await ownEvent(id, user), merged = { ...e, ...patch };
-    if ('allDay' in patch && !patch.allDay === false) { /* switching to all day clears times in checkEvent */ }
     await checkEvent(user, merged);
     const { id: _i, ownerId: _o, createdAt: _c, updatedAt: _u, schemaVersion: _s, ...fields } = merged;
     return strip(await events.update(e.id, fields));

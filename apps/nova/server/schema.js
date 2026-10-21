@@ -88,7 +88,7 @@ export const taskDefaults = () => ({ description: '', projectId: null, milestone
 export const EVENT_KINDS = [['event', 'Event'], ['activity', 'Activity'], ['meeting', 'Meeting'], ['appointment', 'Appointment'], ['reminder', 'Reminder']];
 export const EVENT_KIND_IDS = EVENT_KINDS.map(([id]) => id);
 const time = (x, name) => { if (typeof x !== 'string' || !/^([01]\d|2[0-3]):[0-5]\d$/.test(x)) throw badRequest(`${name} must be a time like 14:30`); return x; };
-const EVENT_KEYS = ['title', 'description', 'location', 'kind', 'date', 'endDate', 'allDay', 'startTime', 'endTime', 'projectId', 'recurrence'];
+const EVENT_KEYS = ['title', 'description', 'location', 'kind', 'date', 'endDate', 'allDay', 'startTime', 'endTime', 'projectId', 'recurrence', 'dayTimes'];
 export function eventIn(body, { partial = false } = {}) {
   const b = allowKeys(v.object(body), EVENT_KEYS), o = {};
   if (!partial && !('title' in b)) throw badRequest('title is required');
@@ -104,9 +104,20 @@ export function eventIn(body, { partial = false } = {}) {
   if ('endTime' in b) o.endTime = nullable(b.endTime, (x) => time(x, 'endTime'));
   if ('projectId' in b) o.projectId = nullable(b.projectId, (x) => v.anyId(x, 'projectId'));
   if ('recurrence' in b) o.recurrence = recurrenceIn(b.recurrence);
+  if ('dayTimes' in b) { // per-day times for a multi-day event: { 'YYYY-MM-DD': { startTime, endTime } | { allDay: true } }
+    const dt = v.object(b.dayTimes, 'dayTimes'), keys = Object.keys(dt), out = {};
+    if (keys.length > 92) throw badRequest('Too many days with their own times');
+    for (const k of keys) {
+      date(k, 'dayTimes date'); const x = allowKeys(v.object(dt[k], 'dayTimes'), ['startTime', 'endTime', 'allDay'], 'dayTimes');
+      if (x.allDay === true) { out[k] = { allDay: true }; continue; }
+      out[k] = { startTime: time(x.startTime, `Start time on ${k}`), endTime: x.endTime ? time(x.endTime, `End time on ${k}`) : null };
+      if (out[k].endTime && out[k].endTime <= out[k].startTime) throw badRequest(`The end time must be after the start time on ${k}`);
+    }
+    o.dayTimes = out;
+  }
   return o;
 }
-export const eventDefaults = () => ({ description: '', location: '', kind: 'event', endDate: null, allDay: false, startTime: null, endTime: null, projectId: null, recurrence: null });
+export const eventDefaults = () => ({ description: '', location: '', kind: 'event', endDate: null, allDay: false, startTime: null, endTime: null, projectId: null, recurrence: null, dayTimes: {} });
 
 export function milestoneIn(body, { partial = false } = {}) {
   const b = allowKeys(v.object(body), ['title', 'description', 'dueDate', 'completed']), o = {};

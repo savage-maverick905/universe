@@ -1,4 +1,4 @@
-self.UNIVERSE_SW = { prefix: 'universe-nova', version: 'v2', shell: [
+self.UNIVERSE_SW = { prefix: 'universe-nova', version: 'v3', shell: [
   '/apps/nova/', '/apps/nova/app.js', '/apps/nova/lib.js', '/apps/nova/services/api.js', '/apps/nova/views/overview.js', '/apps/nova/views/tasks.js', '/apps/nova/views/taskui.js',
   '/apps/nova/views/calendar.js', '/apps/nova/views/schedule.js', '/apps/nova/views/eventui.js', '/apps/nova/views/projects.js', '/apps/nova/views/settings.js', '/apps/nova/styles.css',
   '/shared/theme.css', '/shared/icons.js', '/shared/ui.js', '/shared/auth.js', '/shared/account.js', '/shared/pwa.js',

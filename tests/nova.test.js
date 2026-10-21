@@ -360,11 +360,17 @@ test('events and activities: validation, repeats, clashes, calendar, overview, p
   const list = (await A('GET', `/events?from=${d(0)}&to=${d(30)}`)).json.events;
   assert.equal(list.filter((e) => e.title === 'Football').length, 3);
   assert.deepEqual(list.filter((e) => e.date === d(1) && e.occurrenceDate === d(1)).map((e) => e.clash), [true, true]);
-  assert.equal(list.filter((e) => e.title === 'Holiday').length, 1);
+  assert.equal(list.filter((e) => e.title === 'Holiday').length, 3); // multi-day: one entry per day
   assert.equal((await A('GET', `/events?from=${d(3)}&to=${d(3)}`)).json.events[0].title, 'Holiday'); // multi-day shows on every day
+  const trip = (await A('POST', '/events', { title: 'Course', date: d(10), endDate: d(12), startTime: '09:00', endTime: '17:00', dayTimes: { [d(11)]: { startTime: '13:00', endTime: '15:00' }, [d(12)]: { allDay: true }, [d(30)]: { allDay: true } } })).json.event;
+  assert.deepEqual(Object.keys(trip.dayTimes), [d(11), d(12)]); // days outside the span are dropped
+  const tdays = (await A('GET', `/events?from=${d(9)}&to=${d(13)}`)).json.events.filter((e) => e.title === 'Course');
+  assert.deepEqual(tdays.map((e) => [e.occurrenceDate, e.startTime, e.endTime, e.allDay, e.dayIndex]), [[d(10), '09:00', '17:00', false, 1], [d(11), '13:00', '15:00', false, 2], [d(12), null, null, true, 3]]);
+  assert.equal((await A('POST', '/events', { title: 'Bad', date: d(10), endDate: d(11), startTime: '09:00', dayTimes: { [d(10)]: { startTime: '15:00', endTime: '14:00' } } })).status, 400);
+  assert.equal((await A('GET', `/calendar?from=${d(11)}&to=${d(11)}`)).json.events.filter((e) => e.title === 'Course').length, 1); // shows on the middle day too
   assert.equal((await A('PATCH', `/events/${e1.id}`, { startTime: '11:00', endTime: '12:00' })).json.event.startTime, '11:00');
   assert.equal((await A('GET', `/events?from=${d(1)}&to=${d(1)}`)).json.events.every((e) => !e.clash), true);
-  const cal = (await A('GET', `/calendar?from=${d(0)}&to=${d(10)}`)).json; assert.ok(cal.events.length === 5);
+  const cal = (await A('GET', `/calendar?from=${d(0)}&to=${d(10)}`)).json; assert.ok(cal.events.length === 8);
   const ov = (await A('GET', '/overview')).json; assert.equal(ov.todayEvents[0].title, 'Football'); assert.ok(ov.upcomingEvents.length);
   assert.equal((await Bq('GET', `/events/${e1.id}`)).status, 404); assert.equal((await Bq('DELETE', `/events/${e1.id}`)).status, 404);
   assert.deepEqual((await Bq('GET', `/events?from=${d(0)}&to=${d(30)}`)).json.events, []);
