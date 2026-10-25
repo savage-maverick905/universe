@@ -93,7 +93,7 @@ export class AiOrchestrator {
   async deleteConvo(user, id) { const c = await this.ownConvo(user, id); await this.msgs.deleteWhere({ conversationId: c.id }); await this.convos.delete(c.id); }
 
   // ---- the chat loop ----
-  async chat(user, { conversationId, message, request = null }) {
+  async chat(user, { conversationId, message, request = null, clientContext = null }) {
     const profile = await this.profileDoc(user);
     const cred = await this.credentials(user, profile);
     let convo = conversationId ? await this.ownConvo(user, conversationId) : await this.convos.insert({ id: newId('conv'), userId: user.id, title: 'New chat', messageCount: 0, summary: null });
@@ -108,7 +108,7 @@ export class AiOrchestrator {
         return this.msgs.insert({ id: newId('msg'), conversationId: convo.id, userId: user.id, seq, ...m }); };
       await save({ role: 'user', content: message });
 
-      const toolsUsed = [], gates = []; let tokens = 0, reply = null;
+      const toolsUsed = [], gates = [], actions = []; let tokens = 0, reply = null;
       for (let step = 0; step < MAX_STEPS && !reply; step++) {
         const defs = step === MAX_STEPS - 1 ? [] : await this.tools.available(user);
         let out;
@@ -123,7 +123,8 @@ export class AiOrchestrator {
           let final = null;
           for (const c of calls) {
             toolsUsed.push(c.name);
-            const r = await this.tools.execute(user, c.name, c.arguments, this.services, { request, conversationId: convo.id });
+            const r = await this.tools.execute(user, c.name, c.arguments, this.services, { request, conversationId: convo.id, clientContext });
+            if (r.ok && r.clientActions?.length) for (const a of r.clientActions) if (actions.length < 8) actions.push({ ...a, app: c.name.split('.')[0] });
             // An app can ask for a PIN (code "locked") or word the final reply itself ("final"), e.g. for a draft it prepared.
             if (!r.ok && (r.code === 'locked' || r.code === 'no_pin')) { gates.push({ app: r.appId, code: r.code }); final = final || r.error; }
             else if (r.ok && typeof r.result?.final === 'string') final = final || r.result.final;
@@ -136,7 +137,7 @@ export class AiOrchestrator {
       }
       if (cred.source === 'shared' && tokens) await this.addUsage(user, 0, tokens);
       if (convo.title === 'New chat') convo = await this.convos.update(convo.id, { title: message.replace(/\s+/g, ' ').slice(0, 60) });
-      return { conversation: convo, reply, toolsUsed, gates };
+      return { conversation: convo, reply, toolsUsed, gates, actions };
     } finally { this.busy.delete(convo.id); }
   }
 

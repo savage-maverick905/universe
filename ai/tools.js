@@ -20,7 +20,9 @@ export function validateArgs(schema, args) {
 }
 
 const MAX_RESULT_CHARS = 6000;
+const MAX_CLIENT_ACTIONS = 4, MAX_ACTION_CHARS = 12000;
 
+let _drop;
 export class ToolRegistry {
   constructor({ installer, permissions, audit, apps }) {
     Object.assign(this, { installer, permissions, audit, apps });
@@ -60,9 +62,18 @@ export class ToolRegistry {
     if (problem) return { ok: false, error: `Invalid arguments: ${problem}` };
     try {
       if (t.access === 'write') await this.audit.record({ actorId: user.id, action: 'ai.tool.write', meta: { tool: name, args } });
-      let text = JSON.stringify(await t.handler(args, { user, services, ...extra }));
+      const out = await t.handler(args, { user, services, ...extra });
+      // A tool may ask the BROWSER to do something (e.g. start playing). Those instructions are built server-side from verified data,
+      // are capped, and never shown to the model; the browser re-validates them and only runs a fixed set of action types.
+      let clientActions = [];
+      let shown = out;
+      if (out && typeof out === 'object' && Array.isArray(out.clientActions)) {
+        clientActions = out.clientActions.slice(0, MAX_CLIENT_ACTIONS).filter((a) => a && typeof a === 'object' && JSON.stringify(a).length <= MAX_ACTION_CHARS);
+        ({ clientActions: _drop, ...shown } = out);
+      }
+      let text = JSON.stringify(shown);
       if (text.length > MAX_RESULT_CHARS) text = JSON.stringify({ truncated: true, partial: text.slice(0, MAX_RESULT_CHARS) });
-      return { ok: true, result: JSON.parse(text) };
+      return { ok: true, result: JSON.parse(text), clientActions };
     } catch (e) {
       return { ok: false, error: e instanceof HttpError ? e.message : 'The tool failed', code: e instanceof HttpError ? e.code : undefined, appId: t.appId };
     }

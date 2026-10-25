@@ -7,7 +7,7 @@ export function applySecurityHeaders(res, production) {
   res.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
   res.setHeader('Cache-Control', 'no-store');
   res.setHeader('Content-Security-Policy',
-    "default-src 'self'; connect-src 'self' https://api.cloudinary.com; img-src 'self' data: https://res.cloudinary.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; frame-ancestors 'none'; base-uri 'none'; form-action 'self'");
+    "default-src 'self'; connect-src 'self' https://api.cloudinary.com; img-src 'self' data: blob: https://res.cloudinary.com; media-src 'self' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; frame-ancestors 'none'; base-uri 'none'; form-action 'self'");
   if (production) res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
 }
 

@@ -1,9 +1,9 @@
 export class Router {
   constructor() { this.routes = []; }
-  add(method, pattern, handler, { auth = true, bodyLimit } = {}) {
+  add(method, pattern, handler, { auth = true, bodyLimit, raw = false } = {}) {
     const names = [];
     const rx = new RegExp('^' + pattern.replace(/:([a-zA-Z]+)/g, (_, n) => { names.push(n); return '([^/]+)'; }) + '/?$');
-    this.routes.push({ method, rx, names, handler, auth, bodyLimit });
+    this.routes.push({ method, rx, names, handler, auth, bodyLimit, raw });
   }
   match(method, path) {
     let pathMatched = false;

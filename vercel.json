@@ -9,6 +9,7 @@
       "includeFiles": "{apps,core,auth,ai,database,shared,config,http}/**"
     }
   },
+  "crons": [{ "path": "/api/apps/jupiter/maintenance/weekly", "schedule": "0 3 * * 0" }],
   "rewrites": [
     { "source": "/", "destination": "/dashboard/index.html" },
     { "source": "/api/:path*", "destination": "/api/index.js" }
@@ -21,7 +22,7 @@
         { "key": "X-Frame-Options", "value": "DENY" },
         { "key": "Referrer-Policy", "value": "no-referrer" },
         { "key": "Strict-Transport-Security", "value": "max-age=31536000; includeSubDomains" },
-        { "key": "Content-Security-Policy", "value": "default-src 'self'; connect-src 'self' https://api.cloudinary.com; img-src 'self' data: https://res.cloudinary.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; frame-ancestors 'none'; base-uri 'none'; form-action 'self'" }
+        { "key": "Content-Security-Policy", "value": "default-src 'self'; connect-src 'self' https://api.cloudinary.com; img-src 'self' data: blob: https://res.cloudinary.com; media-src 'self' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; frame-ancestors 'none'; base-uri 'none'; form-action 'self'" }
       ]
     },
     {

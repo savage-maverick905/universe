@@ -77,11 +77,14 @@ export function aiRoutes(router, s) {
   router.add('POST', '/api/ai/chat', async ({ user, body, req, res, session }) => {
     await use(user);
     const rl = s.limiters.ai.hit(user.id); if (!rl.allowed) throw tooMany(rl.retryAfterSec);
-    const b = allowKeys(v.object(body), ['conversationId', 'message']);
+    const b = allowKeys(v.object(body), ['conversationId', 'message', 'clientContext']);
+    // Optional small snapshot of what the person's screen is showing (e.g. Jupiter's player). Tools treat it as untrusted information.
+    let clientContext = null;
+    if (b.clientContext != null) { v.object(b.clientContext, 'clientContext'); if (JSON.stringify(b.clientContext).length > 6000) throw badRequest('clientContext is too large'); clientContext = b.clientContext; }
     const message = v.string(b.message, 'message', { min: 1, max: 4000 });
     const conversationId = b.conversationId == null ? null : v.anyId(b.conversationId, 'conversationId');
-    const r = await o.chat(user, { conversationId, message, request: { req, res, session } });
-    return { conversation: { id: r.conversation.id, title: r.conversation.title }, reply: { id: r.reply.id, content: r.reply.content, provider: r.reply.provider, model: r.reply.model }, toolsUsed: r.toolsUsed, gates: r.gates };
+    const r = await o.chat(user, { conversationId, message, clientContext, request: { req, res, session } });
+    return { conversation: { id: r.conversation.id, title: r.conversation.title }, reply: { id: r.reply.id, content: r.reply.content, provider: r.reply.provider, model: r.reply.model }, toolsUsed: r.toolsUsed, gates: r.gates, actions: r.actions };
   });
 
   // ---- admin defaults ----

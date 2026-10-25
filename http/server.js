@@ -122,11 +122,13 @@ async function handle(req, res, s, router) {
       auth = await authenticate(req, s);
       if (!auth.user) throw new HttpError(401, 'Authentication required', 'unauthenticated');
     }
-    const body = changes ? await readJsonBody(req, m.route.bodyLimit) : undefined;
+    // `raw` routes (binary uploads) read their own body and enforce their own size limit.
+    const body = changes && !m.route.raw ? await readJsonBody(req, m.route.bodyLimit) : undefined;
     const result = await m.route.handler({
       req, res, params: m.params, query: url.searchParams, body, ip,
       user: auth.user, session: auth.session, services: s,
     });
+    if (result?.__handled) return; // the handler already wrote the response itself (audio/image streaming)
     if (result?.__reply) sendJson(res, result.status, result.body, result.headers);
     else sendJson(res, 200, result);
   } catch (e) {

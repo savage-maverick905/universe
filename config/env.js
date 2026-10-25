@@ -23,6 +23,10 @@ export function loadConfig(env = process.env, overrides = {}) {
         ephemeral: (env.GITHUB_EPHEMERAL_COLLECTIONS || '').split(',').map((s) => s.trim()).filter(Boolean),
       },
     },
+    // Jupiter (apps/jupiter): music binaries and listening history live in a SEPARATE branch (never the Universe data branch).
+    jupiter: { driver: env.JUPITER_MEDIA_DRIVER || '', repo: env.JUPITER_MEDIA_REPO || '', branch: env.JUPITER_MEDIA_BRANCH || 'jupiter-media', token: env.JUPITER_MEDIA_TOKEN || '',
+      dir: env.JUPITER_MEDIA_DIR || './data/jupiter-media', secret: env.JUPITER_SECRET || '', cronSecret: env.CRON_SECRET || '',
+      maxFileMb: int(env.JUPITER_MAX_FILE_MB, 200), libraryLimitMb: int(env.JUPITER_LIBRARY_LIMIT_MB, 900) },
     cloudinary: { cloudName: env.CLOUDINARY_CLOUD_NAME || '', uploadPreset: env.CLOUDINARY_UPLOAD_PRESET || '' },
     ai: { defaultProvider: env.AI_DEFAULT_PROVIDER || 'groq', defaultModel: env.AI_DEFAULT_MODEL || '', sharedKeys: { groq: env.GROQ_API_KEY || '' },
       keyEncryptionSecret: env.KEY_ENCRYPTION_SECRET || '', groqBaseUrl: env.GROQ_BASE_URL || 'https://api.groq.com/openai/v1' },

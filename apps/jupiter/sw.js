@@ -1,1 +1,5 @@
-self.UNIVERSE_SW={prefix:'jupiter',version:'1.0.0',shell:['/apps/jupiter/','/apps/jupiter/index.html','/apps/jupiter/app.js','/apps/jupiter/styles.css','/apps/jupiter/icon.svg','/shared/theme.css','/shared/ui.js','/shared/auth.js','/shared/icons.js','/shared/pwa.js','/shared/sw-core.js']};importScripts('/shared/sw-core.js');
+self.UNIVERSE_SW = { prefix: 'universe-jupiter', version: 'v1', shell: [
+  '/apps/jupiter/', '/apps/jupiter/app.js', '/apps/jupiter/styles.css', '/apps/jupiter/services/api.js', '/apps/jupiter/lib/player.js', '/apps/jupiter/lib/offline.js', '/apps/jupiter/lib/tags.js',
+  '/shared/theme.css', '/shared/icons.js', '/shared/ui.js', '/shared/auth.js', '/shared/account.js', '/shared/pwa.js', '/shared/markdown.js', '/apps/jupiter/icons/icon-192.png', '/apps/jupiter/icons/icon.svg',
+] };
+importScripts('/shared/sw-core.js');

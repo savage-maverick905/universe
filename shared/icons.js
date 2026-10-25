@@ -36,6 +36,14 @@ const P = {
   calendar: '<rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
   columns: '<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18M15 3v18"/>',
   flag: '<path d="M4 22V4M4 4h13l-2 4 2 4H4"/>',
+  music: '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
+  play: '<path d="M6 3l14 9-14 9z"/>', pause: '<path d="M6 4h4v16H6zM14 4h4v16h-4z"/>',
+  next: '<path d="m5 4 10 8-10 8zM19 5v14"/>', prev: '<path d="m19 20-10-8 10-8zM5 19V5"/>',
+  shuffle: '<path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/>',
+  heart: '<path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7z"/>',
+  queue: '<path d="M3 6h13M3 12h13M3 18h9M18 14v6l4-3z"/>', vol: '<path d="M11 5 6 9H2v6h4l5 4zM16 9a4 4 0 0 1 0 6M19 6a8 8 0 0 1 0 12"/>',
+  chevdown: '<path d="m6 9 6 6 6-6"/>', headphones: '<path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/>',
+  disc: '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/>',
   pencil: '<path d="M17 3a2.85 2.85 0 0 1 4 4L7.5 20.5 2 22l1.5-5.5z"/>',
 };
 export function icon(name, size) {
