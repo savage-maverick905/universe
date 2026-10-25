@@ -1,0 +1,1 @@
+self.UNIVERSE_SW={prefix:'jupiter',version:'1.0.0',shell:['/apps/jupiter/','/apps/jupiter/index.html','/apps/jupiter/app.js','/apps/jupiter/styles.css','/apps/jupiter/icon.svg','/shared/theme.css','/shared/ui.js','/shared/auth.js','/shared/icons.js','/shared/pwa.js','/shared/sw-core.js']};importScripts('/shared/sw-core.js');

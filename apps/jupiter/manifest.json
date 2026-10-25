@@ -1,0 +1,34 @@
+{
+  "manifestVersion": 1,
+  "id": "jupiter",
+  "name": "Jupiter",
+  "version": "1.0.0",
+  "description": "Your private music universe: own, organize, stream, download and understand your music.",
+  "icon": "music",
+  "entry": "index.html",
+  "permissions": [
+    "jupiter.library.read",
+    "jupiter.library.write",
+    "jupiter.playback.read",
+    "jupiter.playback.write",
+    "jupiter.stats.read",
+    "jupiter.ai.use"
+  ],
+  "defaultRolePermissions": {
+    "admin": ["jupiter.library.read","jupiter.library.write","jupiter.playback.read","jupiter.playback.write","jupiter.stats.read","jupiter.ai.use"],
+    "resident": ["jupiter.library.read","jupiter.library.write","jupiter.playback.read","jupiter.playback.write","jupiter.stats.read","jupiter.ai.use"],
+    "guest": []
+  },
+  "dataResources": ["jupiter_tracks","jupiter_artists","jupiter_albums","jupiter_playlists","jupiter_playlist_tracks","jupiter_likes","jupiter_plays","jupiter_player_commands"],
+  "widgets": [
+    {"id":"summary","title":"Jupiter","type":"stat","dataEndpoint":"/api/apps/jupiter/widget/summary","requiredPermission":"jupiter.stats.read"},
+    {"id":"top","title":"Jupiter most played","type":"list","dataEndpoint":"/api/apps/jupiter/widget/top","requiredPermission":"jupiter.stats.read"}
+  ],
+  "aiTools": [
+    {"name":"jupiter.search","description":"Search the user's private Jupiter music library by song, artist, album or tag.","access":"read","requiredPermission":"jupiter.library.read"},
+    {"name":"jupiter.play","description":"Queue and play songs from the user's Jupiter library. Use search first when the request names music.","access":"write","requiredPermission":"jupiter.playback.write"},
+    {"name":"jupiter.stats","description":"Get the user's Jupiter listening statistics and most played music.","access":"read","requiredPermission":"jupiter.stats.read"},
+    {"name":"jupiter.createPlaylist","description":"Create a Jupiter playlist from songs in the user's private library.","access":"write","requiredPermission":"jupiter.library.write"}
+  ],
+  "aiGuidance": "JUPITER is the user's private music library. Only music stored in Jupiter is playable. Never invent a track, artist, album or URL. For requests such as 'play my favourite Afrobeats', search the library first, then use jupiter.play. Playback commands are requests the Jupiter app consumes on the user's device; do not claim audio started unless the tool reports it. Use jupiter.stats for listening history and analytics."
+}
