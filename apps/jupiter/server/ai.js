@@ -87,7 +87,8 @@ export function makeAi(s, lib, analytics) {
         else { const r = await resolve(ctx.user, a); rows = r.rows; label = r.source || [a.artist, a.genre, a.tag, a.query, a.likedOnly && 'liked'].filter(Boolean).join(' · ') || 'Selected tracks'; if (r.ignored) extra.ignoredUnknownIds = r.ignored; }
         if (!rows.length) return { played: 0, found: false, note: extra.note || notFound(a) };
         const mode = a.mode || 'replace';
-        return { found: true, queued: rows.length, mode, label, first: rows.slice(0, 5).map(brief), ...extra, clientActions: [{ type: 'play', trackIds: rows.map((t) => t.id), mode, shuffle: !!a.shuffle, label }] };
+        const lead = rows[0], one = rows.length === 1 ? `${lead.title} by ${lead.artists.join(', ')}` : `${label} (${rows.length} songs, starting with ${lead.title} by ${lead.artists.join(', ')})`;
+        return { final: mode === 'replace' ? `Playing ${one}.` : mode === 'next' ? `${one} will play next.` : `Added ${one} to your queue.`, found: true, queued: rows.length, mode, label, first: rows.slice(0, 5).map(brief), ...extra, clientActions: [{ type: 'play', trackIds: rows.map((t) => t.id), mode, shuffle: !!a.shuffle, label }] };
       } });
 
     reg('jupiter.control', { parameters: { required: ['action'], properties: { action: { type: 'string', enum: ['pause', 'resume', 'next', 'previous', 'shuffleOn', 'shuffleOff', 'repeatOff', 'repeatOne', 'repeatAll', 'seek', 'volume', 'like', 'unlike'] },
@@ -96,7 +97,8 @@ export function makeAi(s, lib, analytics) {
         await can(user, 'library.read');
         if (['seek', 'volume'].includes(a.action) && a.value == null) throw badRequest(`${a.action} needs a value`);
         if (a.action === 'volume' && a.value > 100) throw badRequest('volume must be 0 to 100');
-        return { ok: true, requested: a.action, clientActions: [{ type: 'control', action: a.action, ...(a.value != null ? { value: a.value } : {}) }] };
+        const said = { pause: 'Paused.', resume: 'Playing.', next: 'Skipping to the next song.', previous: 'Going back.', shuffleOn: 'Shuffle is on.', shuffleOff: 'Shuffle is off.', repeatOff: 'Repeat is off.', repeatOne: 'Repeating this song.', repeatAll: 'Repeating the queue.', seek: 'Done.', volume: `Volume set to ${a.value}%.`, like: 'Added to your liked songs.', unlike: 'Removed from your liked songs.' }[a.action];
+        return { ok: true, requested: a.action, final: said, clientActions: [{ type: 'control', action: a.action, ...(a.value != null ? { value: a.value } : {}) }] };
       } });
 
     reg('jupiter.createPlaylist', { parameters: { required: ['name'], properties: { name: str(100), description: str(300), ids: str(3000, { description: 'Comma-separated track ids' }), query: str(100), artist: str(100), genre: str(60), tag: str(40), likedOnly: { type: 'boolean' },

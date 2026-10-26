@@ -92,3 +92,17 @@ input[type=range]::-moz-range-thumb { width: 14px; height: 14px; border-radius: 
 .net-note { position: fixed; left: .5rem; right: .5rem; top: max(.5rem, env(safe-area-inset-top)); z-index: 90; background: var(--raise); border: 1px solid var(--line-strong); border-radius: 12px; padding: .5rem .8rem; font-size: .82rem; text-align: center; }
 
 .banner { max-width: none; }
+
+/* ---- v1.5: livelier home, mini player close, live play/pause card ---- */
+.mini .iconbtn { flex: none; }
+.homehero { border-radius: 22px; padding: 1.1rem 1.1rem 1rem; margin: .2rem 0 .9rem; border: 1px solid var(--line); background: linear-gradient(135deg, rgba(0,173,239,.22), rgba(90,70,216,.18) 55%, rgba(237,102,39,.18)); } .homehero .greet { font-size: 1.45rem; margin: 0; } .homehero p { margin: .3rem 0 0; }
+.homehero.morning { background: linear-gradient(135deg, rgba(255,184,77,.25), rgba(237,102,39,.18) 60%, rgba(0,173,239,.12)); } .homehero.evening { background: linear-gradient(135deg, rgba(237,102,39,.28), rgba(150,60,160,.22) 60%, rgba(40,60,160,.2)); } .homehero.night { background: linear-gradient(135deg, rgba(40,50,150,.35), rgba(90,70,216,.22) 60%, rgba(0,173,239,.1)); }
+.heroact { display: flex; gap: .6rem; margin-top: .9rem; flex-wrap: wrap; } .heroact .btn { padding: .55rem 1rem; }
+.lastcard .lbl { display: flex; align-items: center; gap: .4rem; } .lastcard .lbl small { color: #a9b6ff; }
+.bigplay .icon { margin-left: 0; fill: currentColor; } .bigplay.isplay .icon { margin-left: 2px; }
+.eq { display: none; align-items: flex-end; gap: 2px; height: 12px; } .eq i { width: 3px; background: var(--orange); border-radius: 2px; height: 30%; animation: eqb .9s ease-in-out infinite; } .eq i:nth-child(2) { animation-delay: .2s; } .eq i:nth-child(3) { animation-delay: .4s; } .lastcard.playing .eq { display: inline-flex; }
+@keyframes eqb { 0%, 100% { height: 25%; } 50% { height: 100%; } } @media (prefers-reduced-motion: reduce) { .eq i { animation: none; height: 70%; } }
+.mix { flex: none; width: 150px; height: 150px; border-radius: 18px; border: 0; padding: .8rem; color: #fff; text-align: left; display: flex; flex-direction: column; justify-content: flex-end; gap: .1rem; cursor: pointer; font: inherit; position: relative; overflow: hidden; } .mix b { font-size: 1rem; } .mix small { font-size: .72rem; opacity: .85; line-height: 1.2; } .mix em { font-style: normal; font-size: .7rem; opacity: .7; margin-top: .2rem; }
+.mix .mixic { position: absolute; top: .7rem; right: .7rem; width: 34px; height: 34px; border-radius: 50%; background: rgba(255,255,255,.22); display: grid; place-items: center; } .mix .mixic .icon { width: 16px; height: 16px; fill: currentColor; margin-left: 2px; }
+.mix.m1 { background: linear-gradient(145deg, #3b5bff, #6a3de8); } .mix.m2 { background: linear-gradient(145deg, #ed6627, #d23a6b); } .mix.m3 { background: linear-gradient(145deg, #00a6a0, #0b6cc4); } .mix.m4 { background: linear-gradient(145deg, #e0457b, #8d3dd6); }
+.tile.ava { width: 96px !important; text-align: center; } .tile.ava .art { border-radius: 50%; } .tile.ava .ttl { font-size: .8rem; }

@@ -216,7 +216,7 @@ test('GroqProvider: wire format, tool-name mapping, usage, error kinds (against 
     });
   });
   await new Promise((r) => srv.listen(0, '127.0.0.1', r));
-  const p = new GroqProvider({ baseUrl: `http://127.0.0.1:${srv.address().port}` });
+  const p = new GroqProvider({ baseUrl: `http://127.0.0.1:${srv.address().port}`, retryDelayMs: 1 });
   const req = { apiKey: 'K1', model: 'm', tools: [{ name: 'inventory.search', description: 'd', parameters: { type: 'object', properties: {} } }],
     messages: [{ role: 'system', content: 's' }, { role: 'user', content: 'u' }, { role: 'assistant', content: '', toolCalls: [{ id: 'x0', name: 'inventory.search', arguments: '{}' }] }, { role: 'tool', toolCallId: 'x0', content: '{}' }] };
   const out = await p.chat(req);

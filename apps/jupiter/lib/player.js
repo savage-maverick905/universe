@@ -57,6 +57,13 @@ export function removeFromQueue(i) { if (i === P.index) return; P.queue.splice(i
 export function moveInQueue(i, dir) { const j = i + dir; if (j < 0 || j >= P.queue.length) return; [P.queue[i], P.queue[j]] = [P.queue[j], P.queue[i]]; if (P.index === i) P.index = j; else if (P.index === j) P.index = i; buildOrder(); persist(); emit(); }
 export function jump(i) { if (i < 0 || i >= P.queue.length) return; P.index = i; buildOrder(); persist(); return load(current()); }
 export function toggle() { if (P.index < 0) return; if (audio.paused) { if (!audio.src) load(current(), audio.currentTime); else audio.play().catch(() => {}); } else audio.pause(); }
+// Ends playback completely: closes the listening session, empties the queue and hides the player.
+export function stopAll() {
+  tick(); closeSession(audio.currentTime * 1000 >= (session?.dur || 1) * 0.9 ? 'complete' : 'skip'); loadSeq++; audio.pause(); audio.removeAttribute('src'); audio.load();
+  if (objectUrl) { URL.revokeObjectURL(objectUrl); objectUrl = null; }
+  P.queue = []; P.index = -1; order = []; persist(); emit();
+  if ('mediaSession' in navigator) { navigator.mediaSession.metadata = null; navigator.mediaSession.playbackState = 'none'; }
+}
 export const pause = () => audio.pause(); export const resume = () => { if (audio.paused) toggle(); };
 export function next(auto = false) {
   if (P.index < 0) return; const at = posInOrder();

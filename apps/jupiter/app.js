@@ -129,18 +129,36 @@ async function downloadsView() {
 }
 
 // ---------------- Home ----------------
+let homeUpd = null;
+const dayRand = () => { let x = 0; for (const c of new Date().toDateString()) x = (x * 31 + c.charCodeAt(0)) >>> 0; return () => { x = (x * 1664525 + 1013904223) >>> 0; return x / 4294967296; }; };
 function homeView() {
-  const hr = new Date().getHours(), greet = hr < 12 ? 'Good morning' : hr < 18 ? 'Good afternoon' : 'Good evening';
+  const hr = new Date().getHours(), greet = hr < 5 ? 'Still up' : hr < 12 ? 'Good morning' : hr < 18 ? 'Good afternoon' : 'Good evening', mood = hr < 5 || hr >= 21 ? 'night' : hr < 12 ? 'morning' : hr < 18 ? 'day' : 'evening';
   const played = [...S.tracks].filter((t) => t.lastPlayedAt).sort((a, b) => b.lastPlayedAt.localeCompare(a.lastPlayedAt)), last = pl.current() || played[0];
   const added = [...S.tracks].sort((a, b) => b.addedAt.localeCompare(a.addedAt)).slice(0, 12), liked = S.tracks.filter((t) => t.liked);
+  const rnd = dayRand(), daily = [...S.tracks].map((t) => [rnd(), t]).sort((a, b) => a[0] - b[0]).map((x) => x[1]).slice(0, 30);
+  const top = [...S.tracks].filter((t) => t.playCount).sort((a, b) => b.playCount - a.playCount).slice(0, 30);
+  const fresh = [...S.tracks].filter((t) => !t.playCount).slice(0, 30).concat([...S.tracks].filter((t) => t.playCount).sort((a, b) => (a.lastPlayedAt || '').localeCompare(b.lastPlayedAt || ''))).slice(0, 30);
+  const mixes = [['Daily Mix', 'Fresh picks, changes daily', daily, 'm1', true], ['Top Hits', 'What you play most', top, 'm2', false], ['Rediscover', 'Songs you have not heard lately', fresh, 'm3', true], ['Liked Mix', 'Your favourites, shuffled', liked, 'm4', true]].filter((m) => m[2].length > 1);
   const quick = [['heart', 'Liked Songs', plural(liked.length, 'song'), 'blue', () => { S.tab = 'songs'; S.likedOnly = true; location.hash = '#/library'; }], ['play', 'Recently Played', plural(Math.min(50, played.length), 'song'), 'orange', () => { if (played.length) pl.playList(played.slice(0, 50), 0, { src: 'library' }); }],
     ['user', 'Your Artists', plural(artistsList().length, 'artist'), 'violet', () => { location.hash = '#/artists'; }], ['disc', 'Your Albums', plural(albumsFrom(S.tracks).length, 'album'), 'indigo', () => { S.tab = 'albums'; location.hash = '#/library'; }]];
   const search = h('input', { type: 'search', placeholder: 'Search songs, artists, albums, tags…', 'aria-label': 'Search', onkeydown: (e) => { if (e.key === 'Enter') { S.q = e.target.value; S.tab = 'songs'; location.hash = '#/library'; } } });
+  // The "now playing / last played" card shows pause while its song plays and toggles instead of restarting.
+  let card = null;
+  if (last) {
+    const label = h('small', {}), big = h('span', { class: 'bigplay' }), eq = h('span', { class: 'eq', 'aria-hidden': 'true' }, h('i'), h('i'), h('i'));
+    card = h('div', { class: 'lastcard', onclick: () => { if (pl.current()?.id === last.id) pl.toggle(); else pl.playList([last, ...played.filter((t) => t.id !== last.id)].slice(0, 50), 0, { src: 'library' }); } }, artEl(artKeyOf(last)), h('div', { class: 'meta' }, h('div', { class: 'lbl' }, eq, label), h('div', { class: 'ttl' }, last.title), h('div', { class: 'sub2' }, last.artists.join(', '))), big);
+    homeUpd = () => { if (!card.isConnected) { homeUpd = null; return; } const cur = pl.current()?.id === last.id, on = cur && pl.state().playing; label.textContent = on ? 'Now playing' : cur ? 'Paused' : 'Last played'; card.classList.toggle('playing', on); big.replaceChildren(icon(on ? 'pause' : 'play')); big.classList.toggle('isplay', !on); };
+    homeUpd();
+  } else homeUpd = null;
+  const artists = artistsList().slice(0, 14);
   frame('home', topbar('Jupiter'), h('div', { class: 'stick' }, h('div', { class: 'searchfield' }, icon('search'), search)),
-    h('h2', { class: 'greet' }, `${greet}, ${S.me.user.displayName.split(' ')[0]} `, h('span', {}, '👋')), h('p', { class: 'muted', style: 'margin:.1rem 0 1rem' }, 'Let\'s make today amazing.'),
-    last ? h('div', { class: 'lastcard', onclick: () => pl.playList([last, ...played.filter((t) => t.id !== last.id)].slice(0, 50), 0, { src: 'library' }) }, artEl(artKeyOf(last)), h('div', { class: 'meta' }, h('small', {}, pl.current() ? 'Now playing' : 'Last played'), h('div', { class: 'ttl' }, last.title), h('div', { class: 'sub2' }, last.artists.join(', '))), h('span', { class: 'bigplay' }, icon('play'))) : null,
+    h('div', { class: `homehero ${mood}` }, h('h2', { class: 'greet' }, `${greet}, ${S.me.user.displayName.split(' ')[0]} `, h('span', {}, '👋')), h('p', { class: 'muted' }, S.tracks.length ? `${plural(S.tracks.length, 'song')} in your pocket. What are we playing?` : 'Let\'s make today amazing.'),
+      S.tracks.length ? h('div', { class: 'heroact' }, h('button', { class: 'btn', onclick: () => pl.playList([...S.tracks].sort(() => Math.random() - 0.5), 0, { src: 'library', shuffle: true }) }, icon('shuffle'), 'Shuffle all'), S.meta?.can?.ai && !S.offlineMode ? h('button', { class: 'btn ghost', onclick: openNebula }, icon('sparkle'), 'Ask Nebula') : null) : null),
+    card,
     !S.tracks.length ? emptyState('Your library is empty. Add the music you own to start.', h('a', { class: 'btn', href: '#/upload' }, icon('upload'), 'Add music')) : null,
-    S.tracks.length ? h('div', {}, h('h2', { class: 'sec' }, 'Quick Access'), h('div', { class: 'quick' }, quick.map(([ic, t, s, c, fn]) => h('button', { class: 'qtile', onclick: fn }, h('span', { class: `qic ${c}` }, icon(ic)), h('span', { class: 'meta' }, h('b', {}, t), h('small', {}, s)))))) : null,
+    S.tracks.length ? h('div', {}, h('h2', { class: 'sec' }, 'Quick Access'), h('div', { class: 'quick' }, quick.map(([ic, t, sub, c, fn]) => h('button', { class: 'qtile', onclick: fn }, h('span', { class: `qic ${c}` }, icon(ic)), h('span', { class: 'meta' }, h('b', {}, t), h('small', {}, sub)))))) : null,
+    mixes.length ? h('div', {}, h('h2', { class: 'sec' }, 'Made for you'), h('div', { class: 'scroller' }, mixes.map(([t, sub, list, cls, shuf]) => h('button', { class: `mix ${cls}`, onclick: () => pl.playList(list, 0, { src: 'library', shuffle: shuf }) }, h('span', { class: 'mixic' }, icon('play')), h('b', {}, t), h('small', {}, sub), h('em', {}, plural(list.length, 'song')))))) : null,
+    artists.length ? h('div', {}, h('h2', { class: 'sec' }, 'Your Artists', h('a', { href: '#/artists', class: 'seeall' }, 'See all')), h('div', { class: 'scroller' }, artists.map((a) => h('div', { class: 'tile ava', onclick: () => { location.hash = `#/artist/${a.id}`; } }, artEl(S.artistArt.get(a.id) || (a.tracks[0] && artKeyOf(a.tracks[0])), { cls: 'big round', ic: 'user' }), h('div', { class: 'ttl' }, a.name))))) : null,
     S.tracks.length ? h('div', {}, h('h2', { class: 'sec' }, 'Recently Added', h('a', { href: '#/library', onclick: () => { S.tab = 'songs'; }, class: 'seeall' }, 'See all')), h('div', { class: 'scroller' }, added.map((t, i) => h('div', { class: 'tile', onclick: () => pl.playList(added, i, { src: 'library' }) }, artEl(artKeyOf(t), { cls: 'big' }), h('div', { class: 'ttl' }, t.title), h('div', { class: 'sub2' }, t.artists.join(', ')))))) : null,
     S.playlists.length ? h('div', {}, h('h2', { class: 'sec' }, 'Playlists'), h('div', { class: 'scroller' }, S.playlists.map((p) => h('div', { class: 'tile', onclick: () => { location.hash = `#/playlist/${p.id}`; } }, artEl(artKeyOf(songs(p.trackIds)[0] || {}), { cls: 'big', ic: 'queue', blue: true }), h('div', { class: 'ttl' }, p.name), h('div', { class: 'sub2' }, plural(p.trackIds.length, 'song')))))) : null);
 }
@@ -365,7 +383,7 @@ async function moreView() {
   frame('more', h('div', { class: 'top' }, h('h1', {}, 'Settings')), h('div', { class: 'profile' }, h('img', { class: 'logo big', src: '/apps/jupiter/icons/icon-192.png', alt: '' }), h('div', { class: 'meta' }, h('b', {}, S.me.user.displayName), h('small', { class: 'muted' }, S.me.user.email || ''))),
     h('div', { class: 'setlist' }, row('download', 'Offline Downloads', plural(S.offline.size, 'song'), () => { location.hash = '#/downloads'; }), row('box', 'Storage Usage', `${fmtSize(S.used || 0)} / ${S.meta.libraryLimitMb} MB`, () => toast(`Library ${fmtSize(S.used || 0)}. On this device: ${fmtSize(u.bytes)} downloaded. Storage: ${S.meta.storage === 'github' ? 'private GitHub branch' : 'local files'}.`)),
       S.meta.can.write ? row('upload', 'Add music', '', () => { location.hash = '#/upload'; }) : null, S.meta.can.ai ? row('sparkle', 'Ask Nebula', '', openNebula) : null, row('file', 'Export library list', 'no audio', async () => { const j = await api('GET', '/export'); h('a', { href: URL.createObjectURL(new Blob([JSON.stringify(j, null, 1)], { type: 'application/json' })), download: 'jupiter-library.json' }).click(); }),
-      S.meta.can.maintain ? row('settings', 'Storage upkeep', '', maintenance) : null, canPromptInstall() && !isStandalone() ? row('phone', 'Install Jupiter', '', promptInstall) : null, row('home', 'Universe dashboard', '', () => { location.href = '/dashboard/'; }), row('target', 'About Jupiter', 'v1.3.0', () => toast('Jupiter · part of Universe · Hie Technologies'))),
+      S.meta.can.maintain ? row('settings', 'Storage upkeep', '', maintenance) : null, canPromptInstall() && !isStandalone() ? row('phone', 'Install Jupiter', '', promptInstall) : null, row('home', 'Universe dashboard', '', () => { location.href = '/dashboard/'; }), row('target', 'About Jupiter', 'v1.5.0', () => toast('Jupiter · part of Universe · Hie Technologies'))),
     h('button', { class: 'btn ghost danger wide', onclick: async () => { try { await rootApi('POST', '/api/auth/logout'); } catch { /* already out */ } S.me = null; boot(); } }, 'Sign Out'));
 }
 async function maintenance() {
@@ -410,7 +428,7 @@ let mini, np;
 function drawMini() {
   mini?.remove(); mini = null; const t = pl.current(); if (!t) return;
   const bar = h('div', { class: 'bar' }), play = h('button', { class: 'iconbtn', 'aria-label': 'Play or pause', onclick: (e) => { e.stopPropagation(); pl.toggle(); } });
-  mini = h('div', { class: 'mini', role: 'group', 'aria-label': 'Player', onclick: openNow }, artEl(artKeyOf(t)), h('div', { class: 'meta' }, h('div', { class: 'ttl' }, t.title), h('div', { class: 'sub2' }, t.artists.join(', '))), play, h('button', { class: 'iconbtn', 'aria-label': 'Next', onclick: (e) => { e.stopPropagation(); pl.next(); } }, icon('next')), bar);
+  mini = h('div', { class: 'mini', role: 'group', 'aria-label': 'Player', onclick: openNow }, artEl(artKeyOf(t)), h('div', { class: 'meta' }, h('div', { class: 'ttl' }, t.title), h('div', { class: 'sub2' }, t.artists.join(', '))), play, h('button', { class: 'iconbtn', 'aria-label': 'Next', onclick: (e) => { e.stopPropagation(); pl.next(); } }, icon('next')), h('button', { class: 'iconbtn', 'aria-label': 'Close player and stop the song', title: 'Stop and close', onclick: (e) => { e.stopPropagation(); pl.stopAll(); } }, icon('x')), bar);
   mini._upd = () => { const s = pl.state(); play.replaceChildren(icon(s.playing ? 'pause' : 'play')); bar.style.width = s.dur ? `${(s.pos / s.dur) * 100}%` : '0'; }; mini._upd(); document.body.append(mini);
 }
 function drawNow() { if (np) openNow(true); }
@@ -421,7 +439,7 @@ function openNow(redraw) {
   const queue = h('div', { class: 'rows queue' });
   const drawQueue = () => { const upNext = pl.P.queue.map((id, i) => [id, i]).filter(([, i]) => i > pl.P.index); queue.replaceChildren(h('h2', { class: 'sec' }, 'Up Next', h('span', { class: 'fine muted' }, plural(upNext.length, 'song'))), upNext.map(([id, i]) => { const q = S.byId.get(id) || pl.P.tracks.get(id); if (!q) return null; return h('div', { class: 'row-t', onclick: () => pl.jump(i) }, artEl(artKeyOf(q)), h('div', { class: 'meta' }, h('div', { class: 'ttl' }, q.title), h('div', { class: 'sub2' }, q.artists.join(', '))),
     h('span', { style: 'display:flex' }, h('button', { class: 'iconbtn', 'aria-label': 'Move up', onclick: (e) => { e.stopPropagation(); pl.moveInQueue(i, -1); } }, icon('up')), h('button', { class: 'iconbtn', 'aria-label': 'Move down', onclick: (e) => { e.stopPropagation(); pl.moveInQueue(i, 1); } }, icon('down')), h('button', { class: 'iconbtn', 'aria-label': 'Remove from queue', onclick: (e) => { e.stopPropagation(); pl.removeFromQueue(i); } }, icon('x')))); })); };
-  const opts = () => { const d = dialog('Options', h('div', { class: 'optrow' }, icon('vol'), vol2()), h('div', { class: 'menu' }, [S.offline.has(t.id) ? h('button', { onclick: () => { d.close(); toast('Available offline'); } }, icon('check'), 'Downloaded') : (S.dl[t.id] != null ? h('button', { disabled: '' }, icon('download'), 'Downloading…') : h('button', { onclick: () => { d.close(); startDownload(t); } }, icon('download'), 'Download for offline')),
+  const opts = () => { const d = dialog('Options', h('div', { class: 'optrow' }, icon('vol'), vol2()), h('div', { class: 'menu' }, [h('button', { onclick: () => { d.close(); pl.enqueue([t], 'next'); toast('Will play next'); } }, icon('next'), 'Play next'), h('button', { onclick: () => { d.close(); pl.enqueue([t], 'append'); toast('Added to queue'); } }, icon('queue'), 'Add to queue'), S.offline.has(t.id) ? h('button', { onclick: () => { d.close(); toast('Available offline'); } }, icon('check'), 'Downloaded') : (S.dl[t.id] != null ? h('button', { disabled: '' }, icon('download'), 'Downloading…') : h('button', { onclick: () => { d.close(); startDownload(t); } }, icon('download'), 'Download for offline')),
     S.meta.can.write ? h('button', { onclick: () => { d.close(); addToPlaylist([t.id]); } }, icon('plus'), 'Add to playlist') : null]), closer()); };
   const vol2 = () => { const v = h('input', { type: 'range', min: 0, max: 100, value: Math.round(pl.P.volume * 100), 'aria-label': 'Volume', oninput: (e) => { fillRange(e.target); pl.setVolume(e.target.value / 100); } }); fillRange(v); return v; };
   np = h('div', { class: 'np', role: 'dialog', 'aria-label': 'Now playing' }, h('div', { class: 'head' }, h('button', { class: 'iconbtn', 'aria-label': 'Close', onclick: closeNow }, icon('chevdown')), h('b', {}, 'Now playing'), h('button', { class: 'iconbtn', 'aria-label': 'More', onclick: () => trackMenu(t) }, icon('more'))),
@@ -434,17 +452,48 @@ function openNow(redraw) {
 const fillRange = (el) => el.style.setProperty('--p', `${(el.value / (el.max || 100)) * 100}%`);
 function closeNow() { np?.remove(); np = null; }
 let lastTrack = null;
-pl.on(() => { mini?._upd?.(); np?._upd?.(); const c = pl.current()?.id; if (c !== lastTrack) { lastTrack = c; if (np) openNow(true); drawMini(); root.className = c ? '' : 'has-no-mini'; document.title = pl.current() ? `${pl.current().title} · Jupiter` : 'Jupiter'; } else np?._q?.(); });
+pl.on(() => { mini?._upd?.(); np?._upd?.(); homeUpd?.(); if (!pl.current() && np) { np.remove(); np = null; } const c = pl.current()?.id; if (c !== lastTrack) { lastTrack = c; if (np) openNow(true); drawMini(); root.className = c ? '' : 'has-no-mini'; document.title = pl.current() ? `${pl.current().title} · Jupiter` : 'Jupiter'; } else np?._q?.(); });
 
 // ---------------- Nebula ----------------
+// Simple commands are understood right here on the device: instant, no AI call, so they work even when the AI provider is busy or slow.
+const sn = (x) => String(x || '').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/&/g, ' and ').replace(/[^a-z0-9]+/g, ' ').replace(/^the /, '').trim();
+function lev(a, b) { const m = a.length, n = b.length; if (!m || !n) return Math.max(m, n); let prev = Array.from({ length: n + 1 }, (_, j) => j); for (let i = 1; i <= m; i++) { const cur = [i]; for (let j = 1; j <= n; j++) cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)); prev = cur; } return prev[n]; }
+const alike = (a, b) => { a = sn(a); b = sn(b); if (!a || !b) return false; if (a === b || a.includes(b) || b.includes(a)) return true; return 1 - lev(a, b) / Math.max(a.length, b.length) >= 0.78; };
+function quickCommand(text) {
+  const t = text.trim().replace(/[.!?]+$/, '').replace(/^(?:hey |hi |ok |okay )?(?:nebula[, ]+)?(?:please |pls )?(?:can you |could you |will you )?(?:please |pls )?/i, '').replace(/\s+(?:please|pls)$/i, '').trim(), l = t.toLowerCase();
+  const ctl = (fn, say) => { fn(); return say; };
+  if (/^(pause|stop)( the)?( music| song| playing)?$/.test(l)) return pl.current() ? ctl(() => pl.pause(), 'Paused.') : 'Nothing is playing.';
+  if (/^(resume|continue|unpause|play)( the)?( music| song)?$/.test(l)) return pl.current() ? ctl(() => pl.resume(), 'Playing.') : 'Nothing is queued yet. Tell me what to play.';
+  if (/^(next|skip)( the)?( song| track)?$/.test(l)) return pl.current() ? ctl(() => pl.next(), 'Skipping to the next song.') : 'Nothing is playing.';
+  if (/^(previous|go back|back|last)( song| track)?$/.test(l)) return pl.current() ? ctl(() => pl.prev(), 'Going back.') : 'Nothing is playing.';
+  if (/^shuffle (on|off)$/.test(l)) return ctl(() => pl.setShuffle(l.endsWith('on')), `Shuffle is ${l.endsWith('on') ? 'on' : 'off'}.`);
+  let m = l.match(/^(?:set )?(?:the )?volume(?: to)? (\d{1,3})(?: ?%| percent)?$/); if (m) return ctl(() => pl.setVolume(Math.min(100, +m[1]) / 100), `Volume set to ${Math.min(100, +m[1])}%.`);
+  m = t.match(/^(?:play|put on|start|listen to)\s+(.+)$/i); if (!m) return null;
+  const rest = m[1].trim(); let lk = sn(rest);
+  if (/^(my )?(liked|favou?rite|favs?)( songs| tracks| music)?$/.test(lk) || /^(all )?(my )?(music|songs|library)$/.test(lk) || lk === 'everything') {
+    const list = /(liked|favou?rite|favs?)/.test(lk) ? S.tracks.filter((x) => x.liked) : S.tracks; if (!list.length) return null;
+    return ctl(() => pl.playList(list, 0, { src: 'nebula', shuffle: true }), `Playing ${/(liked|favou?rite|favs?)/.test(lk) ? 'your liked songs' : 'your music'} on shuffle.`);
+  }
+  const by = rest.split(/\s+by\s+/i), title = by[0].trim(), artist = by.length > 1 ? by.slice(1).join(' by ').trim() : '';
+  const score = (x) => { let sc = 0; const tt = sn(x.title), q = sn(title); if (tt === q) sc += 6; else if (tt.includes(q) || q.includes(tt)) sc += 3; else if (alike(tt, q)) sc += 2; else return 0;
+    if (artist) { if (x.artists.some((a) => alike(a, artist))) sc += 4; else sc -= 2; } return sc; };
+  const ranked = S.tracks.map((x) => [score(x), x]).filter(([sc]) => sc > 0).sort((a, b) => b[0] - a[0]);
+  if (ranked.length && (!artist || ranked[0][0] >= 5)) { const x = ranked[0][1]; return ctl(() => pl.playList([x], 0, { src: 'nebula' }), `Playing ${x.title} by ${x.artists.join(', ')}.`); }
+  const who = artist || title, byArtist = S.tracks.filter((x) => x.artists.some((a) => alike(a, who)));
+  if (byArtist.length && sn(who).length > 2) return ctl(() => pl.playList(byArtist, 0, { src: 'nebula', shuffle: true }), `Playing ${byArtist[0].artists.find((a) => alike(a, who)) || who} on shuffle.`);
+  return null; // not sure: let the AI work it out
+}
 let neb = null;
 function openNebula() {
   if (neb) return; const log = h('div', { class: 'log', role: 'log', 'aria-live': 'polite' }), input = h('textarea', { rows: 1, enterkeyhint: 'send', placeholder: 'Ask Nebula…', 'aria-label': 'Message Nebula' }), send = h('button', { class: 'btn round', 'aria-label': 'Send' }, icon('send'));
   const add = (cls, ...k) => { const m = h('div', { class: `msg ${cls}` }, ...k); log.append(m); log.scrollTop = log.scrollHeight; return m; };
   const submit = async (text) => {
     text = (text ?? input.value).trim(); if (!text) return; input.value = ''; hideSugg(); add('user', text); const wait = add('assistant', '…'); send.disabled = true;
-    try { const r = await rootApi('POST', '/api/ai/chat', { message: text, ...(S.conv ? { conversationId: S.conv } : {}), clientContext: pl.snapshot() }); S.conv = r.conversation.id; wait.replaceChildren(renderMarkdown(r.reply.content, h)); for (const a of r.actions || []) if (a.app === 'jupiter') await runAction(a, log); }
-    catch (x) { wait.replaceChildren(x.message); } finally { send.disabled = false; log.scrollTop = log.scrollHeight; }
+    const quick = quickCommand(text); if (quick) { wait.replaceChildren(quick); send.disabled = false; return; }
+    try {
+      let r; for (let a = 0; ; a++) { try { r = await rootApi('POST', '/api/ai/chat', { message: text, ...(S.conv ? { conversationId: S.conv } : {}), clientContext: pl.snapshot() }); break; } catch (x) { if (a < 1 && (x.code === 'provider_rate_limit' || x.code === 'provider_unavailable')) { wait.replaceChildren('Nebula is a little busy. Trying again…'); await new Promise((k) => setTimeout(k, 4000)); continue; } throw x; } }
+      S.conv = r.conversation.id; wait.replaceChildren(renderMarkdown(r.reply.content, h)); for (const a of r.actions || []) if (a.app === 'jupiter') await runAction(a, log); }
+    catch (x) { wait.replaceChildren(x.code === 'provider_rate_limit' ? 'The AI service is very busy right now. Simple commands like "play <song> by <artist>", "pause" and "next" still work instantly; try the rest again in a minute.' : x.message); } finally { send.disabled = false; log.scrollTop = log.scrollHeight; }
   };
   send.onclick = () => submit(); input.onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit(); } };
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition; let rec = null;
