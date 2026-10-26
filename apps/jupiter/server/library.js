@@ -2,7 +2,7 @@
 // Audio bytes live in the media store (see media.js); only metadata and references live in the Universe database.
 import { newId, nowIso } from '../../../shared/ids.js';
 import { badRequest, conflict, notFound } from '../../../shared/errors.js';
-import { ART_RE, LIMITS, albumId, artistId, effectiveAlbumArtist, norm } from './schema.js';
+import { ART_RE, LIMITS, UNKNOWN_ARTIST, albumId, norm } from './schema.js';
 
 export const PART_SIZE = 3 * 1024 * 1024; // every stored part except a track's last is exactly this size; also keeps each response under Vercel's 4.5 MB limit
 
@@ -11,22 +11,28 @@ export function makeLibrary(s, media) {
   const cols = { tracks: col('tracks', { indexes: ['ownerId'] }), playlists: col('playlists', { indexes: ['ownerId'] }), albums: col('albums', { indexes: ['ownerId'] }), artists: col('artists', { indexes: ['ownerId'] }) };
   const mine = (c, user, extra = {}) => c.find({ where: { ownerId: user.id, ...extra }, limit: 10000 });
 
-  const compact = (t) => ({ id: t.id, title: t.title, artists: t.artists, album: t.album, albumArtist: t.albumArtist || '', trackNo: t.trackNo, discNo: t.discNo, durationMs: t.durationMs, year: t.year, releaseDate: t.releaseDate,
+  // Artists are real records the person creates. A track stores only their ids; names are filled in when reading. No artist = Unknown artist.
+  const nameMap = async (user) => new Map((await mine(cols.artists, user)).map((a) => [a.id, a.name]));
+  const decorate = (t, names) => { const n = (t.artistIds || []).map((i) => names.get(i)).filter(Boolean); return { ...t, artists: n.length ? n : [UNKNOWN_ARTIST] }; };
+  const albumKeyOf = (t) => t.albumArtist || t.artistIds?.[0] || '';
+  const albumArtistOf = (t) => t.albumArtist || (t.artistIds?.length ? t.artists[0] : UNKNOWN_ARTIST);
+  async function checkArtists(user, ids) { if (!ids?.length) return; const have = new Set((await mine(cols.artists, user)).map((a) => a.id)); for (const i of ids) if (!have.has(i)) throw badRequest('One of those artists does not exist. Create the artist first.'); }
+  const compact = (t) => ({ id: t.id, title: t.title, artists: t.artists, artistIds: t.artistIds || [], album: t.album, albumArtist: t.albumArtist || '', trackNo: t.trackNo, discNo: t.discNo, durationMs: t.durationMs, year: t.year, releaseDate: t.releaseDate,
     genre: t.genre, tags: t.tags, description: t.description, liked: !!t.liked, artKey: t.artKey || null, size: t.size, kind: t.kind, playCount: t.playCount || 0, skipCount: t.skipCount || 0, listenMs: t.listenMs || 0,
     lastPlayedAt: t.lastPlayedAt || null, addedAt: t.createdAt, hash: t.contentHash.slice(0, 12) });
 
-  async function ownTrack(user, id) { const t = id ? await cols.tracks.get(id) : null; if (!t || t.ownerId !== user.id) throw notFound('Track not found'); return t; }
+  async function ownTrack(user, id) { const t = id ? await cols.tracks.get(id) : null; if (!t || t.ownerId !== user.id) throw notFound('Track not found'); return decorate(t, await nameMap(user)); }
   async function ownPlaylist(user, id) { const p = id ? await cols.playlists.get(id) : null; if (!p || p.ownerId !== user.id) throw notFound('Playlist not found'); return p; }
-  async function allTracks(user) { return mine(cols.tracks, user); }
+  async function allTracks(user) { const names = await nameMap(user); return (await mine(cols.tracks, user)).map((t) => decorate(t, names)); }
 
   async function bootstrap(user) {
-    const [tracks, playlists, albums, artists] = await Promise.all([mine(cols.tracks, user), mine(cols.playlists, user), mine(cols.albums, user), mine(cols.artists, user)]);
+    const [tracks, playlists, albums, artists] = await Promise.all([allTracks(user), mine(cols.playlists, user), mine(cols.albums, user), mine(cols.artists, user)]);
     const used = tracks.reduce((n, t) => n + (t.size || 0), 0);
     return {
-      tracks: tracks.map((t) => ({ ...compact(t), albumId: albumId(user.id, effectiveAlbumArtist(t), t.album), artistIds: t.artists.map((n) => artistId(user.id, n)), mime: t.mime })), used,
+      tracks: tracks.map((t) => ({ ...compact(t), albumId: albumId(user.id, albumKeyOf(t), t.album), mime: t.mime })), used,
       playlists: playlists.map(publicPlaylist),
       albums: albums.map((a) => ({ id: a.id, title: a.title, albumArtist: a.albumArtist, artKey: a.artKey || null, description: a.description || '' })),
-      artists: artists.map((a) => ({ id: a.id, name: a.name, artKey: a.artKey || null, description: a.description || '' })),
+      artists: artists.map((a) => ({ id: a.id, name: a.name, artKey: a.artKey || null, description: a.description || '' })).sort((x, y) => x.name.localeCompare(y.name)),
     };
   }
   const publicPlaylist = (p) => ({ id: p.id, name: p.name, description: p.description || '', trackIds: p.trackIds, createdAt: p.createdAt, updatedAt: p.updatedAt });
@@ -35,10 +41,11 @@ export function makeLibrary(s, media) {
   async function createTrack(user, meta, file, artKey = null, id = newId('trk')) {
     const doc = { id, ownerId: user.id, schemaVersion: 1, ...meta, albumArtist: meta.albumArtist || '', size: file.size, kind: file.kind, mime: file.mime, partSize: PART_SIZE, parts: file.parts, contentHash: file.contentHash,
       originalName: file.originalName || '', artKey, liked: false, playCount: 0, skipCount: 0, listenMs: 0, lastPlayedAt: null };
+    await checkArtists(user, meta.artistIds);
     return s.storage.transaction(async () => {
       const dup = await cols.tracks.find({ where: { ownerId: user.id, contentHash: file.contentHash }, limit: 1 });
       if (dup.length) throw conflict(`This file is already in your library as "${dup[0].title}".`, 'duplicate');
-      return compact(await cols.tracks.insert(doc));
+      return compact(decorate(await cols.tracks.insert(doc), await nameMap(user)));
     });
   }
   async function findDuplicate(user, contentHash) { const d = await cols.tracks.find({ where: { ownerId: user.id, contentHash }, limit: 1 }); return d[0] ? { id: d[0].id, title: d[0].title } : null; }
@@ -47,20 +54,22 @@ export function makeLibrary(s, media) {
     const t = await ownTrack(user, id);
     const { removeArt, ...rest } = patch;
     if (removeArt) rest.artKey = null;
+    if (rest.artistIds) await checkArtists(user, rest.artistIds);
     if ('liked' in rest) rest.likedAt = rest.liked ? nowIso() : null;
-    return compact(await cols.tracks.update(t.id, rest));
+    return compact(decorate(await cols.tracks.update(t.id, rest), await nameMap(user)));
   }
-  // Removes the track record and its place in every playlist in ONE transaction. Returns the media paths to delete afterwards.
-  async function deleteTrack(user, id) {
-    const t = await ownTrack(user, id);
-    const paths = t.parts.map((_, i) => partPath(t.id, i));
+  // Removes track records and their place in every playlist in ONE transaction. Returns the media paths to delete afterwards.
+  async function deleteTracks(user, ids) {
+    const set = new Set(ids), doomed = (await allTracks(user)).filter((t) => set.has(t.id));
+    const paths = doomed.flatMap((t) => t.parts.map((_, i) => partPath(t.id, i)));
     await s.storage.transaction(async () => {
-      for (const p of await mine(cols.playlists, user)) if (p.trackIds.includes(t.id)) await cols.playlists.update(p.id, { trackIds: p.trackIds.filter((x) => x !== t.id) });
-      await cols.tracks.delete(t.id);
+      for (const p of await mine(cols.playlists, user)) { const keep = p.trackIds.filter((x) => !set.has(x)); if (keep.length !== p.trackIds.length) await cols.playlists.update(p.id, { trackIds: keep }); }
+      for (const t of doomed) await cols.tracks.delete(t.id);
     });
-    const art = t.artKey && !(await artInUse(user, t.artKey, t.id)) ? [`art/${t.artKey}`] : [];
-    return { removed: [...paths, ...art], track: compact(t) };
+    const art = []; for (const k of new Set(doomed.map((t) => t.artKey).filter(Boolean))) if (!(await artInUse(user, k))) art.push(`art/${k}`);
+    return { removed: [...paths, ...art], tracks: doomed.map(compact) };
   }
+  async function deleteTrack(user, id) { await ownTrack(user, id); const r = await deleteTracks(user, [id]); return { removed: r.removed, track: r.tracks[0] }; }
   const partPath = (trackId, i) => `tracks/${trackId}/${String(i).padStart(4, '0')}.part`;
 
   // ---------- artwork bookkeeping ----------
@@ -75,26 +84,53 @@ export function makeLibrary(s, media) {
   async function albumsOf(user) {
     const tracks = await allTracks(user), map = new Map();
     for (const t of tracks) {
-      const aa = effectiveAlbumArtist(t), id = albumId(user.id, aa, t.album);
-      const a = map.get(id) || { id, title: t.album, albumArtist: aa, tracks: [] }; a.tracks.push(t); map.set(id, a);
+      const id = albumId(user.id, albumKeyOf(t), t.album);
+      const a = map.get(id) || { id, title: t.album, albumArtist: albumArtistOf(t), tracks: [] }; a.tracks.push(t); map.set(id, a);
     }
+    return map;
+  }
+  async function artistsOf(user) {
+    const tracks = await allTracks(user), map = new Map();
+    for (const a of await mine(cols.artists, user)) map.set(a.id, { id: a.id, name: a.name, tracks: [] });
+    for (const t of tracks) for (const id of t.artistIds || []) map.get(id)?.tracks.push(t);
     return map;
   }
   async function setProfile(user, kind, id, patch) {
-    const c = kind === 'album' ? cols.albums : cols.artists;
-    const known = kind === 'album' ? (await albumsOf(user)).get(id) : (await artistsOf(user)).get(id);
-    if (!known) throw notFound(kind === 'album' ? 'Album not found' : 'Artist not found');
-    const cur = await c.get(id);
     const { removeArt, ...rest } = patch; if (removeArt) rest.artKey = null;
-    const base = kind === 'album' ? { title: known.title, albumArtist: known.albumArtist } : { name: known.name };
-    return cur ? c.update(id, rest) : c.insert({ id, ownerId: user.id, schemaVersion: 1, ...base, artKey: null, description: '', ...rest });
+    if (kind === 'artist') return updateArtist(user, id, rest);
+    const known = (await albumsOf(user)).get(id); if (!known) throw notFound('Album not found');
+    const cur = await cols.albums.get(id);
+    return cur ? cols.albums.update(id, rest) : cols.albums.insert({ id, ownerId: user.id, schemaVersion: 1, title: known.title, albumArtist: known.albumArtist, artKey: null, description: '', ...rest });
   }
-  async function artistsOf(user) {
-    const map = new Map();
-    for (const t of await allTracks(user)) for (const name of t.artists) {
-      const id = artistId(user.id, name); const a = map.get(id) || { id, name, tracks: [] }; a.tracks.push(t); map.set(id, a);
-    }
-    return map;
+  // ---------- artists: created and removed on purpose, never auto-created from uploads ----------
+  async function createArtist(user, { name, description = '' }) {
+    if (norm(name) === norm(UNKNOWN_ARTIST)) throw badRequest('"Unknown artist" is built in. Songs without an artist are listed there already.');
+    if ((await mine(cols.artists, user)).some((a) => norm(a.name) === norm(name))) throw conflict(`You already have an artist called "${name}".`, 'duplicate');
+    return cols.artists.insert({ id: newId('art'), ownerId: user.id, schemaVersion: 1, name, description, artKey: null });
+  }
+  async function updateArtist(user, id, patch) {
+    const a = id ? await cols.artists.get(id) : null; if (!a || a.ownerId !== user.id) throw notFound('Artist not found');
+    if (patch.name && norm(patch.name) !== norm(a.name)) { if (norm(patch.name) === norm(UNKNOWN_ARTIST) || (await mine(cols.artists, user)).some((x) => x.id !== id && norm(x.name) === norm(patch.name))) throw conflict(`You already have an artist called "${patch.name}".`, 'duplicate'); }
+    return cols.artists.update(id, patch);
+  }
+  // keep: songs stay and lose this artist (they fall back to Unknown artist if it was their only one).
+  // delete: songs where this is the ONLY artist are deleted; songs shared with other artists are kept.
+  async function deleteArtist(user, id, { deleteSongs = false } = {}) {
+    const a = id ? await cols.artists.get(id) : null; if (!a || a.ownerId !== user.id) throw notFound('Artist not found');
+    const linked = (await allTracks(user)).filter((t) => (t.artistIds || []).includes(id));
+    const doomed = deleteSongs ? linked.filter((t) => t.artistIds.length === 1) : [];
+    await s.storage.transaction(async () => { for (const t of linked) if (!doomed.includes(t)) await cols.tracks.update(t.id, { artistIds: t.artistIds.filter((x) => x !== id) }); await cols.artists.delete(id); });
+    const r = doomed.length ? await deleteTracks(user, doomed.map((t) => t.id)) : { removed: [], tracks: [] };
+    return { removed: r.removed, deletedSongs: doomed.length, keptSongs: linked.length - doomed.length, artKey: a.artKey };
+  }
+  async function deleteAlbum(user, id, { deleteSongs = false } = {}) {
+    const al = (await albumsOf(user)).get(id); if (!al) throw notFound('Album not found');
+    const prof = await cols.albums.get(id);
+    let r = { removed: [], tracks: [] };
+    if (deleteSongs) r = await deleteTracks(user, al.tracks.map((t) => t.id));
+    else await s.storage.transaction(async () => { for (const t of al.tracks) await cols.tracks.update(t.id, { album: 'Unknown album' }); });
+    if (prof) await cols.albums.delete(id);
+    return { removed: r.removed, deletedSongs: r.tracks.length, keptSongs: deleteSongs ? 0 : al.tracks.length, artKey: prof?.artKey || null };
   }
   async function profileArtKey(user, kind, id) { const d = await (kind === 'album' ? cols.albums : cols.artists).get(id); return d && d.ownerId === user.id ? d.artKey || null : null; }
 
@@ -168,5 +204,5 @@ export function makeLibrary(s, media) {
   };
 
   return { cols, compact, ownTrack, ownPlaylist, allTracks, bootstrap, createTrack, findDuplicate, updateTrack, deleteTrack, partPath, artInUse, ownsArt, albumsOf, artistsOf, setProfile, profileArtKey, renameAlbum,
-    createPlaylist, updatePlaylist, deletePlaylist, setPlaylistTracks, addToPlaylist, findPlaylistByName, select, overview, publicPlaylist };
+    deleteTracks, createArtist, updateArtist, deleteArtist, deleteAlbum, nameMap, createPlaylist, updatePlaylist, deletePlaylist, setPlaylistTracks, addToPlaylist, findPlaylistByName, select, overview, publicPlaylist };
 }

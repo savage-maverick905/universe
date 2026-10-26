@@ -39,14 +39,15 @@ const date = (x, name) => {
   return s;
 };
 
-const TRACK_KEYS = ['title', 'artists', 'album', 'albumArtist', 'trackNo', 'discNo', 'durationMs', 'year', 'releaseDate', 'genre', 'tags', 'description'];
+const TRACK_KEYS = ['title', 'artistIds', 'album', 'albumArtist', 'trackNo', 'discNo', 'durationMs', 'year', 'releaseDate', 'genre', 'tags', 'description'];
 // Track metadata as typed by a person or read from file tags. `partial` = PATCH (only the fields present).
 export function trackMetaIn(body, { partial = false } = {}) {
   const b = allowKeys(v.object(body), [...TRACK_KEYS, ...(partial ? ['liked', 'artKey', 'removeArt'] : [])]);
   const out = {};
   const has = (k) => k in b;
   if (!partial || has('title')) { out.title = text(b.title, 'title', LIMITS.title); if (!out.title && !partial) out.title = 'Untitled'; if (!out.title) throw badRequest('title cannot be empty'); }
-  if (!partial || has('artists')) { out.artists = list(b.artists, 'artists', LIMITS.artists, LIMITS.name); if (!out.artists.length) out.artists = ['Unknown artist']; }
+  // Artists are things the person creates on purpose. A song with none belongs to "Unknown artist"; names are never auto-created from tags.
+  if (!partial || has('artistIds')) { const ids = b.artistIds == null ? [] : b.artistIds; if (!Array.isArray(ids) || ids.length > LIMITS.artists) throw badRequest(`artistIds must be a list of at most ${LIMITS.artists} artists`); out.artistIds = [...new Set(ids.map((i) => v.anyId(i, 'artist id')))]; }
   if (!partial || has('album')) out.album = text(b.album, 'album', LIMITS.name) || 'Unknown album';
   if (!partial || has('albumArtist')) out.albumArtist = text(b.albumArtist, 'albumArtist', LIMITS.name);
   if (!partial || has('trackNo')) out.trackNo = intIn(b.trackNo, 'trackNo', 1, 999);
@@ -65,6 +66,8 @@ export function trackMetaIn(body, { partial = false } = {}) {
 }
 // Albums without an album artist group under the first artist.
 export const effectiveAlbumArtist = (t) => t.albumArtist || t.artists?.[0] || 'Unknown artist';
+export const artistInput = (body) => { const b = allowKeys(v.object(body), ['name', 'description']); return { name: v.string(b.name, 'name', { min: 1, max: 200 }), description: 'description' in b ? text(b.description, 'description', 2000) : '' }; };
+export const UNKNOWN_ARTIST = 'Unknown artist';
 
 export function playlistIn(body, { partial = false } = {}) {
   const b = allowKeys(v.object(body), ['name', 'description']);
@@ -78,8 +81,9 @@ export const idList = (x, name, max = LIMITS.playlistTracks) => {
   return x.map((i) => v.anyId(i, 'track id'));
 };
 export const profileIn = (body) => {
-  const b = allowKeys(v.object(body), ['description', 'artKey', 'removeArt']);
+  const b = allowKeys(v.object(body), ['name', 'description', 'artKey', 'removeArt']);
   const out = {};
+  if ('name' in b) out.name = v.string(b.name, 'name', { min: 1, max: 200 });
   if ('description' in b) out.description = text(b.description, 'description', 2000);
   if ('artKey' in b) { if (b.artKey !== null && !ART_RE.test(String(b.artKey))) throw badRequest('artKey is not valid'); out.artKey = b.artKey; }
   if ('removeArt' in b) out.removeArt = !!b.removeArt;

@@ -4,7 +4,7 @@ import { timingSafeEqual } from 'node:crypto';
 import { v, allowKeys } from '../../../shared/validate.js';
 import { badRequest, HttpError, notFound } from '../../../shared/errors.js';
 import { reply } from '../../../http/http.js';
-import { LIMITS, ART_RE, idList, playlistIn, profileIn, trackMetaIn } from './schema.js';
+import { LIMITS, ART_RE, artistInput, idList, playlistIn, profileIn, trackMetaIn } from './schema.js';
 import { streamAudio, streamArt } from './stream.js';
 import { PART_SIZE } from './library.js';
 
@@ -69,10 +69,32 @@ export function routes({ router, s, lib, media, uploads, analytics, maintenance 
     const n = await lib.renameAlbum(user, params.id, { title: 'title' in b ? v.string(b.title, 'title', { min: 1, max: 200 }) : undefined, albumArtist: 'albumArtist' in b ? v.string(b.albumArtist, 'albumArtist', { max: 200 }) : undefined });
     return { ok: true, tracksChanged: n };
   });
+  // Artists are created by the person, never from upload tags.
+  route('POST', '/artists', 'library.write', async ({ user, body }) => reply(201, { artist: pubArtist(await lib.createArtist(user, artistInput(body))) }));
+  const pubArtist = (a) => ({ id: a.id, name: a.name, artKey: a.artKey || null, description: a.description || '' });
   route('PATCH', '/artists/:id', 'library.write', async ({ user, params, body }) => {
     const p = profileIn(body); if (p.artKey && !(await lib.ownsArt(user, p.artKey))) throw badRequest('That artwork does not exist in your library');
     const old = p.removeArt || 'artKey' in p ? await lib.profileArtKey(user, 'artist', params.id) : null;
-    const saved = await lib.setProfile(user, 'artist', params.id, p); await dropIfUnused(user, old && old !== saved.artKey ? old : null); return { artist: { id: saved.id, artKey: saved.artKey || null, description: saved.description || '' } };
+    const saved = await lib.setProfile(user, 'artist', params.id, p); await dropIfUnused(user, old && old !== saved.artKey ? old : null); return { artist: pubArtist(saved) };
+  });
+  const songsMode = (q) => { const m = q.get('songs') || 'keep'; if (!['keep', 'delete'].includes(m)) throw badRequest('songs must be keep or delete'); return m === 'delete'; };
+  async function finishRemoval(user, r, ip, what, id) {
+    let cleanup = 'done';
+    if (r.removed.length) { try { await media.commit({ remove: r.removed, message: `Jupiter: delete ${what} ${id}` }); } catch (e) { cleanup = 'pending'; s.log.error?.('Jupiter file cleanup failed:', e.message); } }
+    if (r.artKey) await dropIfUnused(user, r.artKey);
+    await s.audit.record({ actorId: user.id, action: `jupiter.${what}_delete`, targetType: what, targetId: id, meta: { deletedSongs: r.deletedSongs }, ip });
+    return { ok: true, deletedSongs: r.deletedSongs, keptSongs: r.keptSongs, storageCleanup: cleanup };
+  }
+  // Deleting an artist or album never deletes songs unless ?songs=delete is given too, and always needs ?confirm=true.
+  route('DELETE', '/artists/:id', 'library.write', async ({ user, params, query, ip }) => {
+    if (!bool(query, 'confirm')) throw badRequest('Send confirm=true to delete this artist.', 'confirm_required');
+    const del = songsMode(query); if (del) await can(user, 'library.delete');
+    return finishRemoval(user, await lib.deleteArtist(user, params.id, { deleteSongs: del }), ip, 'artist', params.id);
+  });
+  route('DELETE', '/albums/:id', 'library.write', async ({ user, params, query, ip }) => {
+    if (!bool(query, 'confirm')) throw badRequest('Send confirm=true to delete this album.', 'confirm_required');
+    const del = songsMode(query); if (del) await can(user, 'library.delete');
+    return finishRemoval(user, await lib.deleteAlbum(user, params.id, { deleteSongs: del }), ip, 'album', params.id);
   });
   for (const [kind, plural] of [['track', 'tracks'], ['album', 'albums'], ['artist', 'artists']]) {
     route('PUT', `/${plural}/:id/artwork`, 'library.write', async ({ user, params, req }) => {

@@ -32,7 +32,10 @@ async function setup(script) {
   };
   const api = (method, path, body, u = admin) => t.request(method, B + path, { cookie: u.cookie, body });
   // The browser's upload routine, in miniature.
+  const artistIds = new Map();
+  async function ensureArtist(name, u = admin) { if (!artistIds.has(name)) artistIds.set(name, (await api('POST', '/artists', { name }, u)).json.artist.id); return artistIds.get(name); }
   async function upload(bytes, meta = {}, { name = 'song.mp3', art, u = admin } = {}) {
+    if (meta.artists) { const ids = []; for (const n of meta.artists) ids.push(await ensureArtist(n, u)); const { artists, ...rest } = meta; meta = { ...rest, artistIds: ids }; }
     const hashes = []; for (let o = 0; o < bytes.length; o += PART_SIZE) hashes.push(sha(bytes.subarray(o, o + PART_SIZE)));
     const fingerprint = sha(hashes.join(''));
     const s = await api('POST', '/uploads/start', { name, size: bytes.length, fingerprint }, u);
@@ -50,7 +53,7 @@ async function setup(script) {
     return { start: s, parts, fin, id: fin.json?.track?.id };
   }
   const cleanup = async () => { await t.close(); rmSync(dir, { recursive: true, force: true }); };
-  return { t, admin, api, bin, upload, provider, dir, cleanup, B };
+  return { t, admin, api, bin, upload, ensureArtist, provider, dir, cleanup, B };
 }
 
 test('sniffing: audio and images are recognised by their first bytes, not names', () => {
@@ -170,7 +173,7 @@ test('metadata, artwork, likes, albums and artists can be edited; audio stays; a
     assert.equal(art.status, 200); assert.equal(art.headers.get('content-type'), 'image/png'); assert.ok(art.buf.equals(PNG));
     assert.equal((await j.bin('GET', `${B}/art/${key}`)).status, 401);
     assert.equal((await j.bin('GET', `${B}/art/..%2F..%2Fsecret.png`, { cookie: j.admin.cookie })).status, 404);
-    let p = await j.api('PATCH', `/tracks/${id}`, { title: 'New title', artists: ['A', 'B'], genre: 'Soul', tags: ['Late Night'], description: 'liner notes', discNo: 2, releaseDate: '2020-05', liked: true });
+    let p = await j.api('PATCH', `/tracks/${id}`, { title: 'New title', artistIds: [await j.ensureArtist('A'), await j.ensureArtist('B')], genre: 'Soul', tags: ['Late Night'], description: 'liner notes', discNo: 2, releaseDate: '2020-05', liked: true });
     assert.equal(p.status, 200); assert.deepEqual([p.json.track.title, p.json.track.discNo, p.json.track.year, p.json.track.liked], ['New title', 2, 2020, true]);
     assert.equal((await j.api('PATCH', `/tracks/${id}`, { ownerId: 'x' })).status, 400);
     assert.equal((await j.api('PATCH', `/tracks/${id}`, { year: 99999 })).status, 400);
@@ -195,8 +198,8 @@ test('albums and artists: derived from tracks, can get artwork and descriptions,
     const a = await j.upload(mp3(40000, 1), { title: 'One', artists: ['Tems'], album: 'Alpha', albumArtist: 'Tems', trackNo: 1 });
     const b = await j.upload(mp3(40000, 2), { title: 'Two', artists: ['Tems', 'Wizkid'], album: 'Alpha', albumArtist: 'Tems', trackNo: 2 });
     const me = (await j.t.request('GET', '/api/auth/me', { cookie: j.admin.cookie })).json.user.id;
-    const { albumId, artistId } = await import('../apps/jupiter/server/schema.js');
-    const alb = albumId(me, 'Tems', 'Alpha'), art = artistId(me, 'Wizkid');
+    const { albumId } = await import('../apps/jupiter/server/schema.js');
+    const alb = albumId(me, 'Tems', 'Alpha'), art = await j.ensureArtist('Wizkid');
     assert.deepEqual((await j.api('GET', `/albums/${alb}`)).json.trackIds.sort(), [a.id, b.id].sort());
     assert.equal((await j.api('GET', `/albums/alb_doesnotexist0000`)).status, 404);
     const put = await j.bin('PUT', `${B}/albums/${alb}/artwork`, { cookie: j.admin.cookie, body: PNG, headers: {} });
@@ -458,4 +461,54 @@ test('media driver selection follows the storage driver, and falls back to local
   assert.equal(createMediaStore({ storage: { driver: 'github', github: { token: 't', repo: 'o/r', branch: 'universe-data' } }, jupiter: {} }, { fetch: async () => {} }).kind, 'github');
   assert.throws(() => createMediaStore({ storage: { driver: 'github', github: { token: 't', repo: 'o/r', branch: 'universe-data' } }, jupiter: { branch: 'universe-data' } }), /must not be/);
   assert.ok(new FsMediaStore({ dir: tmpdir() }));
+});
+
+test('artists are created on purpose: uploads never create them; no artist means Unknown artist', async () => {
+  const j = await setup();
+  try {
+    const up = await j.upload(mp3(30000, 1), { title: 'Mystery', album: 'X' });
+    assert.equal(up.fin.status, 201);
+    let lib = (await j.api('GET', '/library')).json;
+    assert.deepEqual(lib.artists, [], 'no artist was invented'); assert.deepEqual(lib.tracks[0].artists, ['Unknown artist']); assert.deepEqual(lib.tracks[0].artistIds, []);
+    assert.equal((await j.api('POST', '/uploads/start', { name: 'a.mp3', size: 100 })).status, 200);
+    // the old way (free text names) is refused rather than silently creating artists
+    const bad = await j.upload(mp3(30000, 2), { title: 'Names', artists: undefined }); assert.equal(bad.fin.status, 201);
+    const body = { title: 'T', artists: ['Someone'] }; assert.equal((await j.api('PATCH', `/tracks/${up.id}`, body)).status, 400);
+    assert.equal((await j.api('PATCH', `/tracks/${up.id}`, { artistIds: ['art_doesnotexist1'] })).status, 400);
+    // create, duplicate, reserved name, rename
+    const a = (await j.api('POST', '/artists', { name: 'Rema', description: 'Mavin' })); assert.equal(a.status, 201);
+    assert.equal((await j.api('POST', '/artists', { name: ' rema ' })).status, 409); assert.equal((await j.api('POST', '/artists', { name: 'Unknown Artist' })).status, 400);
+    assert.equal((await j.api('PATCH', `/tracks/${up.id}`, { artistIds: [a.json.artist.id] })).json.track.artists[0], 'Rema');
+    assert.equal((await j.api('PATCH', `/artists/${a.json.artist.id}`, { name: 'Rema!' })).json.artist.name, 'Rema!');
+    lib = (await j.api('GET', '/library')).json; assert.equal(lib.tracks.find((t) => t.id === up.id).artists[0], 'Rema!');
+    // another user's artist cannot be attached
+    await j.t.request('POST', '/api/users', { cookie: j.admin.cookie, body: { email: 'o@example.com', displayName: 'O', password: 'a-decent-password', roleId: 'admin' } });
+    const o = await j.t.login('o@example.com', 'a-decent-password'); const theirs = (await j.api('POST', '/artists', { name: 'Theirs' }, o)).json.artist.id;
+    assert.equal((await j.api('PATCH', `/tracks/${up.id}`, { artistIds: [theirs] })).status, 400); assert.equal((await j.api('DELETE', `/artists/${theirs}?confirm=true`)).status, 404);
+  } finally { await j.cleanup(); }
+});
+
+test('deleting artists and albums: confirm needed, songs kept by default, shared songs protected, files removed when asked', async () => {
+  const j = await setup();
+  try {
+    const s1 = await j.upload(mp3(30000, 1), { title: 'Solo', artists: ['Asake'], album: 'Mr Money' }), s2 = await j.upload(mp3(30000, 2), { title: 'Duet', artists: ['Asake', 'Burna'], album: 'Mr Money' }), s3 = await j.upload(mp3(30000, 3), { title: 'Other', artists: ['Burna'], album: 'Outside' });
+    const asake = await j.ensureArtist('Asake'); const pl = (await j.api('POST', '/playlists', { name: 'P', trackIds: [s1.id, s2.id, s3.id] })).json.playlist;
+    assert.equal((await j.api('DELETE', `/artists/${asake}`)).status, 400);
+    assert.equal((await j.api('DELETE', `/artists/${asake}?confirm=true&songs=maybe`)).status, 400);
+    let r = await j.api('DELETE', `/artists/${asake}?confirm=true`); assert.deepEqual([r.json.deletedSongs, r.json.keptSongs], [0, 2]);
+    let lib = (await j.api('GET', '/library')).json; assert.equal(lib.tracks.length, 3); assert.deepEqual(lib.tracks.find((t) => t.id === s1.id).artists, ['Unknown artist']); assert.deepEqual(lib.tracks.find((t) => t.id === s2.id).artists, ['Burna']);
+    // delete artist WITH songs: only songs where they are the sole artist go
+    const burna = await j.ensureArtist('Burna'); const s4 = await j.upload(mp3(30000, 4), { title: 'Mixed', artists: ['Burna', 'Tems'] });
+    r = await j.api('DELETE', `/artists/${burna}?confirm=true&songs=delete`); assert.deepEqual([r.json.deletedSongs, r.json.keptSongs], [2, 1]); assert.equal(r.json.storageCleanup, 'done');
+    lib = (await j.api('GET', '/library')).json; assert.deepEqual(lib.tracks.map((t) => t.title).sort(), ['Mixed', 'Solo']); assert.deepEqual(lib.playlists[0].trackIds.sort(), [s1.id]);
+    assert.equal((await j.bin('GET', `${B}/tracks/${s2.id}/audio`, { cookie: j.admin.cookie })).status, 404);
+    // albums
+    const { albumId } = await import('../apps/jupiter/server/schema.js'); const me = (await j.t.request('GET', '/api/auth/me', { cookie: j.admin.cookie })).json.user.id;
+    const alb = lib.tracks.find((t) => t.id === s1.id).albumId; assert.equal((await j.api('DELETE', `/albums/${alb}`)).status, 400);
+    r = await j.api('DELETE', `/albums/${alb}?confirm=true`); assert.equal(r.json.keptSongs, 1); assert.equal((await j.api('GET', '/library')).json.tracks.find((t) => t.id === s1.id).album, 'Unknown album');
+    const alb2 = (await j.api('GET', '/library')).json.tracks.find((t) => t.id === s4.id).albumId;
+    r = await j.api('DELETE', `/albums/${alb2}?confirm=true&songs=delete`); assert.equal(r.json.deletedSongs, 1); assert.equal((await j.api('GET', '/library')).json.tracks.some((t) => t.id === s4.id), false);
+    assert.equal((await j.api('DELETE', `/albums/alb_nothere00000000?confirm=true`)).status, 404); void albumId; void me; void pl;
+    assert.equal((await j.api('GET', '/maintenance/orphans')).json.orphanCount, 0);
+  } finally { await j.cleanup(); }
 });

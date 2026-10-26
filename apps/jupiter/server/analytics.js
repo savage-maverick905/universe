@@ -143,7 +143,7 @@ export function makeAnalytics(s, media, lib) {
     const days = []; for (let t = r.start.getTime(); t < r.end.getTime(); t += DAY) { const k = new Date(t + tz * 60_000).toISOString().slice(0, 10), has = byDay.get(k);
       days.push(has ? has : { date: k, plays: 0, listenMs: 0, noData: !since || t + DAY <= Date.parse(since) }); }
     return { range: { kind, from: startIso, to: endIso, tz }, coverage: { trackingSince: since, hasAnyData: !!since, partial: !since || since > startIso },
-      totals: { ...tot, uniqueTracks: byTrack.size }, topTracks: top(byTrack, limit).filter((x) => tracks.has(x.trackId)), topArtists: top(byArtist, limit), topGenres: top(byGenre, 8), byDay: days, byHour, events: rows.length };
+      totals: { ...tot, uniqueTracks: byTrack.size, uniqueArtists: [...byArtist.keys()].filter((n) => n !== 'Unknown artist').length }, topTracks: top(byTrack, limit).filter((x) => tracks.has(x.trackId)), topArtists: top(byArtist, limit), topGenres: top(byGenre, 8), byDay: days, byHour, events: rows.length };
   }
   return { ingest, stats, rangeFor, classify };
 }

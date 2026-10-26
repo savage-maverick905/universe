@@ -2,7 +2,7 @@
   "manifestVersion": 1,
   "id": "jupiter",
   "name": "Jupiter",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Jupiter is your own music player: upload the music you own, keep it in your private storage, build playlists, download tracks for offline, see what you listen to, and ask Nebula to play things for you.",
   "icon": "music",
   "entry": "index.html",
