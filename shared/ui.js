@@ -49,3 +49,8 @@ export function dialog(title, ...content) {
 export const closer = (label = 'Close') => h('button', { type: 'button', class: 'btn ghost', onclick: (e) => e.currentTarget.closest('dialog').close() }, label);
 
 export const initial = (name) => (String(name || '?').trim()[0] || '?').toUpperCase();
+
+// Page-change motion for every app: a short fade-and-rise whenever the route changes (not on in-page re-renders).
+if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+  let t; addEventListener('hashchange', () => { document.body.classList.remove('route-in'); void document.body.offsetWidth; document.body.classList.add('route-in'); clearTimeout(t); t = setTimeout(() => document.body.classList.remove('route-in'), 600); });
+}

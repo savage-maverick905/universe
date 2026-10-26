@@ -13,11 +13,11 @@
   --blue-soft: rgba(0, 173, 239, .14);
 
   /* Surfaces, darkest to lightest */
-  --bg: #0D0D0D;
-  --bg2: #141414;
-  --card: #181818;
-  --raise: #1E1E1E;
-  --hover: #242424;
+  --bg: #090d1b;
+  --bg2: #0d1226;
+  --card: #111830;
+  --raise: #192142;
+  --hover: #222c55;
 
   /* Text */
   --text: #F2F2F2;
@@ -25,8 +25,8 @@
   --mute: #707070;
 
   /* Borders and status */
-  --line: #2A2A2A;
-  --line-strong: #383838;
+  --line: #1f2850;
+  --line-strong: #2d3868;
   --bad: #E5484D;
   --bad-text: #FF8589;
   --bad-soft: rgba(229, 72, 77, .14);
@@ -80,7 +80,7 @@ section { margin-top: 1.75rem; }
 .btn:active { background: var(--orange-press); transform: translateY(1px); }
 .btn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
 .btn.ghost { color: var(--text); background: var(--raise); border-color: var(--line-strong); }
-.btn.ghost:hover { background: var(--hover); border-color: #4a4a4a; }
+.btn.ghost:hover { background: var(--hover); border-color: #44538f; }
 .btn.ghost:active { background: var(--card); }
 .btn.small { min-height: 2.125rem; padding: .35rem .8rem; font-size: .8125rem; }
 .btn.danger { background: var(--bad); }
@@ -99,7 +99,7 @@ input, select, textarea {
   transition: border-color .15s, box-shadow .15s;
 }
 input::placeholder, textarea::placeholder { color: var(--mute); }
-input:hover, select:hover, textarea:hover { border-color: #4a4a4a; }
+input:hover, select:hover, textarea:hover { border-color: #44538f; }
 input:focus, select:focus, textarea:focus { outline: none; border-color: var(--orange); box-shadow: 0 0 0 3px var(--orange-soft); }
 input:disabled, select:disabled, textarea:disabled { opacity: .5; cursor: not-allowed; }
 input[type=checkbox], input[type=radio] { display: inline-block; width: 1.05rem; min-height: 0; height: 1.05rem; margin: 0 .5rem 0 0; vertical-align: -.2em; accent-color: var(--orange); }
@@ -297,23 +297,10 @@ section > h2 { margin-bottom: .9rem; }
   :root { --toast-bottom: 1rem; }
 }
 
-/* ---------- Universe atmosphere: a faint starfield and two soft nebula glows, same Hie colours ---------- */
-body::before {
-  content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
-  background-image:
-    radial-gradient(1.5px 1.5px at 20px 30px, rgba(255, 255, 255, .9), transparent 100%),
-    radial-gradient(1.5px 1.5px at 120px 80px, rgba(255, 255, 255, .7), transparent 100%),
-    radial-gradient(2px 2px at 210px 150px, rgba(255, 173, 128, .55), transparent 100%),
-    radial-gradient(1.5px 1.5px at 270px 40px, rgba(255, 255, 255, .6), transparent 100%),
-    radial-gradient(1.5px 1.5px at 70px 215px, rgba(255, 255, 255, .75), transparent 100%),
-    radial-gradient(2px 2px at 175px 255px, rgba(0, 173, 239, .5), transparent 100%),
-    radial-gradient(1.5px 1.5px at 40px 120px, rgba(255, 255, 255, .55), transparent 100%),
-    radial-gradient(42rem 28rem at 8% -8%, rgba(237, 102, 39, .09), transparent 65%),
-    radial-gradient(40rem 30rem at 100% 100%, rgba(0, 173, 239, .07), transparent 65%);
-  background-size: 300px 300px, 300px 300px, 300px 300px, 300px 300px, 300px 300px, 300px 300px, 300px 300px, 100% 100%, 100% 100%;
-}
-.side { background: rgba(20, 20, 20, .96); }
-.side nav { background: rgba(20, 20, 20, .98); }
+/* ---------- Jupiter look, shared by every app: navy surfaces, soft cyan and orange glow ---------- */
+body::before { content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none; background: radial-gradient(1200px 500px at 50% -10%, rgba(0, 173, 239, .10), transparent 60%), radial-gradient(900px 500px at 100% 10%, rgba(237, 102, 39, .08), transparent 60%); }
+.side { background: rgba(13, 18, 38, .88); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+.side nav { background: rgba(10, 14, 30, .94); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
 .mark:not(.inv)::after { content: ""; position: absolute; top: -3px; right: -3px; width: 8px; height: 8px; border-radius: 50%; background: var(--blue); border: 2px solid var(--bg2); }
 .card, .panel { background: linear-gradient(180deg, rgba(255, 255, 255, .03), rgba(255, 255, 255, 0) 55%), var(--card); border-radius: 16px; }
 .card { transition: border-color .15s; }
@@ -321,12 +308,33 @@ a.card:hover, .card:hover { border-color: var(--line-strong); }
 .btn { border-radius: 12px; }
 .btn:not(.ghost):not(.danger) { background: linear-gradient(180deg, var(--orange-hover), var(--orange)); }
 .btn:not(.ghost):not(.danger):active { background: var(--orange-press); }
-section > h2 { font-size: .8125rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--dim); }
+section > h2 { font-size: 1.05rem; font-weight: 600; letter-spacing: -.01em; color: var(--text); }
 .page-head h1, .wrap > h1 { letter-spacing: -.02em; }
 .auth { margin-top: min(10vh, 4rem); padding: 1.5rem 1.25rem; background: linear-gradient(180deg, rgba(255, 255, 255, .03), transparent 50%), var(--card); border: 1px solid var(--line); border-radius: 20px; width: calc(100% - 2rem); }
 .stat b { font-size: 1.4rem; }
 .track i { background: linear-gradient(90deg, var(--blue), #4cc7f5); }
 
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
-}
+
+/* ---------- Jupiter motion and polish (v1.7) ---------- */
+@keyframes pagein { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes fadein { from { opacity: 0; } to { opacity: 1; } } @keyframes fadeout { to { opacity: 0; } }
+@keyframes sheetup { from { transform: translateY(100%); opacity: .6; } to { transform: none; opacity: 1; } }
+@keyframes sheetdown { to { transform: translateY(100%); opacity: 0; } }
+@keyframes toastin { from { opacity: 0; transform: translate(-50%, 12px) scale(.96); } to { opacity: 1; transform: translate(-50%, 0) scale(1); } }
+@keyframes toastout { to { opacity: 0; transform: translate(-50%, 8px); } }
+body.route-in #app > *:not(.shell), body.route-in #root > *:not(.shell) { animation: pagein .28s ease-out; }
+body.route-in .main > *, body.route-in .wrap > * { animation: pagein .3s ease-out backwards; } body.route-in .main > :nth-child(2), body.route-in .wrap > :nth-child(2) { animation-delay: .04s; } body.route-in .main > :nth-child(3), body.route-in .wrap > :nth-child(3) { animation-delay: .08s; } body.route-in .main > :nth-child(n+4), body.route-in .wrap > :nth-child(n+4) { animation-delay: .12s; }
+dialog[open] { animation: sheetup .28s cubic-bezier(.2, .85, .25, 1); } dialog[open]::backdrop { animation: fadein .2s ease-out; backdrop-filter: blur(3px); }
+dialog.closing { animation: sheetdown .18s ease-in forwards; } dialog.closing::backdrop { animation: fadeout .18s ease-in forwards; }
+@media (min-width: 641px) { dialog[open] { animation-name: fadein; } dialog.closing { animation-name: fadeout; } }
+.toast { animation: toastin .25s ease-out, toastout .3s ease-in 2.85s forwards; }
+.card, .panel, .btn, .chip, .app, .seg button, .side nav a, .iconbtn { transition: transform .12s ease, background-color .15s ease, border-color .15s ease, filter .15s ease, color .15s ease; }
+a.card:active, button.card:active, .card.tap:active, .chip:active, .iconbtn:active { transform: scale(.97); } .btn:active { transform: scale(.97); }
+.card, .panel { box-shadow: 0 1px 0 rgba(255, 255, 255, .03) inset, 0 8px 24px rgba(0, 0, 0, .18); }
+.page-head h1, .wrap > h1 { font-size: 1.5rem; }
+.hello.mood-morning { background: radial-gradient(18rem 12rem at 100% 0%, rgba(255, 184, 77, .24), transparent 70%), radial-gradient(14rem 10rem at 0% 100%, rgba(237, 102, 39, .14), transparent 70%), var(--card); }
+.hello.mood-evening { background: radial-gradient(18rem 12rem at 100% 0%, rgba(237, 102, 39, .26), transparent 70%), radial-gradient(14rem 10rem at 0% 100%, rgba(150, 60, 160, .2), transparent 70%), var(--card); }
+.hello.mood-night { background: radial-gradient(18rem 12rem at 100% 0%, rgba(90, 70, 216, .26), transparent 70%), radial-gradient(14rem 10rem at 0% 100%, rgba(0, 173, 239, .12), transparent 70%), var(--card); }
+.hello h1 { font-size: 1.5rem; }
+.ico { background: linear-gradient(135deg, rgba(0, 173, 239, .22), rgba(90, 70, 216, .2)); }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; animation-delay: 0s !important; transition-duration: .01ms !important; scroll-behavior: auto !important; } }

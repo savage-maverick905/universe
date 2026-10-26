@@ -120,8 +120,6 @@ input[type=range]::-moz-range-thumb { width: 14px; height: 14px; border-radius: 
 .neb { animation: slideup .3s cubic-bezier(.2, .85, .25, 1); } .neb.out { animation: slidedown .24s ease-in forwards; pointer-events: none; }
 .mini { animation: minin .3s cubic-bezier(.2, .85, .25, 1); } .mini.out { animation: minout .22s ease-in forwards; pointer-events: none; } .mini.noanim { animation: none; }
 .main.pagein { animation: pagein .28s ease-out; }
-dialog[open] { animation: fadein .18s ease-out; } dialog[open]::backdrop { animation: fadein .2s ease-out; } dialog[open] .sheet { animation: slideup .28s cubic-bezier(.2, .85, .25, 1); }
-dialog.closing { animation: fadeout .17s ease-in forwards; } dialog.closing::backdrop { animation: fadeout .17s ease-in forwards; } dialog.closing .sheet { animation: slidedown .17s ease-in forwards; }
 .toast { animation: toastin .25s ease-out, toastout .3s ease-in 2.85s forwards; }
 .qtile, .mix, .tile, .lastcard, .row-t, .iconbtn, .btn { transition: transform .12s ease, background-color .15s ease, filter .15s ease; } .qtile:active, .mix:active, .tile:active, .lastcard:active { transform: scale(.97); } .row-t:active { background: var(--raise); } .iconbtn:active { transform: scale(.88); } .btn:active { transform: scale(.97); }
 .scroller .tile, .scroller .mix { animation: pagein .35s ease-out backwards; } .scroller > :nth-child(2) { animation-delay: .04s; } .scroller > :nth-child(3) { animation-delay: .08s; } .scroller > :nth-child(4) { animation-delay: .12s; } .scroller > :nth-child(n+5) { animation-delay: .16s; }
