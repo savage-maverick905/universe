@@ -1,3 +1,4 @@
+import '/shared/select.js';
 // Nova: Universe's project, task and execution manager. Its own installable app with its own sign-in, navigation and settings.
 import { api, h, toast, setUnauthorizedHandler } from './services/api.js';
 import { icon } from '/shared/icons.js';

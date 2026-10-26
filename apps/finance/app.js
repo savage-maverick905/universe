@@ -1,3 +1,4 @@
+import '/shared/select.js';
 // Orbit — by Universe. Shell, routing, and the lock lifecycle.
 import { api, h, toast, setHooks, lockNow } from './lib/api.js';
 import { S, loadBase } from './lib/forms.js';

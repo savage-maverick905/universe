@@ -16,7 +16,7 @@ export async function render({ frame, goto, rest }) {
   frame('more', h('div', { class: 'page-head' }, h('h1', {}, 'Accounts'), h('button', { class: 'btn small', onclick: () => accountSheet(null, () => goto('#/accounts')) }, icon('plus'), 'Add')),
     h('div', { class: 'hero' }, h('small', {}, 'Total'), Object.entries(totals).map(([c, v]) => h('div', { class: 'big' }, money(v, c)))),
     live.length ? Object.entries(groups).map(([g, list]) => h('div', { class: 'card' }, h('h3', {}, g), list.map(row))) : emptyState('No accounts yet', 'Add Cash, OPay, PalmPay, Moniepoint or any account you use.', h('button', { class: 'btn small', onclick: () => accountSheet(null, () => goto('#/accounts')) }, 'Add account')),
-    arch.length ? h('details', {}, h('summary', {}, `Archived (${arch.length})`), arch.map(row)) : null, h('a', { href: '#/more' }, '← Back'));
+    arch.length ? h('details', {}, h('summary', {}, `Archived (${arch.length})`), arch.map(row)) : null, h('a', { href: '#/more', class: 'backlink' }, icon('back', 16), 'Back'));
 }
 export function accountSheet(a, done) {
   const presets = S.meta.presets, name = h('input', { type: 'text', maxlength: 60, required: '', value: a?.name || '', list: 'presets' }), err = h('p', { class: 'err', role: 'alert' });

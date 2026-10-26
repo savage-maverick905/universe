@@ -1,3 +1,4 @@
+import '/shared/select.js';
 // Dashboard shell. Built with textContent only (never innerHTML) so API data cannot inject markup.
 import { assistantView } from './assistant.js';
 import { reportsView } from './reports.js';
@@ -55,7 +56,7 @@ async function homeView() {
   if (me.permissions.includes('ai.use')) { try { aiName = (await api('GET', '/api/ai/profile')).profile.name; } catch { /* assistant optional */ } }
   const hr = new Date().getHours(), greet = hr < 5 ? 'Still up' : hr < 12 ? 'Good morning' : hr < 18 ? 'Good afternoon' : 'Good evening', mood = hr < 5 || hr >= 21 ? 'night' : hr < 12 ? 'morning' : hr < 18 ? 'day' : 'evening';
   const hero = h('section', { class: `hello mood-${mood}` },
-    h('div', {}, h('h1', {}, `${greet}, ${me.user.displayName.split(' ')[0]} 👋`),
+    h('div', {}, h('h1', {}, `${greet}, ${me.user.displayName.split(' ')[0]}`),
       h('p', { class: 'muted' }, aiName ? `${aiName} can look things up in your apps for you.` : 'The assistant is not enabled for your account.')),
     aiName ? h('a', { class: 'btn', href: '#/assistant' }, icon('message'), `Talk to ${aiName}`) : null);
   const body = widgets.length

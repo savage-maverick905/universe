@@ -25,7 +25,7 @@ export const accountOptions = ({ include = true, blank = null, exclude = null, c
   [...(blank ? [{ value: '', label: blank }] : []), ...S.accounts.filter((a) => !a.archived && a.id !== exclude && (!currency || a.currency === currency)).map((a) => ({ value: a.id, label: `${a.name} · ${a.currency}` }))];
 export function categoryOptions(kind, { blank = 'No category', selected = null } = {}) {
   const list = S.cats.filter((c) => c.kind === kind && (!c.archived || c.id === selected)).sort((a, b) => a.path.localeCompare(b.path));
-  return [{ value: '', label: blank }, ...list.map((c) => ({ value: c.id, label: `${'\u2003'.repeat(c.depth)}${c.icon ? `${c.icon} ` : ''}${c.name}` }))];
+  return [{ value: '', label: blank }, ...list.map((c) => ({ value: c.id, label: `${'\u2003'.repeat(c.depth)}${c.name}` }))];
 }
 
 // Add / edit sheet. `txn` = existing transaction to edit; `preset` = fields to start with. onDone() runs after a successful save.
@@ -64,7 +64,7 @@ export function txnSheet({ txn = null, preset = {}, onDone = () => {} } = {}) {
       field('Description', desc), h('div', { class: 'two' }, field('Date', date), field('Time (optional)', time)),
       h('details', {}, h('summary', {}, 'More details'), field('Tags', tags), field('Notes', notes)), rules);
   }
-  const seg = h('div', { class: 'seg5', role: 'tablist' }, types.map((t) => h('button', { type: 'button', role: 'tab', 'aria-selected': String(t === type), class: t === type ? 'on' : '', disabled: editing && t !== type ? '' : null, onclick: () => { type = t; cat = catSel(); seg.querySelectorAll('button').forEach((b, i) => { b.className = types[i] === type ? 'on' : ''; b.setAttribute('aria-selected', String(types[i] === type)); }); draw(); } }, TYPE_LABEL[t])));
+  const seg = h('div', { class: 'seg5', role: 'tablist' }, types.map((t) => h('button', { type: 'button', role: 'tab', 'aria-selected': String(t === type), class: t === type ? 'on' : '', disabled: editing && t !== type ? '' : null, onclick: () => { type = t; cat = catSel(); seg.querySelectorAll('button').forEach((b, i) => { b.className = types[i] === type ? 'on' : ''; b.setAttribute('aria-selected', String(types[i] === type)); }); draw(); } }, (t === 'adjustment' ? 'Adjust' : TYPE_LABEL[t]))));
   accountSel.addEventListener('change', draw); toSel.addEventListener('change', draw);
   draw();
   const save = h('button', { class: 'btn', type: 'submit' }, editing ? 'Save changes' : 'Save');

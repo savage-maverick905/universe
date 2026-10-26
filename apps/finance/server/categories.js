@@ -6,21 +6,21 @@ export const KINDS = ['income', 'expense'];
 // Editable starter set (copied into each user's own data on first use; nothing is shared between users).
 export const STARTER = {
   income: [
-    ['Salary & Wages', '💼', '#00ADEF', ['Salary', 'Bonus', 'Allowance']],
-    ['Business & Freelance', '🧑‍💻', '#ED6627', ['Client payments', 'Sales', 'Commissions']],
-    ['Gifts Received', '🎁', '#B07CFF', []], ['Interest & Returns', '📈', '#3DD68C', []], ['Other Income', '➕', '#A6A6A6', []],
+    ['Salary & Wages', 'case', '#00ADEF', ['Salary', 'Bonus', 'Allowance']],
+    ['Business & Freelance', 'laptop', '#ED6627', ['Client payments', 'Sales', 'Commissions']],
+    ['Gifts Received', 'gift', '#B07CFF', []], ['Interest & Returns', 'trend', '#3DD68C', []], ['Other Income', 'plus', '#A6A6A6', []],
   ],
   expense: [
-    ['Food & Dining', '🍲', '#ED6627', ['Groceries', 'Restaurants', 'Snacks & Drinks']],
-    ['Transport', '🚌', '#00ADEF', ['Fuel', 'Ride-hailing', 'Public transport']],
-    ['Bills & Utilities', '💡', '#F5B93C', ['Data & Airtime', 'Electricity', 'Internet', 'Subscriptions']],
-    ['Housing', '🏠', '#3DD68C', ['Rent', 'Repairs & Maintenance']],
-    ['Education', '🎓', '#B07CFF', ['Tuition & Fees', 'Books & Materials', 'Courses']],
-    ['Health', '🩺', '#E5484D', ['Pharmacy', 'Hospital']],
-    ['Shopping', '🛍️', '#FF8CC6', ['Clothing', 'Electronics']],
-    ['Business Expenses', '🧰', '#4cc7f5', ['Hosting & Domains', 'Tools & Software', 'Marketing']],
-    ['Entertainment', '🎮', '#7BD88F', []], ['Gifts & Giving', '🤝', '#FFAD80', ['Gifts', 'Charity & Tithes']],
-    ['Fees & Charges', '🏦', '#A6A6A6', ['Bank charges', 'Transfer fees']], ['Personal Care', '🧴', '#C9A7FF', []], ['Other Expense', '➖', '#707070', []],
+    ['Food & Dining', 'food', '#ED6627', ['Groceries', 'Restaurants', 'Snacks & Drinks']],
+    ['Transport', 'bus', '#00ADEF', ['Fuel', 'Ride-hailing', 'Public transport']],
+    ['Bills & Utilities', 'bulb', '#F5B93C', ['Data & Airtime', 'Electricity', 'Internet', 'Subscriptions']],
+    ['Housing', 'home', '#3DD68C', ['Rent', 'Repairs & Maintenance']],
+    ['Education', 'cap', '#B07CFF', ['Tuition & Fees', 'Books & Materials', 'Courses']],
+    ['Health', 'pulse', '#E5484D', ['Pharmacy', 'Hospital']],
+    ['Shopping', 'bag', '#FF8CC6', ['Clothing', 'Electronics']],
+    ['Business Expenses', 'tools', '#4cc7f5', ['Hosting & Domains', 'Tools & Software', 'Marketing']],
+    ['Entertainment', 'game', '#7BD88F', []], ['Gifts & Giving', 'heart', '#FFAD80', ['Gifts', 'Charity & Tithes']],
+    ['Fees & Charges', 'bank', '#A6A6A6', ['Bank charges', 'Transfer fees']], ['Personal Care', 'drop', '#C9A7FF', []], ['Other Expense', 'minus', '#707070', []],
   ],
 };
 

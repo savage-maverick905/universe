@@ -1,3 +1,4 @@
+import '/shared/select.js';
 // Jupiter: your own music, in your own pocket. Installable app with its own sign-in, mini-player, Now Playing, offline downloads and Nebula.
 import { api, h, toast, dialog, closer, B, sendBytes, fmtTime, fmtSize, setUnauthorizedHandler } from './services/api.js';
 import { icon } from '/shared/icons.js';
@@ -152,7 +153,7 @@ function homeView() {
   } else homeUpd = null;
   const artists = artistsList().slice(0, 14);
   frame('home', topbar('Jupiter'), h('div', { class: 'stick' }, h('div', { class: 'searchfield' }, icon('search'), search)),
-    h('div', { class: `homehero ${mood}` }, h('h2', { class: 'greet' }, `${greet}, ${S.me.user.displayName.split(' ')[0]} `, h('span', {}, '👋')), h('p', { class: 'muted' }, S.tracks.length ? `${plural(S.tracks.length, 'song')} in your pocket. What are we playing?` : 'Let\'s make today amazing.'),
+    h('div', { class: `homehero ${mood}` }, h('h2', { class: 'greet' }, `${greet}, ${S.me.user.displayName.split(' ')[0]}`), h('p', { class: 'muted' }, S.tracks.length ? `${plural(S.tracks.length, 'song')} in your pocket. What are we playing?` : 'Let\'s make today amazing.'),
       S.tracks.length ? h('div', { class: 'heroact' }, h('button', { class: 'btn', onclick: () => pl.playList([...S.tracks].sort(() => Math.random() - 0.5), 0, { src: 'library', shuffle: true }) }, icon('shuffle'), 'Shuffle all'), S.meta?.can?.ai && !S.offlineMode ? h('button', { class: 'btn ghost', onclick: openNebula }, icon('sparkle'), 'Ask Nebula') : null) : null),
     card,
     !S.tracks.length ? emptyState('Your library is empty. Add the music you own to start.', h('a', { class: 'btn', href: '#/upload' }, icon('upload'), 'Add music')) : null,
@@ -342,7 +343,7 @@ function uploadView() {
         const small = it.tags.picture ? await shrinkImage(new Blob([it.tags.picture.data], { type: it.tags.picture.mime })) : null;
         const meta = { title: it.f.title.value.trim(), artistIds: it.pick.get(), album: it.f.album.value.trim(), albumArtist: '', trackNo: it.tags.trackNo, discNo: it.tags.discNo, year: it.tags.year, genre: it.f.genre.value.trim(), tags: csv(it.f.tags.value), durationMs: it.dur || 0 };
         const r = await uploadFile(it.file, meta, small && small.size < 2 * 1024 * 1024 ? small : null, (m) => say(m), (p) => { it.bar.style.width = `${Math.round(p * 100)}%`; });
-        if (r.duplicate) { say(`Already in your library as "${r.duplicate}". Skipped.`, 'bad'); it.state = 'done'; } else { ok++; it.state = 'done'; it.bar.style.width = '100%'; say('Added ✓', 'ok'); }
+        if (r.duplicate) { say(`Already in your library as "${r.duplicate}". Skipped.`, 'bad'); it.state = 'done'; } else { ok++; it.state = 'done'; it.bar.style.width = '100%'; say('Added', 'ok'); }
       } catch (e) { say(e.message || 'Upload failed', 'bad'); }
     }
     go.disabled = false; if (ok) { await loadLibrary(); toast(`${plural(ok, 'song')} added`); } sync();

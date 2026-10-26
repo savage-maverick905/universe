@@ -22,7 +22,7 @@ export async function overviewView({ frame, redraw }) {
   } }, icon('sparkle'), 'Summarise my progress') : null;
 
   frame('overview',
-    h('div', { class: `novahero mood-${mood}` }, h('small', {}, fmtDate(o.today, true)), h('h1', {}, `${greet}, ${S.me.user.displayName.split(' ')[0]} 👋`), h('p', { class: 'lead' }, lead),
+    h('div', { class: `novahero mood-${mood}` }, h('small', {}, fmtDate(o.today, true)), h('h1', {}, `${greet}, ${S.me.user.displayName.split(' ')[0]}`), h('p', { class: 'lead' }, lead),
       h('div', { class: 'row tight' }, summaryBtn, S.meta.canWriteTasks ? h('button', { class: 'btn ghost small', onclick: () => openEvent(null, { onChange: redraw }) }, icon('calendar'), 'New event') : null)),
     summaryBox,
     brandNew ? h('section', { class: 'card onboard' }, h('h2', {}, 'Welcome to Nova'), h('p', { class: 'sub' }, 'Nova turns ideas into plans and plans into finished work. Start small:'),

@@ -1,3 +1,4 @@
+import { icon, catIcon } from '/shared/icons.js';
 import { h, api, toast } from '../lib/api.js';
 import { S, select, accountOptions, acctName } from '../lib/forms.js';
 import { downloadPdf } from '/shared/pdf.js';
@@ -19,10 +20,10 @@ function breakdownCard(title, r, cur, word) {
   if (!items.length) return h('div', { class: 'card' }, h('h3', {}, title), empty('Nothing in this period.'));
   items.forEach((x) => { x.share = x.minor / base; x.pct = x.share >= 0.1 ? Math.round(x.share * 100) : Math.round(x.share * 1000) / 10; });
   const row = (x) => {
-    const head = h('div', { class: 'crow-h' }, h('i', { class: 'dot', style: `background:${x.color}` }), h('span', { class: 'cn' }, `${x.icon || ''} ${x.label}`.trim()), h('span', { class: 'cp' }, `${x.pct}%`), h('b', { class: 'ca' }, money(x.minor, cur)));
+    const head = h('div', { class: 'crow-h' }, h('i', { class: 'dot', style: `background:${x.color}` }), h('span', { class: 'cn' }, x.icon ? h('span', { class: 'cico', style: `color:${x.color}` }, catIcon(x.icon, 16)) : null, x.label), h('span', { class: 'cp' }, `${x.pct}%`), h('b', { class: 'ca' }, money(x.minor, cur)));
     const bar = h('div', { class: 'cbar' }, h('i', { style: `width:${Math.max(2, x.share * 100)}%;background:${x.color}` }));
     if (!x.children.length) return h('div', { class: 'crow' }, head, bar);
-    return h('details', { class: 'crow' }, h('summary', {}, head, bar), h('div', { class: 'subs' }, x.children.map((c) => h('div', { class: 'line' }, h('span', {}, `${c.icon || ''} ${c.name}`.trim()), h('span', {}, h('small', { class: 'muted' }, `${Math.round((c.totalMinor / x.minor) * 100)}% · `), h('b', {}, money(c.totalMinor, cur)))))));
+    return h('details', { class: 'crow' }, h('summary', {}, head, bar), h('div', { class: 'subs' }, x.children.map((c) => h('div', { class: 'line' }, h('span', {}, c.name), h('span', {}, h('small', { class: 'muted' }, `${Math.round((c.totalMinor / x.minor) * 100)}% · `), h('b', {}, money(c.totalMinor, cur)))))));
   };
   const shown = items.slice(0, 6), rest = items.slice(6);
   return h('div', { class: 'card' }, h('h3', {}, title),
@@ -50,7 +51,7 @@ export async function render({ frame }) {
       const top = [...cat.roots].filter((n) => n.totalMinor > 0).sort((a, b) => b.totalMinor - a.totalMinor)[0];
       out.replaceChildren(
         h('div', { class: 'grid3' }, stat('Income', money(s.income, cur), 'pos'), stat('Spent', money(s.netExpense, cur), 'neg', s.netExpense ? `≈ ${money(perDay, cur)} a day` : ''), stat('Net', money(s.net, cur, { sign: true }), s.net >= 0 ? 'pos' : 'neg', saved == null ? '' : saved >= 0 ? `${saved}% of income kept` : 'Spent more than earned')),
-        top ? h('div', { class: 'insight' }, h('i', { class: 'dot', style: `background:${top.color && /^#[0-9a-fA-F]{6}$/.test(top.color) ? top.color : colorAt(0)}` }), h('span', {}, `Biggest spend: ${top.icon || ''} ${top.name}`.replace('  ', ' ')), h('b', {}, money(top.totalMinor, cur))) : null,
+        top ? h('div', { class: 'insight' }, h('i', { class: 'dot', style: `background:${top.color && /^#[0-9a-fA-F]{6}$/.test(top.color) ? top.color : colorAt(0)}` }), h('span', {}, `Biggest spend: ${top.name}`), h('b', {}, money(top.totalMinor, cur))) : null,
         h('div', { class: 'card' }, h('div', { class: 'card-h' }, h('h3', {}, 'Income vs spending'), legend()), tr.points.length ? barChart(tr.points, cur) : empty('No transactions in this period.')),
         h('div', { class: 'card' }, h('div', { class: 'card-h' }, h('h3', {}, 'Running total'), h('small', { class: 'muted' }, 'income minus spending')), cf.points.length ? lineChart(cf.points, cur) : empty('No transactions in this period.')),
         breakdownCard('Where your money went', cat, cur, 'spent'), breakdownCard('Where your money came from', inc, cur, 'earned'),
@@ -89,6 +90,6 @@ export async function render({ frame }) {
     pdfBtn.disabled = false; pdfBtn.textContent = 'Download PDF';
   } }, 'Download PDF');
   const exportCsv = h('button', { class: 'btn ghost small', onclick: async () => { try { const r = await api('GET', `/export/transactions.csv${st.range === 'custom' ? `?from=${st.from}&to=${st.to}` : ''}`); const a = h('a', { href: URL.createObjectURL(new Blob([r.csv], { type: 'text/csv' })), download: r.filename }); document.body.append(a); a.click(); a.remove(); toast(`${r.rows} rows exported`); } catch (e) { toast(e.message); } } }, 'Export CSV');
-  frame('more', h('div', { class: 'page-head' }, h('h1', {}, 'Reports'), h('div', { class: 'row tight' }, pdfBtn, exportCsv)), bar, out, h('a', { href: '#/more' }, '← Back'));
+  frame('more', h('div', { class: 'page-head' }, h('h1', {}, 'Reports'), h('div', { class: 'row tight' }, pdfBtn, exportCsv)), bar, out, h('a', { href: '#/more', class: 'backlink' }, icon('back', 16), 'Back'));
   await go();
 }

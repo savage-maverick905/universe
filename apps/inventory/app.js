@@ -1,3 +1,4 @@
+import '/shared/select.js';
 import { api, h, toast, B, setUnauthorizedHandler } from './services/api.js';
 import { createUploader, thumbUrl } from './services/media.js';
 import { icon } from '/shared/icons.js';
