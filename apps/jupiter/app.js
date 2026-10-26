@@ -73,7 +73,7 @@ function menu(title, sub, items) {
 }
 function trackMenu(t) {
   const W = S.meta.can.write;
-  menu(t.title, t.artists.join(', '), [['play', 'Play next', () => { pl.enqueue([t], 'next'); toast('Playing next'); }], ['queue', 'Add to queue', () => { pl.enqueue([t]); toast('Added to queue'); }], W && ['plus', 'Add to playlist', () => addToPlaylist([t.id])],
+  menu(t.title, t.artists.join(', '), [['play', 'Play next', () => { pl.enqueue([t], 'next'); toast('Playing next'); }], ['queue', 'Add to queue', () => { pl.enqueue([t]); toast('Added to queue'); }], W && ['plus', 'Add to playlist', () => addToPlaylist([t.id])], ['share', 'Share picture', () => shareCard(t)],
     S.offline.has(t.id) ? ['trash', 'Remove download', async () => { await offline.remove(t.id); await refreshOffline(); route(); toast('Download removed'); }] : (S.dl[t.id] != null ? null : ['download', 'Download for offline', () => startDownload(t)]),
     W && ['pencil', 'Edit details, artist and artwork', () => editTrack(t)], ['disc', 'Go to album', () => { location.hash = `#/album/${t.albumId}`; }], ['user', 'Go to artist', () => { location.hash = `#/artist/${t.artistIds[0] || UNKNOWN}`; }],
     S.meta.can.delete && ['trash', 'Delete this song…', () => confirmDeleteTrack(t), 'danger']]);
@@ -135,7 +135,7 @@ function homeView() {
   const quick = [['heart', 'Liked Songs', plural(liked.length, 'song'), 'blue', () => { S.tab = 'songs'; S.likedOnly = true; location.hash = '#/library'; }], ['play', 'Recently Played', plural(Math.min(50, played.length), 'song'), 'orange', () => { if (played.length) pl.playList(played.slice(0, 50), 0, { src: 'library' }); }],
     ['user', 'Your Artists', plural(artistsList().length, 'artist'), 'violet', () => { location.hash = '#/artists'; }], ['disc', 'Your Albums', plural(albumsFrom(S.tracks).length, 'album'), 'indigo', () => { S.tab = 'albums'; location.hash = '#/library'; }]];
   const search = h('input', { type: 'search', placeholder: 'Search songs, artists, albums, tags…', 'aria-label': 'Search', onkeydown: (e) => { if (e.key === 'Enter') { S.q = e.target.value; S.tab = 'songs'; location.hash = '#/library'; } } });
-  frame('home', topbar('Jupiter'), h('div', { class: 'searchfield' }, icon('search'), search),
+  frame('home', topbar('Jupiter'), h('div', { class: 'stick' }, h('div', { class: 'searchfield' }, icon('search'), search)),
     h('h2', { class: 'greet' }, `${greet}, ${S.me.user.displayName.split(' ')[0]} `, h('span', {}, '👋')), h('p', { class: 'muted', style: 'margin:.1rem 0 1rem' }, 'Let\'s make today amazing.'),
     last ? h('div', { class: 'lastcard', onclick: () => pl.playList([last, ...played.filter((t) => t.id !== last.id)].slice(0, 50), 0, { src: 'library' }) }, artEl(artKeyOf(last)), h('div', { class: 'meta' }, h('small', {}, pl.current() ? 'Now playing' : 'Last played'), h('div', { class: 'ttl' }, last.title), h('div', { class: 'sub2' }, last.artists.join(', '))), h('span', { class: 'bigplay' }, icon('play'))) : null,
     !S.tracks.length ? emptyState('Your library is empty. Add the music you own to start.', h('a', { class: 'btn', href: '#/upload' }, icon('upload'), 'Add music')) : null,
@@ -158,8 +158,8 @@ function libraryView() {
       S.meta.can.write ? h('button', { class: 'iconbtn', 'aria-label': 'Playlist options', onclick: (e) => { e.stopPropagation(); playlistMenu(p); } }, icon('more')) : null)));
   else { const tags = [...by(S.tracks, (t) => t.tags)].sort((a, b) => b[1].length - a[1].length); body = tags.length ? h('div', { class: 'chips wrap' }, tags.map(([tag, ts]) => h('button', { class: 'chip', 'aria-pressed': S.tag === tag ? 'true' : 'false', onclick: () => { S.tag = S.tag === tag ? '' : tag; S.tab = 'songs'; libraryView(); } }, `${tag} · ${ts.length}`))) : emptyState('No tags yet. Add custom tags when you upload or edit a song.'); }
   frame('library', h('div', { class: 'top' }, h('h1', {}, 'Your Library'), S.meta.can.write ? h('a', { class: 'iconbtn', href: '#/upload', 'aria-label': 'Add music', title: 'Add music' }, icon('plus')) : null, S.meta?.can?.ai ? h('button', { class: 'iconbtn', 'aria-label': 'Ask Nebula', onclick: openNebula }, icon('sparkle')) : null),
-    h('div', { class: 'chips' }, tabs.map((t) => h('button', { class: 'chip', 'aria-pressed': S.tab === t ? 'true' : 'false', onclick: () => { S.tab = t; libraryView(); } }, t[0].toUpperCase() + t.slice(1))), h('button', { class: 'chip', 'aria-pressed': S.likedOnly ? 'true' : 'false', onclick: () => { S.likedOnly = !S.likedOnly; S.tab = 'songs'; libraryView(); } }, '♥ Liked')),
-    h('div', { class: 'searchfield' }, icon('search'), search), S.tag ? h('p', { class: 'fine' }, `Tag: ${S.tag} `, h('a', { href: '#', onclick: (e) => { e.preventDefault(); S.tag = ''; libraryView(); } }, 'clear')) : null, body);
+    h('div', { class: 'stick' }, h('div', { class: 'chips' }, tabs.map((t) => h('button', { class: 'chip', 'aria-pressed': S.tab === t ? 'true' : 'false', onclick: () => { S.tab = t; libraryView(); } }, t[0].toUpperCase() + t.slice(1))), h('button', { class: 'chip', 'aria-pressed': S.likedOnly ? 'true' : 'false', onclick: () => { S.likedOnly = !S.likedOnly; S.tab = 'songs'; libraryView(); } }, '♥ Liked')),
+    h('div', { class: 'searchfield' }, icon('search'), search)), S.tag ? h('p', { class: 'fine' }, `Tag: ${S.tag} `, h('a', { href: '#', onclick: (e) => { e.preventDefault(); S.tag = ''; libraryView(); } }, 'clear')) : null, body);
 }
 function artistRows(q = []) {
   const list = artistsList().filter((a) => !q.length || q.every((x) => norm(a.name).includes(x)));
@@ -335,13 +335,44 @@ async function moreView() {
   frame('more', h('div', { class: 'top' }, h('h1', {}, 'Settings')), h('div', { class: 'profile' }, h('img', { class: 'logo big', src: '/apps/jupiter/icons/icon-192.png', alt: '' }), h('div', { class: 'meta' }, h('b', {}, S.me.user.displayName), h('small', { class: 'muted' }, S.me.user.email || ''))),
     h('div', { class: 'setlist' }, row('download', 'Offline Downloads', plural(S.offline.size, 'song'), () => { location.hash = '#/downloads'; }), row('box', 'Storage Usage', `${fmtSize(S.used || 0)} / ${S.meta.libraryLimitMb} MB`, () => toast(`Library ${fmtSize(S.used || 0)}. On this device: ${fmtSize(u.bytes)} downloaded. Storage: ${S.meta.storage === 'github' ? 'private GitHub branch' : 'local files'}.`)),
       S.meta.can.write ? row('upload', 'Add music', '', () => { location.hash = '#/upload'; }) : null, S.meta.can.ai ? row('sparkle', 'Ask Nebula', '', openNebula) : null, row('file', 'Export library list', 'no audio', async () => { const j = await api('GET', '/export'); h('a', { href: URL.createObjectURL(new Blob([JSON.stringify(j, null, 1)], { type: 'application/json' })), download: 'jupiter-library.json' }).click(); }),
-      S.meta.can.maintain ? row('settings', 'Storage upkeep', '', maintenance) : null, canPromptInstall() && !isStandalone() ? row('phone', 'Install Jupiter', '', promptInstall) : null, row('home', 'Universe dashboard', '', () => { location.href = '/dashboard/'; }), row('target', 'About Jupiter', 'v1.1.0', () => toast('Jupiter · part of Universe · Hie Technologies'))),
+      S.meta.can.maintain ? row('settings', 'Storage upkeep', '', maintenance) : null, canPromptInstall() && !isStandalone() ? row('phone', 'Install Jupiter', '', promptInstall) : null, row('home', 'Universe dashboard', '', () => { location.href = '/dashboard/'; }), row('target', 'About Jupiter', 'v1.2.0', () => toast('Jupiter · part of Universe · Hie Technologies'))),
     h('button', { class: 'btn ghost danger wide', onclick: async () => { try { await rootApi('POST', '/api/auth/logout'); } catch { /* already out */ } S.me = null; boot(); } }, 'Sign Out'));
 }
 async function maintenance() {
   const st = await api('GET', '/maintenance/status'), msg = h('p', { class: 'fine muted' }, `Branch: ${st.branch || 'n/a'}. History is squashed weekly (${st.cronConfigured ? 'cron secret set' : 'CRON_SECRET not set: weekly job inactive'}). GitHub may keep old commits reachable until it cleans them up.`);
   const d = dialog('Storage upkeep', msg, h('div', { class: 'actions' }, h('button', { class: 'btn ghost', onclick: async () => { try { const r = await api('GET', '/maintenance/orphans'); msg.textContent = `${r.files} files; ${r.orphanCount} unreferenced; ${r.missingCount} referenced but missing. Report only; nothing deleted.`; } catch (x) { toast(x.message); } } }, 'Check files'),
     h('button', { class: 'btn ghost', onclick: async () => { if (!confirm('Squash the music branch history now? All songs and artwork are kept.')) return; try { const r = await api('POST', '/maintenance/rebuild-history?confirm=true'); toast(r.skipped || 'History rebuilt'); } catch (x) { toast(x.message); } } }, 'Rebuild history now'), closer()));
+}
+
+// ---------------- share picture ----------------
+// Draws a 1080x1920 "story" card (cover, title, artist, Jupiter mark) in the browser. Nothing is uploaded; it shares or saves a PNG only.
+const loadImg = (src) => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; });
+async function makeCard(t) {
+  const W = 1080, H = 1920, c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d'), key = artKeyOf(t);
+  try { await document.fonts.load('700 64px Poppins'); await document.fonts.load('400 40px Poppins'); } catch { /* falls back to the system font */ }
+  let img = null; if (key && !S.offlineMode) { try { img = await loadImg(artUrl(key)); } catch { img = null; } }
+  let col = [237, 102, 39]; if (img) { try { const s = document.createElement('canvas'); s.width = s.height = 1; const sg = s.getContext('2d'); sg.drawImage(img, 0, 0, 1, 1); const d = sg.getImageData(0, 0, 1, 1).data; col = [d[0], d[1], d[2]]; } catch { /* keep the orange */ } }
+  const grad = g.createLinearGradient(0, 0, 0, H); grad.addColorStop(0, `rgb(${col.map((x) => Math.round(x * 0.85)).join(',')})`); grad.addColorStop(0.65, '#0b1022'); grad.addColorStop(1, '#090d1b'); g.fillStyle = grad; g.fillRect(0, 0, W, H);
+  const x = 120, y = 300, s = 840, r = 56; g.save(); g.shadowColor = 'rgba(0,0,0,.55)'; g.shadowBlur = 80; g.shadowOffsetY = 30; g.beginPath(); g.roundRect(x, y, s, s, r); g.fillStyle = '#1b2447'; g.fill(); g.restore();
+  g.save(); g.beginPath(); g.roundRect(x, y, s, s, r); g.clip();
+  if (img) { const k = Math.max(s / img.width, s / img.height), w = img.width * k, hh = img.height * k; g.drawImage(img, x + (s - w) / 2, y + (s - hh) / 2, w, hh); } else { try { const m = await loadImg('/apps/jupiter/icons/icon-512.png'); g.drawImage(m, x, y, s, s); } catch { g.fillStyle = '#ED6627'; g.fillRect(x, y, s, s); } }
+  g.restore();
+  const fit = (text, maxW) => { let tx = text; while (g.measureText(tx).width > maxW && tx.length > 1) tx = tx.slice(0, -1); return tx === text ? tx : `${tx.trimEnd()}…`; };
+  g.fillStyle = '#fff'; g.font = '700 70px Poppins, system-ui, sans-serif'; g.fillText(fit(t.title, 840), 120, 1260);
+  g.fillStyle = 'rgba(255,255,255,.72)'; g.font = '400 46px Poppins, system-ui, sans-serif'; g.fillText(fit(t.artists.join(', '), 840), 120, 1335);
+  if (t.album && t.album !== 'Unknown album') { g.fillStyle = 'rgba(255,255,255,.45)'; g.font = '400 36px Poppins, system-ui, sans-serif'; g.fillText(fit(t.album, 840), 120, 1395); }
+  try { const m = await loadImg('/apps/jupiter/icons/icon-192.png'); g.save(); g.beginPath(); g.roundRect(120, 1640, 100, 100, 26); g.clip(); g.drawImage(m, 120, 1640, 100, 100); g.restore(); } catch { /* the wordmark still shows */ }
+  g.fillStyle = '#fff'; g.font = '700 54px Poppins, system-ui, sans-serif'; g.fillText('Jupiter', 244, 1708); g.fillStyle = 'rgba(255,255,255,.5)'; g.font = '400 30px Poppins, system-ui, sans-serif'; g.fillText('Listening on Jupiter', 244, 1752);
+  return new Promise((res) => c.toBlob(res, 'image/png'));
+}
+async function shareCard(t) {
+  toast('Making picture…'); const blob = await makeCard(t); if (!blob) return toast('Could not make the picture.');
+  const file = new File([blob], `${t.title.replace(/[^\w\- ]+/g, '').trim().slice(0, 40) || 'jupiter'}.png`, { type: 'image/png' }), url = URL.createObjectURL(blob);
+  const canShare = !!navigator.canShare?.({ files: [file] });
+  const d = dialog('Share picture', h('img', { class: 'sharepv', src: url, alt: `Share card for ${t.title}` }), h('div', { class: 'actions two' },
+    canShare ? h('button', { class: 'btn', onclick: async () => { try { await navigator.share({ files: [file], title: t.title, text: `${t.title} · ${t.artists.join(', ')}` }); } catch (e) { if (e.name !== 'AbortError') toast('Sharing was not possible. Use Save image.'); } } }, icon('share'), 'Share') : null,
+    h('button', { class: 'btn ghost', onclick: () => { h('a', { href: url, download: file.name }).click(); toast('Saved to your downloads'); } }, icon('download'), 'Save image')), closer());
+  d.addEventListener('close', () => URL.revokeObjectURL(url));
 }
 
 // ---------------- mini player and Now Playing ----------------
@@ -355,19 +386,20 @@ function drawMini() {
 function drawNow() { if (np) openNow(true); }
 function openNow(redraw) {
   const t = pl.current(); if (!t) return; if (np && redraw !== true) return; np?.remove();
-  const seek = h('input', { type: 'range', class: 'seek', min: 0, max: 1000, value: 0, 'aria-label': 'Seek', oninput: (e) => { const s = pl.state(); if (s.dur) pl.seek((e.target.value / 1000) * s.dur); } }), cur = h('span', {}, '0:00'), tot = h('span', {}, fmtTime(t.durationMs));
+  const seek = h('input', { type: 'range', class: 'seek', min: 0, max: 1000, value: 0, 'aria-label': 'Seek', oninput: (e) => { fillRange(e.target); const s = pl.state(); if (s.dur) pl.seek((e.target.value / 1000) * s.dur); } }), cur = h('span', {}, '0:00'), tot = h('span', {}, fmtTime(t.durationMs));
   const playBtn = h('button', { class: 'iconbtn play', 'aria-label': 'Play or pause', onclick: pl.toggle }), shuf = h('button', { class: 'iconbtn', 'aria-label': 'Shuffle', onclick: () => pl.setShuffle(!pl.P.shuffle) }, icon('shuffle')), rep = h('button', { class: 'iconbtn', 'aria-label': 'Repeat', onclick: pl.cycleRepeat }, icon('repeat'));
-  const vol = h('input', { type: 'range', min: 0, max: 100, value: Math.round(pl.P.volume * 100), 'aria-label': 'Volume', oninput: (e) => pl.setVolume(e.target.value / 100) }), queue = h('div', { class: 'rows queue' });
+  const vol = h('input', { type: 'range', min: 0, max: 100, value: Math.round(pl.P.volume * 100), 'aria-label': 'Volume', oninput: (e) => { fillRange(e.target); pl.setVolume(e.target.value / 100); } }), queue = h('div', { class: 'rows queue' });
   const drawQueue = () => { const upNext = pl.P.queue.map((id, i) => [id, i]).filter(([, i]) => i > pl.P.index); queue.replaceChildren(h('h2', { class: 'sec' }, 'Up Next', h('span', { class: 'fine muted' }, plural(upNext.length, 'song'))), upNext.map(([id, i]) => { const q = S.byId.get(id) || pl.P.tracks.get(id); if (!q) return null; return h('div', { class: 'row-t', onclick: () => pl.jump(i) }, artEl(artKeyOf(q)), h('div', { class: 'meta' }, h('div', { class: 'ttl' }, q.title), h('div', { class: 'sub2' }, q.artists.join(', '))),
     h('span', { style: 'display:flex' }, h('button', { class: 'iconbtn', 'aria-label': 'Move up', onclick: (e) => { e.stopPropagation(); pl.moveInQueue(i, -1); } }, icon('up')), h('button', { class: 'iconbtn', 'aria-label': 'Move down', onclick: (e) => { e.stopPropagation(); pl.moveInQueue(i, 1); } }, icon('down')), h('button', { class: 'iconbtn', 'aria-label': 'Remove from queue', onclick: (e) => { e.stopPropagation(); pl.removeFromQueue(i); } }, icon('x')))); })); };
   const dl = S.offline.has(t.id) ? h('button', { class: 'iconbtn on', 'aria-label': 'Downloaded', title: 'Available offline', onclick: () => toast('Available offline') }, icon('check')) : h('button', { class: 'iconbtn', 'aria-label': 'Download for offline', onclick: () => startDownload(t) }, icon('download'));
   np = h('div', { class: 'np', role: 'dialog', 'aria-label': 'Now playing' }, h('div', { class: 'head' }, h('button', { class: 'iconbtn', 'aria-label': 'Close', onclick: closeNow }, icon('chevdown')), h('b', {}, 'Now playing'), h('button', { class: 'iconbtn', 'aria-label': 'More', onclick: () => trackMenu(t) }, icon('more'))),
     h('div', { class: 'cover' }, artEl(artKeyOf(t), { cls: 'big' })), h('div', { class: 'side-col' }, h('div', { class: 'npmeta' }, h('h2', {}, t.title), h('div', { class: 'artist' }, t.artists.join(', ')), h('div', { class: 'muted fine' }, t.album)),
       seek, h('div', { class: 'times' }, cur, tot), h('div', { class: 'ctl' }, shuf, h('button', { class: 'iconbtn', 'aria-label': 'Previous', onclick: () => pl.prev() }, icon('prev')), playBtn, h('button', { class: 'iconbtn', 'aria-label': 'Next', onclick: () => pl.next() }, icon('next')), rep),
-      h('div', { class: 'ctl two' }, h('button', { class: `iconbtn ${t.liked ? 'on' : ''}`, 'aria-label': 'Like', onclick: () => toggleLike(t) }, icon('heart')), dl, h('button', { class: 'iconbtn', 'aria-label': 'Add to playlist', onclick: () => addToPlaylist([t.id]) }, icon('plus'))), h('div', { class: 'vol' }, icon('vol'), vol), queue));
-  np._upd = () => { const s = pl.state(); playBtn.replaceChildren(icon(s.playing ? 'pause' : 'play')); if (s.dur && document.activeElement !== seek) seek.value = Math.round((s.pos / s.dur) * 1000); cur.textContent = fmtTime(s.pos * 1000); if (s.dur) tot.textContent = fmtTime(s.dur * 1000); shuf.classList.toggle('on', pl.P.shuffle); rep.classList.toggle('on', pl.P.repeat !== 'off'); rep.title = `Repeat: ${pl.P.repeat}`; };
-  np._upd(); drawQueue(); np._q = drawQueue; document.body.append(np);
+      h('div', { class: 'ctl two' }, h('button', { class: `iconbtn ${t.liked ? 'on' : ''}`, 'aria-label': 'Like', onclick: () => toggleLike(t) }, icon('heart')), dl, h('button', { class: 'iconbtn', 'aria-label': 'Add to playlist', onclick: () => addToPlaylist([t.id]) }, icon('plus')), h('button', { class: 'iconbtn', 'aria-label': 'Share picture', title: 'Share picture', onclick: () => shareCard(t) }, icon('share'))), h('div', { class: 'vol' }, icon('vol'), vol), queue));
+  np._upd = () => { const s = pl.state(); playBtn.replaceChildren(icon(s.playing ? 'pause' : 'play')); if (s.dur && document.activeElement !== seek) seek.value = Math.round((s.pos / s.dur) * 1000); fillRange(seek); cur.textContent = fmtTime(s.pos * 1000); if (s.dur) tot.textContent = fmtTime(s.dur * 1000); shuf.classList.toggle('on', pl.P.shuffle); rep.classList.toggle('on', pl.P.repeat !== 'off'); rep.title = `Repeat: ${pl.P.repeat}`; };
+  fillRange(vol); np._upd(); drawQueue(); np._q = drawQueue; document.body.append(np);
 }
+const fillRange = (el) => el.style.setProperty('--p', `${(el.value / (el.max || 100)) * 100}%`);
 function closeNow() { np?.remove(); np = null; }
 let lastTrack = null;
 pl.on(() => { mini?._upd?.(); np?._upd?.(); const c = pl.current()?.id; if (c !== lastTrack) { lastTrack = c; if (np) openNow(true); drawMini(); root.className = c ? '' : 'has-no-mini'; document.title = pl.current() ? `${pl.current().title} · Jupiter` : 'Jupiter'; } else np?._q?.(); });
