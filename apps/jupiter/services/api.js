@@ -4,10 +4,21 @@ export { h, toast, dialog, closer };
 export const B = '/api/apps/jupiter';
 let onUnauthorized = () => {};
 export const setUnauthorizedHandler = (fn) => { onUnauthorized = fn; };
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+// Reads are retried on a flaky connection (network failure, timeout, 502/503/504) with a short backoff; writes are never repeated automatically.
 export async function api(method, path, body) {
-  try { return await call(method, B + path, body); }
-  catch (e) { if (e.status === 401) onUnauthorized(); throw e; }
+  const tries = method === 'GET' ? 3 : 1;
+  for (let a = 1; ; a++) {
+    try { return await withTimeout((signal) => call(method, B + path, body, signal), method === 'GET' ? 20000 : 60000); }
+    catch (e) {
+      if (e.status === 401) onUnauthorized();
+      const flaky = !e.status || [502, 503, 504].includes(e.status);
+      if (!flaky || a >= tries) throw (!e.status ? Object.assign(new Error('The connection is weak or down. Check your network and try again.'), { network: true }) : e);
+      await sleep(700 * a);
+    }
+  }
 }
+function withTimeout(fn, ms) { const c = new AbortController(), t = setTimeout(() => c.abort(), ms); return fn(c.signal).finally(() => clearTimeout(t)); }
 // Raw bytes (upload pieces, artwork). Same CSRF header as every other write.
 export async function sendBytes(path, bytes, headers = {}) {
   const res = await fetch(B + path, { method: 'PUT', headers: { 'X-Requested-With': 'universe', 'Content-Type': 'application/octet-stream', ...headers }, body: bytes });

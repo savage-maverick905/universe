@@ -23,8 +23,8 @@ export function h(tag, props = {}, ...kids) {
 }
 
 // JSON fetch. Errors carry the server's message and the HTTP status.
-export async function api(method, path, body) {
-  const res = await fetch(path, { method, headers: { 'X-Requested-With': 'universe', ...(body ? { 'Content-Type': 'application/json' } : {}) }, body: body ? JSON.stringify(body) : undefined });
+export async function api(method, path, body, signal) {
+  const res = await fetch(path, { signal, method, headers: { 'X-Requested-With': 'universe', ...(body ? { 'Content-Type': 'application/json' } : {}) }, body: body ? JSON.stringify(body) : undefined });
   const json = await res.json().catch(() => null);
   if (!res.ok) throw Object.assign(new Error(json?.error?.message || res.statusText || 'Request failed'), { status: res.status, code: json?.error?.code });
   return json;

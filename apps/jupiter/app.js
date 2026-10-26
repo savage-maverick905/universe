@@ -18,7 +18,7 @@ const norm = (s) => String(s || '').toLowerCase().normalize('NFKD').replace(/[\u
 const UNKNOWN = 'unknown';
 const artKeyOf = (t) => t.artKey || S.albumArt.get(t.albumId) || (t.artistIds || []).map((i) => S.artistArt.get(i)).find(Boolean) || null;
 const artUrl = (k) => (k ? `${B}/art/${k}` : null);
-function artEl(key, { cls = '', ic = 'music', blue = false } = {}) { const a = h('div', { class: `art ${cls} ${blue ? 'blue' : ''}` }); if (key && !S.offlineMode) a.append(h('img', { src: artUrl(key), alt: '', loading: 'lazy', onerror: (e) => e.target.remove() })); else a.append(icon(ic)); return a; }
+function artEl(key, { cls = '', ic = 'music', blue = false } = {}) { const a = h('div', { class: `art ${cls} ${blue ? 'blue' : ''}` }); if (key && !S.offlineMode) a.append(h('img', { src: artUrl(key), alt: '', loading: 'lazy', onerror: (e) => { const i = e.target; if (!i.dataset.r) { i.dataset.r = 1; setTimeout(() => { i.src = `${artUrl(key)}?r=1`; }, 1500); } else i.remove(); } })); else a.append(icon(ic)); return a; }
 pl.P.getArt = (t) => (artKeyOf(t) ? new URL(artUrl(artKeyOf(t)), location.origin).href : null);
 pl.P.onError = (m) => toast(m);
 const fmtDur = (ms) => { const m = Math.round(ms / 60000); return m >= 60 ? `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, '0')}m` : `${m}m`; };
@@ -42,14 +42,15 @@ const artistsList = () => { const l = S.artists.map((a) => ({ ...a, tracks: S.tr
 // ---------------- shell ----------------
 const NAV = [['#/', 'Home', 'home', 'home'], ['#/library', 'Library', 'library', 'music'], ['#/artists', 'Artists', 'artists', 'user'], ['#/stats', 'Analytics', 'stats', 'chart'], ['#/more', 'More', 'more', 'more']];
 function frame(page, ...content) {
+  const keepY = window.scrollY;
   const link = ([href, text, id, ic]) => h('a', { href, 'aria-current': page === id ? 'page' : null }, icon(ic), h('span', {}, text));
   const nav = S.offlineMode ? [['#/downloads', 'Offline', 'downloads', 'download']] : NAV;
   root.className = pl.current() ? '' : 'has-no-mini';
   root.replaceChildren(h('div', { class: 'shell' },
     h('aside', { class: 'side' }, h('a', { class: 'brand', href: '#/' }, h('img', { src: '/apps/jupiter/icons/icon-192.png', alt: '' }), 'Jupiter'), nav.map(link), S.offlineMode ? null : link(['#/downloads', 'Offline', 'downloads', 'download'])),
-    h('main', { class: 'main' }, S.offlineMode ? h('div', { class: 'offline-banner' }, 'Offline mode: only tracks you downloaded can play.') : null, ...content),
+    h('main', { class: 'main' }, S.offlineMode ? h('div', { class: 'offline-banner' }, 'Offline mode: only tracks you downloaded can play. ', h('a', { href: '#', onclick: (e) => { e.preventDefault(); S.me = null; boot(); } }, 'Retry connection')) : null, ...content),
     h('nav', { class: 'bottom', 'aria-label': 'Main' }, nav.map(link))));
-  window.scrollTo(0, 0); drawMini();
+  const key = location.hash || '#/'; if (key === S.lastKey) window.scrollTo(0, keepY); else window.scrollTo(0, 0); S.lastKey = key; drawMini();
 }
 const initial = () => (S.me?.user?.displayName || '?').trim()[0]?.toUpperCase() || '?';
 const topbar = (title, ...extra) => h('div', { class: 'top' }, h('img', { class: 'logo', src: '/apps/jupiter/icons/icon-192.png', alt: '' }), h('h1', {}, title), ...extra,
@@ -266,6 +267,16 @@ async function uploadFile(file, meta, art, setStatus, setProgress) {
   setStatus('Saving…'); return api('POST', `/uploads/${start.uploadId}/finish`, { name: file.name, size: file.size, parts, meta, ...(artTicket ? { art: artTicket } : {}) });
 }
 const uploadQueue = [];
+// Asked when a song has no artist chosen and the file names one that is not in your library yet. Resolves 'create', 'unknown' or null (cancel).
+function askArtist(names, hasPic, songTitle) {
+  return new Promise((resolve) => {
+    let out = null; const label = names.map((n) => `"${n}"`).join(', ');
+    const d = dialog('Artist not in your library', h('p', {}, `"${songTitle}" says its artist is ${label}, which you do not have yet.`), h('div', { class: 'actions col' },
+      h('button', { class: 'btn', onclick: () => { out = 'create'; d.close(); } }, `Create ${names.length > 1 ? 'these artists' : label} from the file`), h('p', { class: 'fine muted' }, hasPic ? 'Uses the name in the song\'s data and its embedded picture as the artist picture.' : 'Uses the name in the song\'s data. This song has no embedded picture, so no artist picture is set.'),
+      h('button', { class: 'btn ghost', onclick: () => { out = 'unknown'; d.close(); } }, 'Save as Unknown artist'), closer('Cancel upload')));
+    d.addEventListener('close', () => resolve(out));
+  });
+}
 function uploadView() {
   const input = h('input', { type: 'file', multiple: '', accept: 'audio/*,.mp3,.m4a,.aac,.flac,.ogg,.oga,.opus,.wav', 'aria-label': 'Choose audio files', style: 'display:none' }), cards = h('div', {}), go = h('button', { class: 'btn big', hidden: '' }, icon('upload'), 'Upload'), note = h('p', { class: 'fine muted' });
   const drop = h('div', { class: 'upl', ondragover: (e) => { e.preventDefault(); drop.classList.add('over'); }, ondragleave: () => drop.classList.remove('over'), ondrop: (e) => { e.preventDefault(); drop.classList.remove('over'); add([...e.dataTransfer.files]); } },
@@ -276,7 +287,8 @@ function uploadView() {
       const match = tagName && S.artists.find((a) => norm(a.name) === norm(tagName)), pick = artistPicker(match ? [match.id] : []);
       const f = { title: h('input', { value: tags.title || guess.title, maxlength: 200, 'aria-label': 'Title' }), album: h('input', { value: tags.album, placeholder: 'Unknown album' }), genre: h('input', { value: tags.genre, placeholder: 'e.g. Afrobeats' }), tags: h('input', { placeholder: 'chill, 2022 (comma separated)' }) };
       const st = h('div', { class: 'st' }, dur === null ? 'This browser cannot decode this file; it may not play here.' : ''), bar = h('i');
-      const item = { file, tags, dur, f, pick, st, bar, state: 'ready' };
+      const names = [...new Map((tags.artists.length ? tags.artists : guess.artist ? [guess.artist] : []).map((n) => [norm(n), n.trim()]).filter(([k]) => k)).values()];
+      const item = { file, tags, dur, f, pick, st, bar, names, state: 'ready' };
       const hint = tagName && !match ? h('p', { class: 'fine' }, `The file says the artist is "${tagName}". `, h('a', { href: '#', onclick: async (e) => { e.preventDefault(); const a = await newArtist(tagName); if (a) { pick.add(a.id); pick.redraw(); e.target.closest('p').remove(); } } }, `Create "${tagName}" as an artist`)) : null;
       item.el = h('div', { class: 'card upcard' }, h('div', { class: 'between' }, h('b', { class: 'ttl' }, file.name), h('button', { class: 'iconbtn', 'aria-label': 'Remove', onclick: () => { uploadQueue.splice(uploadQueue.indexOf(item), 1); item.el.remove(); sync(); } }, icon('x'))),
         h('label', {}, 'Title *'), f.title, h('label', {}, 'Artist'), pick.el, hint, h('div', { class: 'field-row' }, h('div', {}, h('label', {}, 'Album'), f.album), h('div', {}, h('label', {}, 'Genre'), f.genre)), h('label', {}, 'Tags'), f.tags, st, h('div', { class: 'prog' }, bar));
@@ -286,11 +298,29 @@ function uploadView() {
   }
   const sync = () => { const n = uploadQueue.filter((i) => i.state !== 'done').length; go.hidden = !n; go.lastChild.textContent = n > 1 ? `Upload ${n} songs` : 'Upload'; note.textContent = S.tracks.length || uploadQueue.length ? `Storage used: ${fmtSize(S.used || 0)} of ${S.meta.libraryLimitMb} MB.` : ''; };
   go.onclick = async () => {
-    go.disabled = true; let ok = 0; const csv = (s) => s.split(',').map((x) => x.trim()).filter(Boolean);
+    go.disabled = true; let ok = 0; const decided = new Map();
+    for (const it of uploadQueue) {
+      if (it.state === 'done' || it.pick.get().length || !it.names.length) continue;
+      const find = (n) => S.artists.find((a) => norm(a.name) === norm(n)), known = it.names.map(find).filter(Boolean), missing = it.names.filter((n) => !find(n));
+      known.forEach((a) => it.pick.add(a.id)); if (known.length) it.pick.redraw(); if (!missing.length) continue;
+      const key = missing.map(norm).join('|'); let ch = decided.get(key);
+      if (!ch) { ch = await askArtist(missing, !!it.tags.picture && missing.length === 1, it.f.title.value.trim() || it.file.name); if (!ch) { go.disabled = false; return; } decided.set(key, ch); }
+      it.choice = ch; it.missing = missing;
+    }
+    const csv = (s) => s.split(',').map((x) => x.trim()).filter(Boolean);
     for (const it of [...uploadQueue]) {
       if (it.state === 'done') continue; const say = (m, c = '') => { it.st.textContent = m; it.st.className = `st ${c}`; };
       if (!it.f.title.value.trim()) { say('Add a title first.', 'bad'); continue; }
       try {
+        if (it.choice === 'create') {
+          for (const n of it.missing) {
+            let a = S.artists.find((x) => norm(x.name) === norm(n)), fresh = false;
+            if (!a) { a = (await api('POST', '/artists', { name: n })).artist; S.artists.push(a); fresh = true; }
+            it.pick.add(a.id);
+            if (fresh && it.missing.length === 1 && it.tags.picture) { try { await putArt('artist', a.id, new Blob([it.tags.picture.data], { type: it.tags.picture.mime })); } catch { /* the artist still exists without a picture */ } }
+          }
+          it.pick.redraw(); it.choice = null;
+        }
         const small = it.tags.picture ? await shrinkImage(new Blob([it.tags.picture.data], { type: it.tags.picture.mime })) : null;
         const meta = { title: it.f.title.value.trim(), artistIds: it.pick.get(), album: it.f.album.value.trim(), albumArtist: '', trackNo: it.tags.trackNo, discNo: it.tags.discNo, year: it.tags.year, genre: it.f.genre.value.trim(), tags: csv(it.f.tags.value), durationMs: it.dur || 0 };
         const r = await uploadFile(it.file, meta, small && small.size < 2 * 1024 * 1024 ? small : null, (m) => say(m), (p) => { it.bar.style.width = `${Math.round(p * 100)}%`; });
@@ -326,7 +356,7 @@ async function statsView() {
   const from = h('input', { type: 'date' }), to = h('input', { type: 'date' }), custom = h('div', { class: 'searchbar', hidden: S.range === 'custom' ? null : '' }, from, to, h('button', { class: 'btn', onclick: () => from.value && to.value && load(from.value, to.value) }, 'Show'));
   frame('stats', h('div', { class: 'top' }, h('h1', {}, 'Analytics')), h('div', { class: 'chips' }, ranges.map(([k, l]) => h('button', { class: 'chip', 'aria-pressed': S.range === k ? 'true' : 'false', onclick: (e) => { S.range = k; document.querySelectorAll('.chips .chip').forEach((c) => c.setAttribute('aria-pressed', c === e.currentTarget ? 'true' : 'false')); custom.hidden = k !== 'custom'; if (k !== 'custom') load(); } }, l))), custom, body,
     h('p', { class: 'fine muted' }, 'A play counts after 30 seconds of real listening (or half of a short track). Starts under 3 seconds are ignored.'));
-  load(S.range === 'custom' ? undefined : undefined);
+  if (S.range !== 'custom') load(); else body.replaceChildren(h('p', { class: 'muted' }, 'Pick two dates and tap Show.'));
 }
 
 // ---------------- More ----------------
@@ -335,7 +365,7 @@ async function moreView() {
   frame('more', h('div', { class: 'top' }, h('h1', {}, 'Settings')), h('div', { class: 'profile' }, h('img', { class: 'logo big', src: '/apps/jupiter/icons/icon-192.png', alt: '' }), h('div', { class: 'meta' }, h('b', {}, S.me.user.displayName), h('small', { class: 'muted' }, S.me.user.email || ''))),
     h('div', { class: 'setlist' }, row('download', 'Offline Downloads', plural(S.offline.size, 'song'), () => { location.hash = '#/downloads'; }), row('box', 'Storage Usage', `${fmtSize(S.used || 0)} / ${S.meta.libraryLimitMb} MB`, () => toast(`Library ${fmtSize(S.used || 0)}. On this device: ${fmtSize(u.bytes)} downloaded. Storage: ${S.meta.storage === 'github' ? 'private GitHub branch' : 'local files'}.`)),
       S.meta.can.write ? row('upload', 'Add music', '', () => { location.hash = '#/upload'; }) : null, S.meta.can.ai ? row('sparkle', 'Ask Nebula', '', openNebula) : null, row('file', 'Export library list', 'no audio', async () => { const j = await api('GET', '/export'); h('a', { href: URL.createObjectURL(new Blob([JSON.stringify(j, null, 1)], { type: 'application/json' })), download: 'jupiter-library.json' }).click(); }),
-      S.meta.can.maintain ? row('settings', 'Storage upkeep', '', maintenance) : null, canPromptInstall() && !isStandalone() ? row('phone', 'Install Jupiter', '', promptInstall) : null, row('home', 'Universe dashboard', '', () => { location.href = '/dashboard/'; }), row('target', 'About Jupiter', 'v1.2.0', () => toast('Jupiter · part of Universe · Hie Technologies'))),
+      S.meta.can.maintain ? row('settings', 'Storage upkeep', '', maintenance) : null, canPromptInstall() && !isStandalone() ? row('phone', 'Install Jupiter', '', promptInstall) : null, row('home', 'Universe dashboard', '', () => { location.href = '/dashboard/'; }), row('target', 'About Jupiter', 'v1.3.0', () => toast('Jupiter · part of Universe · Hie Technologies'))),
     h('button', { class: 'btn ghost danger wide', onclick: async () => { try { await rootApi('POST', '/api/auth/logout'); } catch { /* already out */ } S.me = null; boot(); } }, 'Sign Out'));
 }
 async function maintenance() {
@@ -388,16 +418,18 @@ function openNow(redraw) {
   const t = pl.current(); if (!t) return; if (np && redraw !== true) return; np?.remove();
   const seek = h('input', { type: 'range', class: 'seek', min: 0, max: 1000, value: 0, 'aria-label': 'Seek', oninput: (e) => { fillRange(e.target); const s = pl.state(); if (s.dur) pl.seek((e.target.value / 1000) * s.dur); } }), cur = h('span', {}, '0:00'), tot = h('span', {}, fmtTime(t.durationMs));
   const playBtn = h('button', { class: 'iconbtn play', 'aria-label': 'Play or pause', onclick: pl.toggle }), shuf = h('button', { class: 'iconbtn', 'aria-label': 'Shuffle', onclick: () => pl.setShuffle(!pl.P.shuffle) }, icon('shuffle')), rep = h('button', { class: 'iconbtn', 'aria-label': 'Repeat', onclick: pl.cycleRepeat }, icon('repeat'));
-  const vol = h('input', { type: 'range', min: 0, max: 100, value: Math.round(pl.P.volume * 100), 'aria-label': 'Volume', oninput: (e) => { fillRange(e.target); pl.setVolume(e.target.value / 100); } }), queue = h('div', { class: 'rows queue' });
+  const queue = h('div', { class: 'rows queue' });
   const drawQueue = () => { const upNext = pl.P.queue.map((id, i) => [id, i]).filter(([, i]) => i > pl.P.index); queue.replaceChildren(h('h2', { class: 'sec' }, 'Up Next', h('span', { class: 'fine muted' }, plural(upNext.length, 'song'))), upNext.map(([id, i]) => { const q = S.byId.get(id) || pl.P.tracks.get(id); if (!q) return null; return h('div', { class: 'row-t', onclick: () => pl.jump(i) }, artEl(artKeyOf(q)), h('div', { class: 'meta' }, h('div', { class: 'ttl' }, q.title), h('div', { class: 'sub2' }, q.artists.join(', '))),
     h('span', { style: 'display:flex' }, h('button', { class: 'iconbtn', 'aria-label': 'Move up', onclick: (e) => { e.stopPropagation(); pl.moveInQueue(i, -1); } }, icon('up')), h('button', { class: 'iconbtn', 'aria-label': 'Move down', onclick: (e) => { e.stopPropagation(); pl.moveInQueue(i, 1); } }, icon('down')), h('button', { class: 'iconbtn', 'aria-label': 'Remove from queue', onclick: (e) => { e.stopPropagation(); pl.removeFromQueue(i); } }, icon('x')))); })); };
-  const dl = S.offline.has(t.id) ? h('button', { class: 'iconbtn on', 'aria-label': 'Downloaded', title: 'Available offline', onclick: () => toast('Available offline') }, icon('check')) : h('button', { class: 'iconbtn', 'aria-label': 'Download for offline', onclick: () => startDownload(t) }, icon('download'));
+  const opts = () => { const d = dialog('Options', h('div', { class: 'optrow' }, icon('vol'), vol2()), h('div', { class: 'menu' }, [S.offline.has(t.id) ? h('button', { onclick: () => { d.close(); toast('Available offline'); } }, icon('check'), 'Downloaded') : (S.dl[t.id] != null ? h('button', { disabled: '' }, icon('download'), 'Downloading…') : h('button', { onclick: () => { d.close(); startDownload(t); } }, icon('download'), 'Download for offline')),
+    S.meta.can.write ? h('button', { onclick: () => { d.close(); addToPlaylist([t.id]); } }, icon('plus'), 'Add to playlist') : null]), closer()); };
+  const vol2 = () => { const v = h('input', { type: 'range', min: 0, max: 100, value: Math.round(pl.P.volume * 100), 'aria-label': 'Volume', oninput: (e) => { fillRange(e.target); pl.setVolume(e.target.value / 100); } }); fillRange(v); return v; };
   np = h('div', { class: 'np', role: 'dialog', 'aria-label': 'Now playing' }, h('div', { class: 'head' }, h('button', { class: 'iconbtn', 'aria-label': 'Close', onclick: closeNow }, icon('chevdown')), h('b', {}, 'Now playing'), h('button', { class: 'iconbtn', 'aria-label': 'More', onclick: () => trackMenu(t) }, icon('more'))),
     h('div', { class: 'cover' }, artEl(artKeyOf(t), { cls: 'big' })), h('div', { class: 'side-col' }, h('div', { class: 'npmeta' }, h('h2', {}, t.title), h('div', { class: 'artist' }, t.artists.join(', ')), h('div', { class: 'muted fine' }, t.album)),
       seek, h('div', { class: 'times' }, cur, tot), h('div', { class: 'ctl' }, shuf, h('button', { class: 'iconbtn', 'aria-label': 'Previous', onclick: () => pl.prev() }, icon('prev')), playBtn, h('button', { class: 'iconbtn', 'aria-label': 'Next', onclick: () => pl.next() }, icon('next')), rep),
-      h('div', { class: 'ctl two' }, h('button', { class: `iconbtn ${t.liked ? 'on' : ''}`, 'aria-label': 'Like', onclick: () => toggleLike(t) }, icon('heart')), dl, h('button', { class: 'iconbtn', 'aria-label': 'Add to playlist', onclick: () => addToPlaylist([t.id]) }, icon('plus')), h('button', { class: 'iconbtn', 'aria-label': 'Share picture', title: 'Share picture', onclick: () => shareCard(t) }, icon('share'))), h('div', { class: 'vol' }, icon('vol'), vol), queue));
+      h('div', { class: 'ctl two' }, h('button', { class: `iconbtn ${t.liked ? 'on' : ''}`, 'aria-label': 'Like', onclick: () => toggleLike(t) }, icon('heart')), h('button', { class: 'iconbtn', 'aria-label': 'Volume, download and playlist', title: 'Volume, download, add to playlist', onclick: opts }, icon('sliders')), h('button', { class: 'iconbtn', 'aria-label': 'Share picture', title: 'Share picture', onclick: () => shareCard(t) }, icon('share'))), queue));
   np._upd = () => { const s = pl.state(); playBtn.replaceChildren(icon(s.playing ? 'pause' : 'play')); if (s.dur && document.activeElement !== seek) seek.value = Math.round((s.pos / s.dur) * 1000); fillRange(seek); cur.textContent = fmtTime(s.pos * 1000); if (s.dur) tot.textContent = fmtTime(s.dur * 1000); shuf.classList.toggle('on', pl.P.shuffle); rep.classList.toggle('on', pl.P.repeat !== 'off'); rep.title = `Repeat: ${pl.P.repeat}`; };
-  fillRange(vol); np._upd(); drawQueue(); np._q = drawQueue; document.body.append(np);
+  np._upd(); drawQueue(); np._q = drawQueue; document.body.append(np);
 }
 const fillRange = (el) => el.style.setProperty('--p', `${(el.value / (el.max || 100)) * 100}%`);
 function closeNow() { np?.remove(); np = null; }
@@ -451,8 +483,15 @@ async function route() {
   } catch (x) { if (x.status === 401) return; frame('home', topbar('Jupiter'), h('p', { class: 'err', role: 'alert' }, `Something went wrong: ${x.message}`), h('button', { class: 'btn ghost', onclick: route }, 'Try again')); }
 }
 const splash = () => new Promise((res) => { root.className = ''; root.replaceChildren(h('div', { class: 'splash' }, h('img', { class: 'hero-logo', src: '/apps/jupiter/icons/icon-512.png', alt: 'Jupiter' }), h('h1', {}, 'Jupiter'), h('p', {}, 'Your Music. Your Universe.'), h('button', { class: 'btn big', onclick: res }, 'Get Started'), h('div', { class: 'foot' }, icon('grid'), 'UNIVERSE'))); });
+// A weak connection is not the same as no connection: try a few times before falling back to downloaded music.
+async function retryMe() {
+  for (let a = 0; ; a++) {
+    try { const c = new AbortController(), t = setTimeout(() => c.abort(), 12000); try { return await rootApi('GET', '/api/auth/me', undefined, c.signal); } finally { clearTimeout(t); } }
+    catch (e) { if (e.status || a >= (navigator.onLine ? 2 : 0)) throw e; await new Promise((r) => setTimeout(r, 1000 * (a + 1))); }
+  }
+}
 async function boot(note = '') {
-  try { S.me = await rootApi('GET', '/api/auth/me'); }
+  try { S.me = await retryMe(); }
   catch (e) {
     if (!e.status) { // no connection at all: offline mode with downloaded tracks only
       S.offlineMode = true; S.meta = { can: {}, partSize: 0 }; await refreshOffline(); const metas = (await offline.list()).filter((m) => m.done); for (const m of metas) { const t = { artistIds: [], artists: ['Unknown artist'], tags: [], ...m.track }; S.byId.set(m.id, t); pl.P.tracks.set(m.id, t); } S.tracks = metas.map((m) => S.byId.get(m.id)); S.me = { user: { displayName: 'you' } }; return route();
@@ -462,7 +501,8 @@ async function boot(note = '') {
   S.offlineMode = false;
   try { S.meta = await api('GET', '/meta'); }
   catch (x) { if (x.status === 401) return; frame('home', h('h1', {}, 'Jupiter'), h('p', { class: 'muted' }, x.status === 403 ? 'Your account does not have access to Jupiter yet. Ask an admin to grant the jupiter permissions.' : `Jupiter could not load: ${x.message}`), h('button', { class: 'btn ghost', onclick: () => { S.me = null; boot(); } }, 'Sign out')); return; }
-  await Promise.all([loadLibrary(), refreshOffline()]); pl.restore(S.byId); pl.flushEvents(); await route();
+  try { await Promise.all([loadLibrary(), refreshOffline()]); } catch (x) { if (x.status === 401) return; frame('home', h('h1', {}, 'Jupiter'), h('p', { class: 'err', role: 'alert' }, x.network ? 'Your connection is too weak to load your library.' : `Could not load your library: ${x.message}`), h('button', { class: 'btn', onclick: () => boot() }, 'Try again')); return; }
+  pl.restore(S.byId); pl.flushEvents(); await route();
 }
 addEventListener('hashchange', () => { if (S.me) route(); });
 addEventListener('online', () => { if (S.offlineMode) { S.me = null; boot(); } });

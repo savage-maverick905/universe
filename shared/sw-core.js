@@ -21,15 +21,16 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const req = event.request, url = new URL(req.url);
   if (req.method !== 'GET' || url.origin !== self.location.origin || url.pathname.startsWith('/api/')) return;
-  // Network first, so updates show up as soon as you are online; the cache is the offline fallback.
-  event.respondWith(fetch(req).then((res) => {
+  // Network first, so updates show up as soon as you are online. On a weak connection we do not wait forever:
+  // after 4 seconds the cached copy is used (the network request keeps going and refreshes the cache when it lands).
+  const net = fetch(req).then((res) => {
     if (res.ok && res.type === 'basic') { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(req, copy)); }
     return res;
-  }).catch(async () => {
-    const hit = await caches.match(req, { ignoreSearch: true });
-    if (hit) return hit;
-    if (req.mode === 'navigate') { const page = await caches.match(shell[0]); if (page) return page; }
-    return new Response('You are offline.', { status: 503, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
+  });
+  const cached = async () => (await caches.match(req, { ignoreSearch: true })) || (req.mode === 'navigate' ? await caches.match(shell[0]) : null);
+  event.respondWith(Promise.race([net, new Promise((_, rej) => setTimeout(rej, 4000))]).catch(async () => {
+    const hit = await cached(); if (hit) { net.catch(() => {}); return hit; }
+    try { return await net; } catch { return new Response('You are offline.', { status: 503, headers: { 'Content-Type': 'text/plain; charset=utf-8' } }); }
   }));
 });
 

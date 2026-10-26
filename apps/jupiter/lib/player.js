@@ -75,8 +75,20 @@ export const cycleRepeat = () => setRepeat({ off: 'all', all: 'one', one: 'off' 
 audio.addEventListener('timeupdate', () => { tick(); emit(); });
 audio.addEventListener('play', () => { if (session) session.last = performance.now(); emit(); updateMedia(); }); audio.addEventListener('pause', () => { tick(); persist(); emit(); updateMedia(); });
 audio.addEventListener('ended', () => next(true));
-audio.addEventListener('error', () => { const t = current(); if (!t) return; closeSession('skip'); const code = audio.error?.code; P.onError(code === 4 ? `"${t.title}" can't be played on this device (format or missing file).` : `Playback problem with "${t.title}".`);
+let retries = 0, retryFor = null;
+audio.addEventListener('playing', () => { retries = 0; });
+audio.addEventListener('error', () => {
+  const t = current(); if (!t) return; const code = audio.error?.code, pos = audio.currentTime || 0;
+  // A dropped or slow connection (code 2) is not a broken song: wait and resume the same track where it stopped. Never skip ahead because of the network.
+  if (code === 2 || (code === 4 && !navigator.onLine)) {
+    if (retryFor !== t.id) { retryFor = t.id; retries = 0; }
+    if (retries < 6) { retries++; P.onError(navigator.onLine ? 'Weak connection. Retrying…' : 'You are offline. Will resume when you are back.'); const wait = navigator.onLine ? Math.min(8000, 800 * retries * retries) : 0;
+      const go = () => { if (current()?.id === t.id) load(t, pos, true); }; if (navigator.onLine) setTimeout(go, wait); else addEventListener('online', go, { once: true }); return; }
+    P.onError(`Connection too weak to keep playing "${t.title}". Tap play to try again.`); return;
+  }
+  closeSession('skip'); P.onError(code === 4 ? `"${t.title}" can't be played on this device (format or missing file).` : `Playback problem with "${t.title}".`);
   const at = posInOrder(); if (at < order.length - 1 && P.queue.length > 1) setTimeout(() => { P.index = order[at + 1]; load(current()); }, 600); });
+audio.addEventListener('stalled', () => { if (!audio.paused && navigator.onLine) { const t = current(), pos = audio.currentTime; setTimeout(() => { if (current()?.id === t?.id && !audio.paused && audio.readyState < 3 && audio.currentTime === pos) { audio.load(); audio.currentTime = pos; audio.play().catch(() => {}); } }, 12000); } });
 function persist() { ls.set(KEY, { queue: P.queue, index: P.index, pos: audio.currentTime || 0, shuffle: P.shuffle, repeat: P.repeat, volume: P.volume }); }
 setInterval(() => { if (!audio.paused) persist(); }, 5000);
 export function restore(tracksById) {
