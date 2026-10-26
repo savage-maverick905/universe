@@ -1,7 +1,7 @@
 // Nova: Universe's project, task and execution manager. Its own installable app with its own sign-in, navigation and settings.
 import { api, h, toast, setUnauthorizedHandler } from './services/api.js';
 import { icon } from '/shared/icons.js';
-import { api as rootApi } from '/shared/ui.js';
+import { api as rootApi, dialog, closer } from '/shared/ui.js';
 import { showAuth } from '/shared/auth.js';
 import { registerServiceWorker, canPromptInstall, promptInstall, onInstallChange, isStandalone } from '/shared/pwa.js';
 import { startNotifier } from '/shared/notify.js';
@@ -20,20 +20,26 @@ const brand = { name: 'Nova', blurb: 'Turn ideas into plans, and plans into fini
 setUnauthorizedHandler(() => { if (S.me) { S.me = null; boot('Your session ended. Sign in again.'); } });
 const signOut = () => { S.me = null; boot(); };
 
-const NAV = [['#/', 'Overview', 'overview', 'home'], ['#/tasks', 'Tasks', 'tasks', 'check'], ['#/schedule', 'Schedule', 'schedule', 'calendar'], ['#/board', 'Board', 'board', 'columns'], ['#/calendar', 'Calendar', 'calendar', 'calendar'], ['#/projects', 'Projects', 'projects', 'target'], ['#/settings', 'Settings', 'settings', 'settings']];
+// Phones show five tabs; Schedule, Board and Settings live under More. The sidebar on larger screens shows everything.
+const MAIN = ['overview', 'tasks', 'calendar', 'projects'];
+const NAV = [['#/', 'Today', 'overview', 'home'], ['#/tasks', 'Tasks', 'tasks', 'check'], ['#/schedule', 'Schedule', 'schedule', 'calendar'], ['#/board', 'Board', 'board', 'columns'], ['#/calendar', 'Calendar', 'calendar', 'calendar'], ['#/projects', 'Projects', 'projects', 'target'], ['#/settings', 'Settings', 'settings', 'settings']];
 let lastHash = null, keepY = null;
 function frame(page, ...content) {
-  const link = ([href, text, id, ic]) => h('a', { href, 'aria-current': page === id ? 'page' : null }, icon(ic), h('span', {}, text));
+  const link = ([href, text, id, ic]) => h('a', { href, class: MAIN.includes(id) ? null : 'extra', 'aria-current': page === id ? 'page' : null }, icon(ic), h('span', {}, text));
+  const extras = NAV.filter((n) => !MAIN.includes(n[2]));
+  const more = h('button', { class: 'morebtn', type: 'button', 'aria-label': 'More', 'aria-current': extras.some((n) => n[2] === page) ? 'page' : null, onclick: () => {
+    const d = dialog('More', h('div', { class: 'moremenu' }, extras.map(([href, text, , ic]) => h('a', { href, onclick: () => d.close() }, icon(ic), h('span', {}, text)))), h('div', { class: 'row actions' }, closer())); } }, icon('more'), h('span', {}, 'More'));
   const install = h('button', { class: 'btn ghost small', hidden: '', title: 'Install Nova', 'aria-label': 'Install Nova', onclick: promptInstall }, icon('download'), h('span', { class: 'lbl' }, 'Install'));
   const syncInstall = () => { install.hidden = isStandalone() || !canPromptInstall(); };
   syncInstall(); onInstallChange(syncInstall);
   root.replaceChildren(
     h('header', { class: 'side' },
       h('a', { class: 'brand', href: '#/', 'aria-label': 'Nova overview' }, brand.mark(), h('span', { class: 'brand-text' }, h('b', {}, 'Nova'), h('small', {}, 'Hie Technologies'))),
-      h('nav', { 'aria-label': 'Main' }, NAV.map(link)),
+      h('nav', { 'aria-label': 'Main' }, NAV.map(link), more),
       h('div', { class: 'me' }, h('span', { class: 'who' }, S.me.user.displayName), install,
         h('button', { class: 'btn ghost small', 'aria-label': 'Sign out', title: 'Sign out', onclick: async () => { try { await rootApi('POST', '/api/auth/logout'); } catch { /* already signed out */ } signOut(); } }, icon('logout'), h('span', { class: 'lbl' }, 'Sign out')))),
-    h('main', { class: 'main' }, h('div', { class: 'wrap' }, ...content)));
+    h('main', { class: 'main' }, h('div', { class: 'wrap' }, ...content)),
+    S.meta?.canWriteTasks ? h('button', { class: 'fab', type: 'button', 'aria-label': 'New task', title: 'New task (n)', onclick: () => openTask(null, { onChange: route }) }, icon('plus')) : null);
   window.scrollTo(0, keepY ?? 0); keepY = null;
 }
 

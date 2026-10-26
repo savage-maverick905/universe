@@ -10,6 +10,9 @@ export async function overviewView({ frame, redraw }) {
   const c = o.counts, section = (title, tasks, cls = '') => (tasks.length ? h('section', { class: `card ${cls}` }, h('h3', {}, title), h('div', { class: 'tasks' }, tasks.map((t) => taskRow(t, redraw)))) : null);
   const stat = (value, text, cls = '') => h('div', { class: `stat-card ${cls}` }, h('b', {}, String(value)), h('span', {}, text));
   const brandNew = !c.total && !S.projects.length;
+  const hr = new Date().getHours(), greet = hr < 5 ? 'Still up' : hr < 12 ? 'Good morning' : hr < 18 ? 'Good afternoon' : 'Good evening', mood = hr < 5 || hr >= 21 ? 'night' : hr < 12 ? 'morning' : hr < 18 ? 'day' : 'evening';
+  const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
+  const lead = brandNew ? 'Let\'s set up your first project. It only takes a minute.' : c.overdue ? `${plural(c.overdue, 'task')} could use your attention, then you are on track.` : c.dueToday ? `${plural(c.dueToday, 'task')} to finish today. You have got this.` : c.eventsToday ? `${plural(c.eventsToday, 'event')} on today. Nothing due.` : c.doneLast7Days ? `Nothing due today, and you finished ${plural(c.doneLast7Days, 'task')} this week. Nice work.` : 'Nothing due today. A calm day.';
 
   const summaryBox = h('div', { class: 'ai-summary', hidden: '' });
   const summaryBtn = S.meta.ai ? h('button', { class: 'btn ghost small', type: 'button', onclick: async (e) => {
@@ -19,7 +22,8 @@ export async function overviewView({ frame, redraw }) {
   } }, icon('sparkle'), 'Summarise my progress') : null;
 
   frame('overview',
-    h('div', { class: 'page-head' }, h('div', {}, h('h1', {}, 'Overview'), h('p', { class: 'sub' }, fmtDate(o.today, true))), h('div', { class: 'row tight' }, summaryBtn, S.meta.canWriteTasks ? h('button', { class: 'btn ghost', onclick: () => openEvent(null, { onChange: redraw }) }, icon('calendar'), h('span', { class: 'lbl' }, 'Event')) : null, h('button', { class: 'btn', onclick: () => openTask(null, { onChange: redraw }) }, icon('plus'), 'New task'))),
+    h('div', { class: `novahero mood-${mood}` }, h('small', {}, fmtDate(o.today, true)), h('h1', {}, `${greet}, ${S.me.user.displayName.split(' ')[0]} 👋`), h('p', { class: 'lead' }, lead),
+      h('div', { class: 'row tight' }, summaryBtn, S.meta.canWriteTasks ? h('button', { class: 'btn ghost small', onclick: () => openEvent(null, { onChange: redraw }) }, icon('calendar'), 'New event') : null)),
     summaryBox,
     brandNew ? h('section', { class: 'card onboard' }, h('h2', {}, 'Welcome to Nova'), h('p', { class: 'sub' }, 'Nova turns ideas into plans and plans into finished work. Start small:'),
       h('ol', { class: 'steps' }, h('li', {}, 'Create a project for something you want to finish.'), h('li', {}, 'Add the first few tasks, with due dates if they have them.'), h('li', {}, 'Come back here to see what needs attention.')),

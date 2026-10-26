@@ -19,16 +19,24 @@ export async function tasksView({ frame, redraw }) {
   const search = h('input', { type: 'search', placeholder: 'Search tasks', 'aria-label': 'Search tasks', value: F.q }); let timer;
   search.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(() => { F.q = search.value; load(); }, 250); });
   const set = (k) => (v) => { F[k] = v; load(); };
-  frame('tasks', h('div', { class: 'page-head' }, h('h1', {}, 'Tasks'), h('button', { class: 'btn', onclick: () => openTask(null, { onChange: load }) }, icon('plus'), 'New task')),
+  const DUE = [['', 'All open'], ['today', 'Today'], ['overdue', 'Overdue'], ['week', 'Next 7 days'], ['none', 'No date']];
+  const chips = h('div', { class: 'fchips', role: 'group', 'aria-label': 'Quick filter' });
+  const drawChips = () => chips.replaceChildren(...DUE.map(([v, t]) => h('button', { class: 'fchip', type: 'button', 'aria-pressed': String(F.due === v), onclick: () => { F.due = v; drawChips(); load(); } }, t)));
+  drawChips();
+  const active = () => [F.project, F.status, F.priority, F.archived].filter(Boolean).length;
+  const panel = h('div', { class: 'filterpanel', hidden: active() ? null : '' },
+    h('div', { class: 'tools' },
+      select(projectOptions('Any project').concat([['none', 'No project']]), F.project, (v) => { F.project = v; load(); badgeUpd(); }, 'Filter by project'),
+      select([['', 'Any status'], ...S.meta.statuses.map((x) => [x.id, x.label])], F.status, (v) => { F.status = v; load(); badgeUpd(); }, 'Filter by status'),
+      select([['', 'Any priority'], ...S.meta.priorities.map((x) => [x.id, x.label])], F.priority, (v) => { F.priority = v; load(); badgeUpd(); }, 'Filter by priority'),
+      select([['dueDate|asc', 'Sort: due date'], ['priority|asc', 'Sort: priority'], ['status|asc', 'Sort: status'], ['title|asc', 'Sort: title A to Z'], ['updatedAt|desc', 'Sort: recently changed'], ['createdAt|desc', 'Sort: newest']], `${F.sort}|${F.dir}`, (v) => { [F.sort, F.dir] = v.split('|'); load(); }, 'Sort'),
+      select([['false', 'Active tasks'], ['true', 'Archived tasks']], String(F.archived), (v) => { F.archived = v === 'true'; load(); badgeUpd(); }, 'Show')),
+    h('label', { class: 'toggle-row' }, h('input', { type: 'checkbox', checked: F.hideDone ? '' : null, onchange: (e) => { F.hideDone = e.target.checked; load(); } }), 'Hide finished tasks'));
+  const fbadge = h('span', { class: 'fcount' }), badgeUpd = () => { fbadge.textContent = active() ? String(active()) : ''; fbadge.hidden = !active(); }; badgeUpd();
+  const fbtn = h('button', { class: 'btn ghost', type: 'button', 'aria-label': 'Filters', 'aria-expanded': String(!panel.hidden), onclick: () => { panel.hidden = !panel.hidden; fbtn.setAttribute('aria-expanded', String(!panel.hidden)); } }, icon('sliders'), h('span', { class: 'lbl' }, 'Filters'), fbadge);
+  frame('tasks', h('div', { class: 'page-head' }, h('div', {}, h('h1', {}, 'Tasks'), h('p', { class: 'sub' }, 'Everything you have on your plate.')), h('button', { class: 'btn newbtn', onclick: () => openTask(null, { onChange: load }) }, icon('plus'), 'New task')),
     quickAdd({ onChange: load }),
-    h('div', { class: 'tools' }, h('div', { class: 'search' }, icon('search'), search),
-      select(projectOptions('Any project').concat([['none', 'No project']]).map(([v, t]) => [v, t]), F.project, set('project'), 'Filter by project'),
-      select([['', 'Any status'], ...S.meta.statuses.map((s) => [s.id, s.label])], F.status, set('status'), 'Filter by status'),
-      select([['', 'Any priority'], ...S.meta.priorities.map((s) => [s.id, s.label])], F.priority, set('priority'), 'Filter by priority'),
-      select([['', 'Any due date'], ['overdue', 'Overdue'], ['today', 'Due today'], ['week', 'Next 7 days'], ['none', 'No due date']], F.due, set('due'), 'Filter by due date'),
-      select([['dueDate|asc', 'Due date'], ['priority|asc', 'Priority'], ['status|asc', 'Status'], ['title|asc', 'Title A to Z'], ['updatedAt|desc', 'Recently changed'], ['createdAt|desc', 'Newest']], `${F.sort}|${F.dir}`, (v) => { [F.sort, F.dir] = v.split('|'); load(); }, 'Sort'),
-      select([['false', 'Active tasks'], ['true', 'Archived tasks']], String(F.archived), (v) => { F.archived = v === 'true'; load(); }, 'Show')),
-    h('label', { class: 'toggle-row' }, h('input', { type: 'checkbox', checked: F.hideDone ? '' : null, onchange: (e) => { F.hideDone = e.target.checked; load(); } }), 'Hide finished tasks'),
+    h('div', { class: 'tsearch' }, h('div', { class: 'search' }, icon('search'), search), fbtn), chips, panel,
     count, list);
   await load();
 }

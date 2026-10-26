@@ -21,7 +21,7 @@ export function taskRow(t, onChange, { showProject = true } = {}) {
   const box = h('input', { type: 'checkbox', checked: done ? '' : null, 'aria-label': done ? `Reopen ${t.title}` : `Complete ${t.title}`, onclick: (e) => { e.stopPropagation(); toggleDone(t, onChange); } });
   const meta = [showProject && t.projectName, t.milestoneTitle, t.subtaskCounts.total ? `${t.subtaskCounts.done}/${t.subtaskCounts.total} subtasks` : '', t.tags.map((x) => `#${x}`).join(' ')].filter(Boolean).join(' · ');
   const due = dueText(t);
-  return h('div', { class: `task${done ? ' done' : ''}` }, box,
+  return h('div', { class: `task p-${t.priority}${done ? ' done' : ''}` }, box,
     h('button', { class: 'task-main', type: 'button', onclick: () => openTask(t, { onChange }) },
       h('b', {}, t.title), meta ? h('small', {}, meta) : null),
     h('span', { class: 'task-badges' },

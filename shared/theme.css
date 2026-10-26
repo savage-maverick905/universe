@@ -299,7 +299,8 @@ section > h2 { margin-bottom: .9rem; }
 
 /* ---------- Jupiter look, shared by every app: navy surfaces, soft cyan and orange glow ---------- */
 body::before { content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none; background: radial-gradient(1200px 500px at 50% -10%, rgba(0, 173, 239, .10), transparent 60%), radial-gradient(900px 500px at 100% 10%, rgba(237, 102, 39, .08), transparent 60%); }
-.side { background: rgba(13, 18, 38, .88); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+.side { background: rgba(13, 18, 38, .96); } /* no backdrop-filter here: it would make the fixed bottom tabs position against this bar and pull them to the top */
+@media (min-width: 901px) { .side { background: rgba(13, 18, 38, .88); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); } }
 .side nav { background: rgba(10, 14, 30, .94); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
 .mark:not(.inv)::after { content: ""; position: absolute; top: -3px; right: -3px; width: 8px; height: 8px; border-radius: 50%; background: var(--blue); border: 2px solid var(--bg2); }
 .card, .panel { background: linear-gradient(180deg, rgba(255, 255, 255, .03), rgba(255, 255, 255, 0) 55%), var(--card); border-radius: 16px; }
