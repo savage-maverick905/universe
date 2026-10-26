@@ -40,6 +40,7 @@ export function toast(msg) {
 export function dialog(title, ...content) {
   const d = h('dialog', {}, h('div', { class: 'sheet' }, h('h2', {}, title), ...content));
   d.addEventListener('close', () => d.remove());
+  const plain = d.close.bind(d); d.close = (v) => { if (d.classList.contains('closing') || !d.open) return plain(v); d.classList.add('closing'); setTimeout(() => plain(v), 170); }; // slide out, then really close
   d.addEventListener('click', (e) => { if (e.target === d) d.close(); });
   document.body.append(d); d.showModal();
   return d;

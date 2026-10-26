@@ -42,13 +42,13 @@ const artistsList = () => { const l = S.artists.map((a) => ({ ...a, tracks: S.tr
 // ---------------- shell ----------------
 const NAV = [['#/', 'Home', 'home', 'home'], ['#/library', 'Library', 'library', 'music'], ['#/artists', 'Artists', 'artists', 'user'], ['#/stats', 'Analytics', 'stats', 'chart'], ['#/more', 'More', 'more', 'more']];
 function frame(page, ...content) {
-  const keepY = window.scrollY;
+  const keepY = window.scrollY, fresh = (location.hash || '#/') !== S.lastKey;
   const link = ([href, text, id, ic]) => h('a', { href, 'aria-current': page === id ? 'page' : null }, icon(ic), h('span', {}, text));
   const nav = S.offlineMode ? [['#/downloads', 'Offline', 'downloads', 'download']] : NAV;
   root.className = pl.current() ? '' : 'has-no-mini';
   root.replaceChildren(h('div', { class: 'shell' },
     h('aside', { class: 'side' }, h('a', { class: 'brand', href: '#/' }, h('img', { src: '/apps/jupiter/icons/icon-192.png', alt: '' }), 'Jupiter'), nav.map(link), S.offlineMode ? null : link(['#/downloads', 'Offline', 'downloads', 'download'])),
-    h('main', { class: 'main' }, S.offlineMode ? h('div', { class: 'offline-banner' }, 'Offline mode: only tracks you downloaded can play. ', h('a', { href: '#', onclick: (e) => { e.preventDefault(); S.me = null; boot(); } }, 'Retry connection')) : null, ...content),
+    h('main', { class: fresh ? 'main pagein' : 'main' }, S.offlineMode ? h('div', { class: 'offline-banner' }, 'Offline mode: only tracks you downloaded can play. ', h('a', { href: '#', onclick: (e) => { e.preventDefault(); S.me = null; boot(); } }, 'Retry connection')) : null, ...content),
     h('nav', { class: 'bottom', 'aria-label': 'Main' }, nav.map(link))));
   const key = location.hash || '#/'; if (key === S.lastKey) window.scrollTo(0, keepY); else window.scrollTo(0, 0); S.lastKey = key; drawMini();
 }
@@ -147,8 +147,8 @@ function homeView() {
   if (last) {
     const label = h('small', {}), big = h('span', { class: 'bigplay' }), eq = h('span', { class: 'eq', 'aria-hidden': 'true' }, h('i'), h('i'), h('i'));
     card = h('div', { class: 'lastcard', onclick: () => { if (pl.current()?.id === last.id) pl.toggle(); else pl.playList([last, ...played.filter((t) => t.id !== last.id)].slice(0, 50), 0, { src: 'library' }); } }, artEl(artKeyOf(last)), h('div', { class: 'meta' }, h('div', { class: 'lbl' }, eq, label), h('div', { class: 'ttl' }, last.title), h('div', { class: 'sub2' }, last.artists.join(', '))), big);
-    homeUpd = () => { if (!card.isConnected) { homeUpd = null; return; } const cur = pl.current()?.id === last.id, on = cur && pl.state().playing; label.textContent = on ? 'Now playing' : cur ? 'Paused' : 'Last played'; card.classList.toggle('playing', on); big.replaceChildren(icon(on ? 'pause' : 'play')); big.classList.toggle('isplay', !on); };
-    homeUpd();
+    const paint = () => { const cur = pl.current()?.id === last.id, on = cur && pl.state().playing; label.textContent = on ? 'Now playing' : cur ? 'Paused' : 'Last played'; card.classList.toggle('playing', on); big.replaceChildren(icon(on ? 'pause' : 'play')); big.classList.toggle('isplay', !on); };
+    homeUpd = () => { if (!card.isConnected) { homeUpd = null; return; } paint(); }; paint();
   } else homeUpd = null;
   const artists = artistsList().slice(0, 14);
   frame('home', topbar('Jupiter'), h('div', { class: 'stick' }, h('div', { class: 'searchfield' }, icon('search'), search)),
@@ -383,7 +383,7 @@ async function moreView() {
   frame('more', h('div', { class: 'top' }, h('h1', {}, 'Settings')), h('div', { class: 'profile' }, h('img', { class: 'logo big', src: '/apps/jupiter/icons/icon-192.png', alt: '' }), h('div', { class: 'meta' }, h('b', {}, S.me.user.displayName), h('small', { class: 'muted' }, S.me.user.email || ''))),
     h('div', { class: 'setlist' }, row('download', 'Offline Downloads', plural(S.offline.size, 'song'), () => { location.hash = '#/downloads'; }), row('box', 'Storage Usage', `${fmtSize(S.used || 0)} / ${S.meta.libraryLimitMb} MB`, () => toast(`Library ${fmtSize(S.used || 0)}. On this device: ${fmtSize(u.bytes)} downloaded. Storage: ${S.meta.storage === 'github' ? 'private GitHub branch' : 'local files'}.`)),
       S.meta.can.write ? row('upload', 'Add music', '', () => { location.hash = '#/upload'; }) : null, S.meta.can.ai ? row('sparkle', 'Ask Nebula', '', openNebula) : null, row('file', 'Export library list', 'no audio', async () => { const j = await api('GET', '/export'); h('a', { href: URL.createObjectURL(new Blob([JSON.stringify(j, null, 1)], { type: 'application/json' })), download: 'jupiter-library.json' }).click(); }),
-      S.meta.can.maintain ? row('settings', 'Storage upkeep', '', maintenance) : null, canPromptInstall() && !isStandalone() ? row('phone', 'Install Jupiter', '', promptInstall) : null, row('home', 'Universe dashboard', '', () => { location.href = '/dashboard/'; }), row('target', 'About Jupiter', 'v1.5.0', () => toast('Jupiter · part of Universe · Hie Technologies'))),
+      S.meta.can.maintain ? row('settings', 'Storage upkeep', '', maintenance) : null, canPromptInstall() && !isStandalone() ? row('phone', 'Install Jupiter', '', promptInstall) : null, row('home', 'Universe dashboard', '', () => { location.href = '/dashboard/'; }), row('target', 'About Jupiter', 'v1.6.0', () => toast('Jupiter · part of Universe · Hie Technologies'))),
     h('button', { class: 'btn ghost danger wide', onclick: async () => { try { await rootApi('POST', '/api/auth/logout'); } catch { /* already out */ } S.me = null; boot(); } }, 'Sign Out'));
 }
 async function maintenance() {
@@ -426,33 +426,41 @@ async function shareCard(t) {
 // ---------------- mini player and Now Playing ----------------
 let mini, np;
 function drawMini() {
-  mini?.remove(); mini = null; const t = pl.current(); if (!t) return;
+  const t = pl.current(), had = !!mini;
+  if (!t) { if (mini) { const m = mini; mini = null; m.classList.add('out'); setTimeout(() => m.remove(), 230); } return; }
+  mini?.remove(); mini = null;
   const bar = h('div', { class: 'bar' }), play = h('button', { class: 'iconbtn', 'aria-label': 'Play or pause', onclick: (e) => { e.stopPropagation(); pl.toggle(); } });
   mini = h('div', { class: 'mini', role: 'group', 'aria-label': 'Player', onclick: openNow }, artEl(artKeyOf(t)), h('div', { class: 'meta' }, h('div', { class: 'ttl' }, t.title), h('div', { class: 'sub2' }, t.artists.join(', '))), play, h('button', { class: 'iconbtn', 'aria-label': 'Next', onclick: (e) => { e.stopPropagation(); pl.next(); } }, icon('next')), h('button', { class: 'iconbtn', 'aria-label': 'Close player and stop the song', title: 'Stop and close', onclick: (e) => { e.stopPropagation(); pl.stopAll(); } }, icon('x')), bar);
+  if (had) mini.classList.add('noanim');
   mini._upd = () => { const s = pl.state(); play.replaceChildren(icon(s.playing ? 'pause' : 'play')); bar.style.width = s.dur ? `${(s.pos / s.dur) * 100}%` : '0'; }; mini._upd(); document.body.append(mini);
+}
+// The queue is hidden until asked for: Options > Up next. Dismiss it with Close or by tapping outside.
+function openQueue() {
+  const list = h('div', { class: 'rows queue' });
+  const d = dialog('Up Next', list, closer());
+  const draw = () => { const up = pl.P.queue.map((id, i) => [id, i]).filter(([, i]) => i > pl.P.index); list.replaceChildren(up.length ? up.map(([id, i]) => { const q = S.byId.get(id) || pl.P.tracks.get(id); if (!q) return null; return h('div', { class: 'row-t', onclick: () => { d.close(); pl.jump(i); } }, artEl(artKeyOf(q)), h('div', { class: 'meta' }, h('div', { class: 'ttl' }, q.title), h('div', { class: 'sub2' }, q.artists.join(', '))),
+    h('span', { style: 'display:flex' }, h('button', { class: 'iconbtn', 'aria-label': 'Move up', onclick: (e) => { e.stopPropagation(); pl.moveInQueue(i, -1); draw(); } }, icon('up')), h('button', { class: 'iconbtn', 'aria-label': 'Move down', onclick: (e) => { e.stopPropagation(); pl.moveInQueue(i, 1); draw(); } }, icon('down')), h('button', { class: 'iconbtn', 'aria-label': 'Remove from queue', onclick: (e) => { e.stopPropagation(); pl.removeFromQueue(i); draw(); } }, icon('x')))); }) : h('p', { class: 'muted' }, 'Nothing is queued after this song.')); };
+  draw();
 }
 function drawNow() { if (np) openNow(true); }
 function openNow(redraw) {
   const t = pl.current(); if (!t) return; if (np && redraw !== true) return; np?.remove();
   const seek = h('input', { type: 'range', class: 'seek', min: 0, max: 1000, value: 0, 'aria-label': 'Seek', oninput: (e) => { fillRange(e.target); const s = pl.state(); if (s.dur) pl.seek((e.target.value / 1000) * s.dur); } }), cur = h('span', {}, '0:00'), tot = h('span', {}, fmtTime(t.durationMs));
   const playBtn = h('button', { class: 'iconbtn play', 'aria-label': 'Play or pause', onclick: pl.toggle }), shuf = h('button', { class: 'iconbtn', 'aria-label': 'Shuffle', onclick: () => pl.setShuffle(!pl.P.shuffle) }, icon('shuffle')), rep = h('button', { class: 'iconbtn', 'aria-label': 'Repeat', onclick: pl.cycleRepeat }, icon('repeat'));
-  const queue = h('div', { class: 'rows queue' });
-  const drawQueue = () => { const upNext = pl.P.queue.map((id, i) => [id, i]).filter(([, i]) => i > pl.P.index); queue.replaceChildren(h('h2', { class: 'sec' }, 'Up Next', h('span', { class: 'fine muted' }, plural(upNext.length, 'song'))), upNext.map(([id, i]) => { const q = S.byId.get(id) || pl.P.tracks.get(id); if (!q) return null; return h('div', { class: 'row-t', onclick: () => pl.jump(i) }, artEl(artKeyOf(q)), h('div', { class: 'meta' }, h('div', { class: 'ttl' }, q.title), h('div', { class: 'sub2' }, q.artists.join(', '))),
-    h('span', { style: 'display:flex' }, h('button', { class: 'iconbtn', 'aria-label': 'Move up', onclick: (e) => { e.stopPropagation(); pl.moveInQueue(i, -1); } }, icon('up')), h('button', { class: 'iconbtn', 'aria-label': 'Move down', onclick: (e) => { e.stopPropagation(); pl.moveInQueue(i, 1); } }, icon('down')), h('button', { class: 'iconbtn', 'aria-label': 'Remove from queue', onclick: (e) => { e.stopPropagation(); pl.removeFromQueue(i); } }, icon('x')))); })); };
-  const opts = () => { const d = dialog('Options', h('div', { class: 'optrow' }, icon('vol'), vol2()), h('div', { class: 'menu' }, [h('button', { onclick: () => { d.close(); pl.enqueue([t], 'next'); toast('Will play next'); } }, icon('next'), 'Play next'), h('button', { onclick: () => { d.close(); pl.enqueue([t], 'append'); toast('Added to queue'); } }, icon('queue'), 'Add to queue'), S.offline.has(t.id) ? h('button', { onclick: () => { d.close(); toast('Available offline'); } }, icon('check'), 'Downloaded') : (S.dl[t.id] != null ? h('button', { disabled: '' }, icon('download'), 'Downloading…') : h('button', { onclick: () => { d.close(); startDownload(t); } }, icon('download'), 'Download for offline')),
+  const opts = () => { const d = dialog('Options', h('div', { class: 'optrow' }, icon('vol'), vol2()), h('div', { class: 'menu' }, [h('button', { onclick: () => { d.close(); openQueue(); } }, icon('queue'), `Up next (${pl.P.queue.length - pl.P.index - 1})`), h('button', { onclick: () => { d.close(); pl.enqueue([t], 'next'); toast('Will play next'); } }, icon('next'), 'Play next'), h('button', { onclick: () => { d.close(); pl.enqueue([t], 'append'); toast('Added to queue'); } }, icon('queue'), 'Add to queue'), S.offline.has(t.id) ? h('button', { onclick: () => { d.close(); toast('Available offline'); } }, icon('check'), 'Downloaded') : (S.dl[t.id] != null ? h('button', { disabled: '' }, icon('download'), 'Downloading…') : h('button', { onclick: () => { d.close(); startDownload(t); } }, icon('download'), 'Download for offline')),
     S.meta.can.write ? h('button', { onclick: () => { d.close(); addToPlaylist([t.id]); } }, icon('plus'), 'Add to playlist') : null]), closer()); };
   const vol2 = () => { const v = h('input', { type: 'range', min: 0, max: 100, value: Math.round(pl.P.volume * 100), 'aria-label': 'Volume', oninput: (e) => { fillRange(e.target); pl.setVolume(e.target.value / 100); } }); fillRange(v); return v; };
   np = h('div', { class: 'np', role: 'dialog', 'aria-label': 'Now playing' }, h('div', { class: 'head' }, h('button', { class: 'iconbtn', 'aria-label': 'Close', onclick: closeNow }, icon('chevdown')), h('b', {}, 'Now playing'), h('button', { class: 'iconbtn', 'aria-label': 'More', onclick: () => trackMenu(t) }, icon('more'))),
     h('div', { class: 'cover' }, artEl(artKeyOf(t), { cls: 'big' })), h('div', { class: 'side-col' }, h('div', { class: 'npmeta' }, h('h2', {}, t.title), h('div', { class: 'artist' }, t.artists.join(', ')), h('div', { class: 'muted fine' }, t.album)),
       seek, h('div', { class: 'times' }, cur, tot), h('div', { class: 'ctl' }, shuf, h('button', { class: 'iconbtn', 'aria-label': 'Previous', onclick: () => pl.prev() }, icon('prev')), playBtn, h('button', { class: 'iconbtn', 'aria-label': 'Next', onclick: () => pl.next() }, icon('next')), rep),
-      h('div', { class: 'ctl two' }, h('button', { class: `iconbtn ${t.liked ? 'on' : ''}`, 'aria-label': 'Like', onclick: () => toggleLike(t) }, icon('heart')), h('button', { class: 'iconbtn', 'aria-label': 'Volume, download and playlist', title: 'Volume, download, add to playlist', onclick: opts }, icon('sliders')), h('button', { class: 'iconbtn', 'aria-label': 'Share picture', title: 'Share picture', onclick: () => shareCard(t) }, icon('share'))), queue));
+      h('div', { class: 'ctl two' }, h('button', { class: `iconbtn ${t.liked ? 'on' : ''}`, 'aria-label': 'Like', onclick: () => toggleLike(t) }, icon('heart')), h('button', { class: 'iconbtn', 'aria-label': 'Volume, download and playlist', title: 'Volume, download, add to playlist', onclick: opts }, icon('sliders')), h('button', { class: 'iconbtn', 'aria-label': 'Share picture', title: 'Share picture', onclick: () => shareCard(t) }, icon('share')))));
   np._upd = () => { const s = pl.state(); playBtn.replaceChildren(icon(s.playing ? 'pause' : 'play')); if (s.dur && document.activeElement !== seek) seek.value = Math.round((s.pos / s.dur) * 1000); fillRange(seek); cur.textContent = fmtTime(s.pos * 1000); if (s.dur) tot.textContent = fmtTime(s.dur * 1000); shuf.classList.toggle('on', pl.P.shuffle); rep.classList.toggle('on', pl.P.repeat !== 'off'); rep.title = `Repeat: ${pl.P.repeat}`; };
-  np._upd(); drawQueue(); np._q = drawQueue; document.body.append(np);
+  np._upd(); if (redraw === true) np.classList.add('noanim'); document.body.append(np);
 }
 const fillRange = (el) => el.style.setProperty('--p', `${(el.value / (el.max || 100)) * 100}%`);
-function closeNow() { np?.remove(); np = null; }
+function closeNow() { const n = np; np = null; if (n) { n.classList.add('out'); setTimeout(() => n.remove(), 230); } }
 let lastTrack = null;
-pl.on(() => { mini?._upd?.(); np?._upd?.(); homeUpd?.(); if (!pl.current() && np) { np.remove(); np = null; } const c = pl.current()?.id; if (c !== lastTrack) { lastTrack = c; if (np) openNow(true); drawMini(); root.className = c ? '' : 'has-no-mini'; document.title = pl.current() ? `${pl.current().title} · Jupiter` : 'Jupiter'; } else np?._q?.(); });
+pl.on(() => { mini?._upd?.(); np?._upd?.(); homeUpd?.(); if (!pl.current() && np) closeNow(); const c = pl.current()?.id; if (c !== lastTrack) { lastTrack = c; if (np) openNow(true); drawMini(); root.className = c ? '' : 'has-no-mini'; document.title = pl.current() ? `${pl.current().title} · Jupiter` : 'Jupiter'; } else np?._q?.(); });
 
 // ---------------- Nebula ----------------
 // Simple commands are understood right here on the device: instant, no AI call, so they work even when the AI provider is busy or slow.
@@ -501,7 +509,7 @@ function openNebula() {
   const sugg = ['Play my favourite Afrobeats.', 'Create a playlist for late-night studying.', 'Play everything by …', 'What have I been listening to lately?', 'Show my top artists this month.'];
   const suggBox = h('div', { class: 'sugg' }, sugg.map((s) => h('button', { class: 'pill', onclick: () => (s.endsWith('…') ? (input.value = s.slice(0, -1), input.focus()) : submit(s)) }, icon('message'), s)));
   const hideSugg = () => suggBox.remove();
-  neb = h('div', { class: 'neb', role: 'dialog', 'aria-label': 'Nebula' }, h('div', { class: 'nebhead' }, h('button', { class: 'iconbtn', 'aria-label': 'Close', onclick: () => { neb.remove(); neb = null; } }, icon('chevdown')), h('img', { class: 'logo big', src: '/apps/jupiter/icons/icon-192.png', alt: '' }), h('div', { class: 'meta' }, h('b', {}, 'Nebula ', h('span', { class: 'badge' }, 'Beta')), h('small', { class: 'muted' }, 'Your AI music assistant. Ask me anything about your music.'))),
+  neb = h('div', { class: 'neb', role: 'dialog', 'aria-label': 'Nebula' }, h('div', { class: 'nebhead' }, h('button', { class: 'iconbtn', 'aria-label': 'Close', onclick: () => { const n = neb; neb = null; n.classList.add('out'); setTimeout(() => n.remove(), 230); } }, icon('chevdown')), h('img', { class: 'logo big', src: '/apps/jupiter/icons/icon-192.png', alt: '' }), h('div', { class: 'meta' }, h('b', {}, 'Nebula ', h('span', { class: 'badge' }, 'Beta')), h('small', { class: 'muted' }, 'Your AI music assistant. Ask me anything about your music.'))),
     log, suggBox, h('div', { class: 'in' }, mic, input, send));
   document.body.append(neb); input.focus();
 }

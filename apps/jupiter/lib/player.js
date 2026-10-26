@@ -14,6 +14,37 @@ export const current = () => P.tracks.get(P.queue[P.index]) || null;
 export const state = () => ({ playing: !audio.paused && !audio.ended, pos: audio.currentTime || 0, dur: audio.duration || 0 });
 let order = [], objectUrl = null, session = null, loadSeq = 0;
 
+// ---- smart buffer: while a song streams, the whole file is also kept in memory, plus the next 3 and the previous 2 songs ----
+// So repeat, a dropped connection, and going back all keep playing from memory. Memory only: nothing is saved to the device and it is not an offline download.
+const buf = new Map(), inflight = new Map(), BUF_MAX = 40e6; let bufRun = 0;
+const bufOn = () => ls.get('jupiter.smartbuffer', true) && !navigator.connection?.saveData;
+async function fetchWhole(t, signal) {
+  const parts = []; let pos = 0, total = Infinity;
+  while (pos < total) {
+    const res = await fetch(`${B}/tracks/${t.id}/audio`, { headers: { Range: `bytes=${pos}-` }, signal });
+    if (res.status !== 206 && res.status !== 200) throw new Error('unavailable');
+    const b = await res.blob(); parts.push(b);
+    if (res.status === 200) { total = pos = b.size; break; }
+    total = Number(/\/(\d+)$/.exec(res.headers.get('Content-Range') || '')?.[1]) || pos + b.size; pos += b.size;
+    if (total > BUF_MAX || !b.size) throw new Error('skip');
+  }
+  return new Blob(parts, { type: parts[0].type });
+}
+function bufferTrack(t) {
+  if (!t || !bufOn() || buf.has(t.id) || inflight.has(t.id) || P.offlineIds.has(t.id) || !navigator.onLine || t.size > BUF_MAX) return Promise.resolve();
+  const c = new AbortController(); inflight.set(t.id, c);
+  return fetchWhole(t, c.signal).then((blob) => { if (inflight.get(t.id) === c) buf.set(t.id, { blob, url: null }); }).catch(() => {}).finally(() => { if (inflight.get(t.id) === c) inflight.delete(t.id); });
+}
+function dropBuffered(id) { const b = buf.get(id); if (b?.url && audio.src !== b.url) URL.revokeObjectURL(b.url); if (!b?.url || audio.src !== b.url) buf.delete(id); inflight.get(id)?.abort(); inflight.delete(id); }
+async function bufferAround() {
+  const run = ++bufRun, at = posInOrder(); if (at < 0) return;
+  const id = (k) => P.queue[order[at + k]], wanted = [0, 1, 2, 3].map(id).filter(Boolean), keep = new Set([-2, -1, 0, 1, 2, 3].map(id).filter(Boolean));
+  for (const k of [...buf.keys(), ...inflight.keys()]) if (!keep.has(k)) dropBuffered(k);
+  for (const tid of wanted) { if (run !== bufRun) return; await bufferTrack(P.tracks.get(tid)); }
+}
+export function clearBuffer() { bufRun++; for (const k of [...buf.keys(), ...inflight.keys()]) { const b = buf.get(k); if (b?.url) URL.revokeObjectURL(b.url); buf.delete(k); inflight.get(k)?.abort(); inflight.delete(k); } }
+addEventListener('online', () => setTimeout(bufferAround, 800));
+
 // ---- listening sessions ----
 function openSession(t) { session = { eid: uid(), trackId: t.id, ts: new Date().toISOString(), ms: 0, last: null, dur: t.durationMs || 0, src: P.src, offline: P.offlineIds.has(t.id) && !navigator.onLine }; }
 function tick() { if (!session || audio.paused) { if (session) session.last = null; return; } const now = performance.now(); if (session.last != null) { const d = now - session.last; if (d > 0 && d < 2500) session.ms += d; } session.last = now; }
@@ -37,10 +68,11 @@ async function load(t, startAt = 0, autoplay = true) {
   const seq = ++loadSeq; closeSession('skip'); if (objectUrl) { URL.revokeObjectURL(objectUrl); objectUrl = null; }
   let src = null;
   if (P.offlineIds.has(t.id)) { try { src = await offline.blobUrl(t.id); } catch { src = null; } if (!src) { P.offlineIds.delete(t.id); } else objectUrl = src; }
+  if (!src) { const b = buf.get(t.id); if (b) { b.url ||= URL.createObjectURL(b.blob); src = b.url; } }
   if (!src) { if (!navigator.onLine) { P.onError(`"${t.title}" is not downloaded and you are offline.`); return false; } src = `${B}/tracks/${t.id}/audio`; }
   if (seq !== loadSeq) return false;
   audio.src = src; audio.currentTime = 0; if (startAt) audio.addEventListener('loadedmetadata', () => { audio.currentTime = startAt; }, { once: true });
-  openSession(t); emit(); updateMedia();
+  openSession(t); emit(); updateMedia(); setTimeout(() => { if (seq === loadSeq) bufferAround(); }, 1500);
   if (autoplay) { try { await audio.play(); } catch (e) { if (e.name !== 'AbortError') P.onError(e.name === 'NotAllowedError' ? 'Tap play to start.' : `Could not play "${t.title}".`); } }
   return true;
 }
@@ -61,7 +93,7 @@ export function toggle() { if (P.index < 0) return; if (audio.paused) { if (!aud
 export function stopAll() {
   tick(); closeSession(audio.currentTime * 1000 >= (session?.dur || 1) * 0.9 ? 'complete' : 'skip'); loadSeq++; audio.pause(); audio.removeAttribute('src'); audio.load();
   if (objectUrl) { URL.revokeObjectURL(objectUrl); objectUrl = null; }
-  P.queue = []; P.index = -1; order = []; persist(); emit();
+  clearBuffer(); P.queue = []; P.index = -1; order = []; persist(); emit();
   if ('mediaSession' in navigator) { navigator.mediaSession.metadata = null; navigator.mediaSession.playbackState = 'none'; }
 }
 export const pause = () => audio.pause(); export const resume = () => { if (audio.paused) toggle(); };

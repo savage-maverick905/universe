@@ -3,7 +3,15 @@
 // non-use (iOS Safari for sites not added to the Home Screen); the app re-checks on every start and says so honestly.
 const DB = 'jupiter-offline';
 let dbp;
-const open = () => (dbp ||= new Promise((res, rej) => { const r = indexedDB.open(DB, 1); r.onupgradeneeded = () => { r.result.createObjectStore('meta', { keyPath: 'id' }); r.result.createObjectStore('parts'); }; r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }));
+const STORES = [['meta', { keyPath: 'id' }], ['parts', undefined]];
+const openOnce = (v) => new Promise((res, rej) => { const r = indexedDB.open(DB, v); r.onupgradeneeded = () => { for (const [n, o] of STORES) if (!r.result.objectStoreNames.contains(n)) r.result.createObjectStore(n, o); }; r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); r.onblocked = () => rej(new Error('blocked')); });
+// Version 2 creates any store an older build left out ("One of the specified object stores was not found"). If it is still wrong, the database is rebuilt.
+const open = () => (dbp ||= (async () => {
+  let db = await openOnce(2);
+  if (!STORES.every(([n]) => db.objectStoreNames.contains(n))) { db.close(); await new Promise((res) => { const d = indexedDB.deleteDatabase(DB); d.onsuccess = d.onerror = d.onblocked = () => res(); }); db = await openOnce(2); }
+  db.onversionchange = () => { db.close(); dbp = null; };
+  return db;
+})().catch((e) => { dbp = null; throw e; }));
 const tx = async (stores, mode, fn) => { const db = await open(); return new Promise((res, rej) => { const t = db.transaction(stores, mode); let out; Promise.resolve(fn(...[].concat(stores).map((s) => t.objectStore(s)))).then((v) => { out = v; }).catch(rej); t.oncomplete = () => res(out); t.onerror = () => rej(t.error); t.onabort = () => rej(t.error); }); };
 const rq = (r) => new Promise((res, rej) => { r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
 export const supported = () => typeof indexedDB !== 'undefined';
