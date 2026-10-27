@@ -124,3 +124,8 @@ input[type=range]::-moz-range-thumb { width: 14px; height: 14px; border-radius: 
 .qtile, .mix, .tile, .lastcard, .row-t, .iconbtn, .btn { transition: transform .12s ease, background-color .15s ease, filter .15s ease; } .qtile:active, .mix:active, .tile:active, .lastcard:active { transform: scale(.97); } .row-t:active { background: var(--raise); } .iconbtn:active { transform: scale(.88); } .btn:active { transform: scale(.97); }
 .scroller .tile, .scroller .mix { animation: pagein .35s ease-out backwards; } .scroller > :nth-child(2) { animation-delay: .04s; } .scroller > :nth-child(3) { animation-delay: .08s; } .scroller > :nth-child(4) { animation-delay: .12s; } .scroller > :nth-child(n+5) { animation-delay: .16s; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; animation-delay: 0s !important; transition-duration: .01ms !important; } }
+
+/* download whole album or playlist */
+.actions.two .dlbtn { grid-column: 1 / -1; justify-content: center; }
+.dlbtn.on { color: var(--orange-light); border-color: rgba(237, 102, 39, .55); background: var(--orange-soft); }
+.dlbtn.on .icon { color: var(--orange); }

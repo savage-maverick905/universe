@@ -116,12 +116,50 @@ async function startDownload(t) {
   delete S.dl[t.id]; await refreshOffline(); route();
 }
 const drawDlProgress = () => { for (const [id, p] of Object.entries(S.dl)) { const el = document.querySelector(`[data-dl="${id}"] i`); if (el) el.style.width = `${Math.round(p * 100)}%`; const pc = document.querySelector(`[data-dl="${id}"] .pc`); if (pc) pc.textContent = `${Math.round(p * 100)}%`; } };
+
+// Download a whole album or playlist: two songs at a time, skips what is already saved, stops cleanly if the device runs out of space.
+const dlGroup = {};
+const dlState = (list) => { const total = list.length, have = list.filter((t) => S.offline.has(t.id)).length; return { total, have, all: total > 0 && have === total }; };
+function paintDlButtons() { for (const b of document.querySelectorAll('[data-dlgroup]')) b._paint?.(); drawDlProgress(); }
+async function downloadMany(key, list) {
+  if (dlGroup[key]) return;
+  const todo = list.filter((t) => !S.offline.has(t.id) && S.dl[t.id] == null && t.size);
+  if (!todo.length) { toast('Everything here is already downloaded'); return; }
+  const g = dlGroup[key] = { total: todo.length, done: 0, fail: 0 }; let next = 0, stop = false, why = '';
+  toast(`Downloading ${plural(todo.length, 'song')}`); paintDlButtons();
+  const worker = async () => {
+    while (next < todo.length && !stop) {
+      const t = todo[next++]; S.dl[t.id] = 0;
+      try { await offline.download(t, { base: B, partSize: S.meta.partSize, artUrl: artKeyOf(t) ? artUrl(artKeyOf(t)) : null, onProgress: (p) => { S.dl[t.id] = p; drawDlProgress(); } }); g.done++; }
+      catch (e) { g.fail++; if (e.quota) { stop = true; why = e.message; } }
+      delete S.dl[t.id]; await refreshOffline(); paintDlButtons();
+    }
+  };
+  await Promise.all([worker(), worker()]);
+  delete dlGroup[key]; await refreshOffline();
+  toast(why || (g.fail ? `${plural(g.done, 'song')} saved, ${g.fail} failed` : `${plural(g.done, 'song')} available offline`)); route();
+}
+function dlButton(key, list, name) {
+  const b = h('button', { class: 'btn ghost dlbtn', 'data-dlgroup': key });
+  b._paint = () => {
+    const st = dlState(list), g = dlGroup[key];
+    b.classList.toggle('on', st.all && !g);
+    b.replaceChildren(icon(g ? 'download' : st.all ? 'check' : 'download'), g ? `Downloading ${g.done + g.fail} of ${g.total}` : st.all ? 'Downloaded' : st.have ? `Download ${list.length - st.have} more` : 'Download');
+    b.disabled = !list.length;
+  };
+  b.onclick = () => {
+    const st = dlState(list); if (dlGroup[key]) return toast('Already downloading');
+    if (st.all) menu(name, `${plural(st.total, 'song')} saved on this device`, [['trash', 'Remove these downloads', async () => { for (const t of list) await offline.remove(t.id); await refreshOffline(); route(); toast('Downloads removed'); }, 'danger']]);
+    else downloadMany(key, list);
+  };
+  b._paint(); return b;
+}
 async function downloadsView() {
   const metas = await offline.list(), done = metas.filter((m) => m.done), u = await offline.usage(), items = done.map((m) => ({ ...(S.byId.get(m.id) || m.track), artistIds: (S.byId.get(m.id) || m.track).artistIds || [], artists: (S.byId.get(m.id) || m.track).artists || ['Unknown artist'] }));
   const active = Object.keys(S.dl).map((id) => S.byId.get(id)).filter(Boolean), pct = u.quota ? Math.min(100, (u.bytes / u.quota) * 100) : 0;
   const tabs = [['downloaded', 'Downloaded'], ['downloading', `Downloading${active.length ? ` (${active.length})` : ''}`], ['storage', 'Storage']];
   let body;
-  if (S.dlTab === 'downloaded') body = items.length ? h('div', { class: 'rows' }, items.map((t, i) => trackRow(t, items, i, { src: 'downloads', extra: h('span', { class: 'okdot', title: 'Available offline' }, icon('check')) }))) : emptyState('Nothing downloaded yet. Open a song\'s ⋯ menu and choose "Download for offline". Only songs you choose are saved.');
+  if (S.dlTab === 'downloaded') body = items.length ? h('div', { class: 'rows' }, items.map((t, i) => trackRow(t, items, i, { src: 'downloads', extra: h('span', { class: 'okdot', title: 'Available offline' }, icon('check')) }))) : emptyState('Nothing downloaded yet. Open a song\'s More menu and choose "Download for offline". Only songs you choose are saved.');
   else if (S.dlTab === 'downloading') body = active.length ? h('div', { class: 'rows' }, active.map((t) => h('div', { class: 'row-t', 'data-dl': t.id }, artEl(artKeyOf(t)), h('div', { class: 'meta' }, h('div', { class: 'ttl' }, t.title), h('div', { class: 'prog' }, h('i', { style: `width:${Math.round((S.dl[t.id] || 0) * 100)}%` }))), h('span', { class: 'dur pc' }, `${Math.round((S.dl[t.id] || 0) * 100)}%`)))) : emptyState('No downloads in progress.');
   else body = h('div', { class: 'card' }, h('div', { class: 'between' }, h('b', {}, 'Storage used on this device'), h('span', {}, fmtSize(u.bytes))), h('div', { class: 'prog big' }, h('i', { style: `width:${pct}%` })), h('p', { class: 'fine muted' }, `${plural(done.length, 'song')} saved.${u.quota ? ` The browser allows about ${fmtSize(u.quota)} for this site.` : ''} ${u.persisted ? 'Storage is marked persistent.' : 'The browser may clear it if the device runs low.'}`),
     done.length ? h('button', { class: 'btn ghost danger', onclick: async () => { if (confirm('Remove all downloads from this device? Your library is not affected.')) { await offline.removeAll(); await refreshOffline(); route(); } } }, 'Remove all downloads') : null,
@@ -178,7 +216,7 @@ function libraryView() {
       S.meta.can.write ? h('button', { class: 'iconbtn', 'aria-label': 'Playlist options', onclick: (e) => { e.stopPropagation(); playlistMenu(p); } }, icon('more')) : null)));
   else { const tags = [...by(S.tracks, (t) => t.tags)].sort((a, b) => b[1].length - a[1].length); body = tags.length ? h('div', { class: 'chips wrap' }, tags.map(([tag, ts]) => h('button', { class: 'chip', 'aria-pressed': S.tag === tag ? 'true' : 'false', onclick: () => { S.tag = S.tag === tag ? '' : tag; S.tab = 'songs'; libraryView(); } }, `${tag} · ${ts.length}`))) : emptyState('No tags yet. Add custom tags when you upload or edit a song.'); }
   frame('library', h('div', { class: 'top' }, h('h1', {}, 'Your Library'), S.meta.can.write ? h('a', { class: 'iconbtn', href: '#/upload', 'aria-label': 'Add music', title: 'Add music' }, icon('plus')) : null, S.meta?.can?.ai ? h('button', { class: 'iconbtn', 'aria-label': 'Ask Nebula', onclick: openNebula }, icon('sparkle')) : null),
-    h('div', { class: 'stick' }, h('div', { class: 'chips' }, tabs.map((t) => h('button', { class: 'chip', 'aria-pressed': S.tab === t ? 'true' : 'false', onclick: () => { S.tab = t; libraryView(); } }, t[0].toUpperCase() + t.slice(1))), h('button', { class: 'chip', 'aria-pressed': S.likedOnly ? 'true' : 'false', onclick: () => { S.likedOnly = !S.likedOnly; S.tab = 'songs'; libraryView(); } }, '♥ Liked')),
+    h('div', { class: 'stick' }, h('div', { class: 'chips' }, tabs.map((t) => h('button', { class: 'chip', 'aria-pressed': S.tab === t ? 'true' : 'false', onclick: () => { S.tab = t; libraryView(); } }, t[0].toUpperCase() + t.slice(1))), h('button', { class: 'chip', 'aria-pressed': S.likedOnly ? 'true' : 'false', onclick: () => { S.likedOnly = !S.likedOnly; S.tab = 'songs'; libraryView(); } }, icon('heart'), 'Liked')),
     h('div', { class: 'searchfield' }, icon('search'), search)), S.tag ? h('p', { class: 'fine' }, `Tag: ${S.tag} `, h('a', { href: '#', onclick: (e) => { e.preventDefault(); S.tag = ''; libraryView(); } }, 'clear')) : null, body);
 }
 function artistRows(q = []) {
@@ -204,22 +242,22 @@ function artistView(id) {
   if (S.artistTab === 'popular') body = h('div', { class: 'rows' }, popular.map((t, i) => trackRow(t, popular, i, { src: 'artist', numbered: true })));
   else if (S.artistTab === 'albums') body = albums.length ? h('div', { class: 'grid' }, albums.map((al) => h('div', { class: 'tile', onclick: () => { location.hash = `#/album/${al.id}`; } }, artEl(al.key, { cls: 'big', ic: 'disc' }), h('div', { class: 'ttl' }, al.title), h('div', { class: 'sub2' }, plural(al.tracks.length, 'song'))))) : emptyState('No albums.');
   else if (S.artistTab === 'singles') body = singles.length ? h('div', { class: 'rows' }, singles.map((t, i) => trackRow(t, singles, i, { src: 'artist' }))) : emptyState('No singles.');
-  else body = h('div', { class: 'card' }, h('p', {}, prof?.description || (a.virtual ? 'Songs without an artist are filed here. Open a song\'s ⋯ menu → Edit to give it an artist.' : 'No description yet.')), !a.virtual && S.meta.can.write ? h('button', { class: 'btn ghost', onclick: () => editArtist({ ...a, ...prof }) }, 'Edit about') : null);
+  else body = h('div', { class: 'card' }, h('p', {}, prof?.description || (a.virtual ? 'Songs without an artist are filed here. Open a song\'s More menu, then Edit, to give it an artist.' : 'No description yet.')), !a.virtual && S.meta.can.write ? h('button', { class: 'btn ghost', onclick: () => editArtist({ ...a, ...prof }) }, 'Edit about') : null);
   frame('artists', backbar(!a.virtual && S.meta.can.write ? h('button', { class: 'iconbtn', 'aria-label': 'Artist options', onclick: () => artistMenu(a) }, icon('more')) : null), heroBanner(S.artistArt.get(id) || (a.tracks[0] && artKeyOf(a.tracks[0])), a.name, `${plural(a.tracks.length, 'song')} · ${plural(albums.length, 'album')}`, true), playRow(a.tracks, 'artist'),
     h('div', { class: 'chips tabs' }, tabs.map(([k, l]) => h('button', { class: 'chip', 'aria-pressed': S.artistTab === k ? 'true' : 'false', onclick: () => { S.artistTab = k; artistView(id); } }, l))), body);
 }
 function albumView(id) {
   const a = albumsFrom(S.tracks).find((x) => x.id === id); if (!a) return frame('library', backbar(), emptyState('Album not found.')); const prof = S.albums.find((x) => x.id === id);
   frame('library', backbar(S.meta.can.write ? h('button', { class: 'iconbtn', 'aria-label': 'Album options', onclick: () => menu(a.title, a.artist, [['pencil', 'Edit album', () => editAlbum(a, prof)], ['trash', 'Delete album…', () => confirmDeleteAlbum(a), 'danger']]) }, icon('more')) : null),
-    heroBanner(a.key, a.title, `${a.artist} · ${plural(a.tracks.length, 'song')}`, false), prof?.description ? h('p', { class: 'muted' }, prof.description) : null, playRow(a.tracks, 'album'), h('div', { class: 'rows' }, a.tracks.map((t, i) => trackRow(t, a.tracks, i, { src: 'album', numbered: true }))));
+    heroBanner(a.key, a.title, `${a.artist} · ${plural(a.tracks.length, 'song')}`, false), prof?.description ? h('p', { class: 'muted' }, prof.description) : null, playRow(a.tracks, 'album', [dlButton(`album:${a.id}`, a.tracks, a.title)]), h('div', { class: 'rows' }, a.tracks.map((t, i) => trackRow(t, a.tracks, i, { src: 'album', numbered: true }))));
 }
 function playlistView(id) {
   const p = S.playlists.find((x) => x.id === id); if (!p) return frame('library', backbar(), emptyState('Playlist not found.'));
   const list = songs(p.trackIds), save = async (ids) => { try { await api('PUT', `/playlists/${p.id}/tracks`, { trackIds: ids }); await loadLibrary(); route(); } catch (x) { toast(x.message); } };
   const move = (i, d) => { const ids = [...p.trackIds], j = i + d; if (j < 0 || j >= ids.length) return; [ids[i], ids[j]] = [ids[j], ids[i]]; save(ids); };
-  frame('library', backbar(S.meta.can.write ? h('button', { class: 'iconbtn', 'aria-label': 'Playlist options', onclick: () => playlistMenu(p) }, icon('more')) : null), heroBanner(artKeyOf(list[0] || {}), p.name, plural(list.length, 'song'), false), p.description ? h('p', { class: 'muted' }, p.description) : null, list.length ? playRow(list, 'playlist') : null,
+  frame('library', backbar(S.meta.can.write ? h('button', { class: 'iconbtn', 'aria-label': 'Playlist options', onclick: () => playlistMenu(p) }, icon('more')) : null), heroBanner(artKeyOf(list[0] || {}), p.name, plural(list.length, 'song'), false), p.description ? h('p', { class: 'muted' }, p.description) : null, list.length ? playRow(list, 'playlist', [dlButton(`playlist:${p.id}`, list, p.name)]) : null,
     list.length ? h('div', { class: 'rows' }, list.map((t, i) => trackRow(t, list, i, { src: 'playlist', extra: S.meta.can.write ? h('span', { style: 'display:flex' }, h('button', { class: 'iconbtn', 'aria-label': 'Move up', onclick: (e) => { e.stopPropagation(); move(i, -1); } }, icon('up')), h('button', { class: 'iconbtn', 'aria-label': 'Move down', onclick: (e) => { e.stopPropagation(); move(i, 1); } }, icon('down')),
-      h('button', { class: 'iconbtn', 'aria-label': 'Remove from playlist', title: 'Remove from playlist (keeps the song)', onclick: (e) => { e.stopPropagation(); save(p.trackIds.filter((_, k) => k !== i)); } }, icon('x'))) : null }))) : emptyState('This playlist is empty. Add songs from any song\'s ⋯ menu.'));
+      h('button', { class: 'iconbtn', 'aria-label': 'Remove from playlist', title: 'Remove from playlist (keeps the song)', onclick: (e) => { e.stopPropagation(); save(p.trackIds.filter((_, k) => k !== i)); } }, icon('x'))) : null }))) : emptyState('This playlist is empty. Add songs from any song\'s More menu.'));
 }
 function renamePlaylist(p) { const name = h('input', { value: p.name, maxlength: 100 }); const d = dialog('Rename playlist', name, h('div', { class: 'actions' }, h('button', { class: 'btn', onclick: async () => { try { await api('PATCH', `/playlists/${p.id}`, { name: name.value }); d.close(); await loadLibrary(); route(); } catch (x) { toast(x.message); } } }, 'Save'), closer())); }
 function confirmPlaylist(p, what) {

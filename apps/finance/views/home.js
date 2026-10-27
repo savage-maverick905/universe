@@ -8,7 +8,7 @@ import { icon } from '/shared/icons.js';
 export const txnRow = (t, { onclick, acctId } = {}) => {
   const v = signedFor(t, acctId), cls = t.type === 'transfer' ? 'neutral' : v > 0 ? 'pos' : 'neg';
   return h('button', { class: 'txn', type: 'button', onclick }, h('span', { class: `ico ${cls}` }, icon(t.type === 'transfer' ? 'swap' : v > 0 ? 'down' : 'up')),
-    h('span', { class: 'txt' }, h('b', {}, t.description || t.counterparty || TYPE_LABEL[t.type]), h('small', {}, [t.categoryPath || TYPE_LABEL[t.type], t.type === 'transfer' ? `${acctName(t.accountId)} → ${acctName(t.toAccountId)}` : acctName(t.accountId), day(t.localDate, S.today)].filter(Boolean).join(' · '))),
+    h('span', { class: 'txt' }, h('b', {}, t.description || t.counterparty || TYPE_LABEL[t.type]), h('small', {}, [t.categoryPath || TYPE_LABEL[t.type], t.type === 'transfer' ? `${acctName(t.accountId)} to ${acctName(t.toAccountId)}` : acctName(t.accountId), day(t.localDate, S.today)].filter(Boolean).join(' · '))),
     h('span', { class: `amt ${cls}` }, money(v, acctId && t.toAccountId === acctId ? t.toCurrency : t.currency, { sign: true })));
 };
 export async function render({ frame, goto, openAdd }) {
@@ -17,7 +17,7 @@ export async function render({ frame, goto, openAdd }) {
   const cur = S.settings.currency, sum = d.summary[cur] || { income: 0, netExpense: 0, net: 0 };
   const totals = Object.entries(d.totalBalances);
   const hero = h('section', { class: 'hero' }, h('small', {}, 'Total balance'), totals.length ? totals.map(([c, v]) => h('div', { class: 'big' }, money(v, c))) : h('div', { class: 'big' }, money(0, cur)),
-    h('div', { class: 'chips' }, h('span', {}, `${d.range.from} → ${d.range.to}`), h('span', {}, `${d.coverage.transactions} transactions`)));
+    h('div', { class: 'chips' }, h('span', {}, `${d.range.from} to ${d.range.to}`), h('span', {}, `${d.coverage.transactions} transactions`)));
   const stats = h('div', { class: 'grid3' }, [['Income', sum.income, 'pos'], ['Spent', sum.netExpense, 'neg'], ['Net', sum.net, sum.net >= 0 ? 'pos' : 'neg']].map(([l, v, c]) => h('div', { class: 'card stat2' }, h('span', {}, l), h('b', { class: c }, money(v, cur)))));
   const empty = !S.accounts.length ? emptyState('Start with an account', 'Add the places your money lives: cash, OPay, PalmPay, Moniepoint, your bank.', h('a', { class: 'btn small', href: '#/accounts' }, 'Add account')) : null;
   const chart = h('div', { class: 'card' }, h('div', { class: 'card-h' }, h('h3', {}, 'Last 30 days'), h('div', { class: 'legend' }, h('i', { class: 'b' }), 'Income', h('i', { class: 'o' }), 'Spent')), tr.points.length ? barChart(tr.points, cur) : h('p', { class: 'muted' }, 'No activity in this period yet.'));

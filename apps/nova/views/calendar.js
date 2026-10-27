@@ -24,7 +24,7 @@ export async function calendarView({ frame, redraw }) {
   };
   const cells = [];
   for (let i = 0; i < 42; i++) {
-    const day = addDays(gridStart, i), inMonth = day.slice(0, 7) === cur.slice(0, 7), ts = tasks.get(day) || [], es = evs.get(day) || [], extra = [...(miles.get(day) || []).map((m) => `◆ ${m.title}`), ...(dls.get(day) || []).map((p) => `⚑ ${p.name}`)];
+    const day = addDays(gridStart, i), inMonth = day.slice(0, 7) === cur.slice(0, 7), ts = tasks.get(day) || [], es = evs.get(day) || [], extra = [...(miles.get(day) || []).map((m) => `Milestone: ${m.title}`), ...(dls.get(day) || []).map((p) => `Due: ${p.name}`)];
     const chips = [...es.map((e) => h('span', { class: 'chip ev' }, e.allDay ? e.title : `${fmtTime(e.startTime).replace(':00', '').replace(' ', '').toLowerCase()} ${e.title}`)), ...extra.map((x) => h('span', { class: 'chip ms' }, x)), ...ts.map((t) => h('span', { class: `chip${t.status === 'done' ? ' done' : t.overdue ? ' late' : ''}` }, t.title))];
     cells.push(h('button', { type: 'button', class: `day${inMonth ? '' : ' out'}${day === today ? ' today' : ''}`, 'aria-label': `${fmtDate(day, true)}, ${ts.length} tasks due, ${es.length} events`, onclick: () => dayDialog(day) },
       h('span', { class: 'dn' }, String(+day.slice(8))), h('span', { class: 'chips' }, ...chips.slice(0, 3), chips.length > 3 ? h('span', { class: 'more' }, `+${chips.length - 3} more`) : null)));

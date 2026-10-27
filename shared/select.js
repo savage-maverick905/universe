@@ -1,6 +1,9 @@
-// Universe select: replaces every native <select> with a themed picker (bottom sheet on phones, popover on desktop).
-// The native <select> stays in the DOM as the source of truth, so existing code that reads `.value` or listens for
-// `change` keeps working untouched. Opt out with data-native on a select. Multi-selects are left alone.
+// Universe choices: no dropdowns anywhere. Every native <select> is replaced by a control that is always on screen:
+//   - a few short options  -> pill chips you tap (one is on)
+//   - many or long options -> a row that opens a searchable sheet (bottom sheet on phones, centred card on desktop)
+//   - multi-select         -> toggle chips (with a filter box when the list is long)
+// The native <select> stays in the DOM, hidden, as the source of truth, so existing code that reads `.value` /
+// `.selectedOptions` or listens for `change` keeps working untouched. Opt out with data-native on a select.
 import { icon } from '/shared/icons.js';
 
 const clean = (s) => String(s ?? '').replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{200D}\u{FE0F}]+\s?/gu, '');
@@ -13,61 +16,84 @@ const el = (tag, props = {}, ...kids) => {
   n.append(...kids.flat().filter((x) => x != null)); return n;
 };
 const isNarrow = () => matchMedia('(max-width: 640px)').matches;
+const labelOf = (sel) => sel.getAttribute('aria-label') || sel.closest('label')?.firstChild?.textContent?.trim() || '';
 let openMenu = null;
 
+const flat = (sel) => [...sel.children].flatMap((c) => c.tagName === 'OPTGROUP' ? [{ group: c.label }, ...[...c.children].map((o) => ({ o }))] : [{ o: c }]);
+const emit = (sel) => { sel.dispatchEvent(new Event('input', { bubbles: true })); sel.dispatchEvent(new Event('change', { bubbles: true })); };
+
 function enhance(sel) {
-  if (sel.multiple || sel.dataset.native != null || sel._uni) return;
+  if (sel.dataset.native != null || sel._uni) return;
   sel._uni = true;
   sel.classList.add('uni-native'); sel.tabIndex = -1; sel.setAttribute('aria-hidden', 'true');
+  const multi = sel.multiple;
 
-  const text = el('span', { class: 'uni-text' });
-  const trigger = el('button', { type: 'button', class: 'uni-select', 'aria-haspopup': 'listbox', 'aria-expanded': 'false' }, text, icon('chevdown', 18));
-  sel.before(trigger);
+  const host = el('div', { class: 'uni-ctl' });
+  sel.before(host);
+  host.addEventListener('click', (e) => { if (e.target.closest?.('button')) e.preventDefault(); }); // inside a <label>, a tap would otherwise be forwarded to the first button
+  let filter = '';
 
-  const label = () => {
-    const o = sel.options[sel.selectedIndex];
-    const t = o ? clean(o.textContent).trim() : '';
-    text.textContent = t || sel.getAttribute('aria-label') || 'Select';
-    text.classList.toggle('placeholder', !o || (o.value === '' && /^(choose|select|pick)\b/i.test(t)));
-    trigger.disabled = sel.disabled;
-    const l = sel.getAttribute('aria-label') || sel.closest('label')?.firstChild?.textContent?.trim();
-    if (l) trigger.setAttribute('aria-label', `${l}: ${t}`);
-    trigger.classList.toggle('invalid', sel.matches(':invalid') && sel.required);
+  const paint = () => {
+    const opts = flat(sel), real = opts.filter((x) => x.o), l = labelOf(sel);
+    const chipsOk = multi || (real.length <= 8 && !opts.some((x) => x.group != null) && real.every((x) => clean(x.o.textContent).trim().length <= 24));
+    host.textContent = '';
+    host.classList.toggle('disabled', sel.disabled);
+    if (chipsOk) {
+      const set = el('div', { class: `uni-chipset${multi ? ' multi' : ''}`, role: multi ? 'group' : 'radiogroup', 'aria-label': l || null });
+      let box = set;
+      if (multi && real.length > 12) {
+        const q = el('input', { type: 'search', class: 'uni-filter', placeholder: 'Filter', autocomplete: 'off', 'aria-label': 'Filter options', value: filter });
+        q.addEventListener('input', () => { filter = q.value; paint(); host.querySelector('.uni-filter')?.focus(); });
+        host.append(q); box = el('div', { class: 'uni-chipset multi scroll' }); host.append(box);
+      } else host.append(set);
+      const needle = filter.trim().toLowerCase();
+      for (const x of real) {
+        const o = x.o, t = clean(o.textContent).trim() || 'None';
+        if (multi && needle && !t.toLowerCase().includes(needle)) continue;
+        const on = o.selected && !(!multi && o.disabled);
+        const b = el('button', { type: 'button', class: `uni-chip${on ? ' on' : ''}`, role: multi ? 'checkbox' : 'radio', 'aria-label': t, 'aria-checked': on ? 'true' : 'false', disabled: o.disabled || sel.disabled }, on && multi ? icon('check', 14) : null, t);
+        b.addEventListener('click', () => {
+          if (multi) { o.selected = !o.selected; emit(sel); paint(); return; }
+          if (sel.value !== o.value) { sel.value = o.value; emit(sel); } else paint();
+        });
+        box.append(b);
+      }
+      if (box === set) host.firstChild === set || host.append(set);
+      if (multi && !box.childElementCount) box.append(el('div', { class: 'uni-none' }, real.length ? 'Nothing matches' : 'Nothing to pick yet'));
+      return;
+    }
+    const o = sel.options[sel.selectedIndex], t = o ? clean(o.textContent).trim() : '';
+    const empty = !o || (o.value === '' && /^(choose|select|pick|none)\b/i.test(t));
+    const row = el('button', { type: 'button', class: 'uni-row', 'aria-haspopup': 'dialog', disabled: sel.disabled || null, 'aria-label': l ? `${l}: ${t || 'none'}` : null },
+      el('span', { class: `uni-text${empty ? ' placeholder' : ''}` }, t || l || 'Choose'), icon('chevright', 18));
+    row.addEventListener('click', () => openSheet(sel, row, paint));
+    host.append(row);
   };
 
-  // Keep the label right when code sets .value / .selectedIndex or rebuilds the options.
+  // Keep the controls right when code sets .value / .selectedIndex or rebuilds the options.
   for (const prop of ['value', 'selectedIndex']) {
     const d = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, prop);
-    Object.defineProperty(sel, prop, { configurable: true, get() { return d.get.call(this); }, set(v) { d.set.call(this, v); label(); } });
+    Object.defineProperty(sel, prop, { configurable: true, get() { return d.get.call(this); }, set(v) { d.set.call(this, v); paint(); } });
   }
-  new MutationObserver(label).observe(sel, { childList: true, subtree: true, attributes: true, characterData: true });
-  sel.addEventListener('change', label);
-  sel.form?.addEventListener('reset', () => setTimeout(label));
-  // Page-level validation shows its bubble next to the hidden field; send focus to the visible trigger instead.
-  sel.addEventListener('invalid', () => trigger.focus());
-  label();
-
-  trigger.addEventListener('click', () => open(sel, trigger, label));
-  trigger.addEventListener('keydown', (e) => {
-    if (['ArrowDown', 'ArrowUp'].includes(e.key)) { e.preventDefault(); open(sel, trigger, label); }
-  });
+  let queued = false;
+  new MutationObserver(() => { if (queued) return; queued = true; queueMicrotask(() => { queued = false; paint(); }); }).observe(sel, { childList: true, subtree: true, attributes: true, characterData: true });
+  sel.addEventListener('change', paint);
+  sel.form?.addEventListener('reset', () => setTimeout(paint));
+  sel.addEventListener('invalid', () => host.querySelector('button')?.focus());
+  paint();
 }
 
-function open(sel, trigger, onPick) {
+function openSheet(sel, trigger, onPick) {
   if (openMenu) openMenu.close();
-  const host = trigger.closest('dialog') || document.body;
-  const opts = [...sel.children].flatMap((c) => c.tagName === 'OPTGROUP' ? [{ group: c.label }, ...[...c.children].map((o) => ({ o }))] : [{ o: c }]);
-  const count = opts.filter((x) => x.o).length;
-  const searchable = count > 9;
-  const title = sel.getAttribute('aria-label') || sel.closest('label')?.firstChild?.textContent?.trim() || '';
+  const where = trigger.closest('dialog') || document.body;
+  const opts = flat(sel), count = opts.filter((x) => x.o).length, searchable = count > 9, title = labelOf(sel);
   const list = el('div', { class: 'uni-list', role: 'listbox', tabindex: '-1' });
   const search = searchable ? el('input', { type: 'search', class: 'uni-search', placeholder: 'Search', autocomplete: 'off', 'aria-label': 'Search options', enterkeyhint: 'done' }) : null;
   let items = [], active = -1;
 
   const draw = (q = '') => {
     list.textContent = ''; items = [];
-    const needle = q.trim().toLowerCase();
-    let lastGroup = null;
+    const needle = q.trim().toLowerCase(); let lastGroup = null;
     for (const x of opts) {
       if (x.group != null) { lastGroup = x.group; continue; }
       const o = x.o, t = clean(o.textContent);
@@ -76,7 +102,7 @@ function open(sel, trigger, onPick) {
       const on = o.value === sel.value && !o.disabled;
       const indent = (/^[\u2003]+/.exec(t) || [''])[0].length;
       const row = el('button', { type: 'button', role: 'option', class: `uni-opt${on ? ' on' : ''}`, 'aria-selected': on ? 'true' : 'false', disabled: o.disabled, style: indent ? `padding-left:${.9 + indent * .9}rem` : null },
-        el('span', {}, t.trim() || '—'), on ? icon('check', 18) : null);
+        el('span', {}, t.trim() || 'None'), on ? icon('check', 18) : null);
       row.addEventListener('click', () => pick(o.value));
       items.push(row); list.append(row);
     }
@@ -85,31 +111,14 @@ function open(sel, trigger, onPick) {
   };
   const setActive = (i, scroll) => {
     items[active]?.classList.remove('hot'); active = Math.min(items.length - 1, Math.max(0, i));
-    const r = items[active]; if (!r) return; r.classList.add('hot'); if (scroll) r.scrollIntoView({ block: 'center' }); else r.scrollIntoView({ block: 'nearest' });
+    const r = items[active]; if (!r) return; r.classList.add('hot'); r.scrollIntoView({ block: scroll ? 'center' : 'nearest' });
   };
-  const pick = (v) => {
-    const changed = sel.value !== v; sel.value = v;
-    if (changed) { sel.dispatchEvent(new Event('input', { bubbles: true })); sel.dispatchEvent(new Event('change', { bubbles: true })); }
-    onPick(); close(true);
-  };
+  const pick = (v) => { const changed = sel.value !== v; sel.value = v; if (changed) emit(sel); onPick(); close(true); };
 
-  const sheet = el('div', { class: 'uni-sheet' },
-    el('div', { class: 'uni-grab', 'aria-hidden': 'true' }),
-    title ? el('div', { class: 'uni-title' }, title) : null, search, list);
+  const sheet = el('div', { class: 'uni-sheet' }, el('div', { class: 'uni-grab', 'aria-hidden': 'true' }), title ? el('div', { class: 'uni-title' }, title) : null, search, list);
   const back = el('div', { class: 'uni-back' });
-  const root = el('div', { class: 'uni-root' }, back, sheet);
-  const narrow = isNarrow();
-  root.classList.add(narrow ? 'sheet-mode' : 'pop-mode');
-  host.append(root);
-
-  const place = () => {
-    if (narrow) return;
-    const r = trigger.getBoundingClientRect(), vh = innerHeight, below = vh - r.bottom - 12, above = r.top - 12;
-    const flip = below < 240 && above > below, room = Math.max(160, flip ? above : below);
-    sheet.style.width = `${Math.max(r.width, 220)}px`; sheet.style.maxHeight = `${Math.min(room, 360)}px`;
-    sheet.style.left = `${Math.min(r.left, innerWidth - Math.max(r.width, 220) - 8)}px`;
-    if (flip) { sheet.style.top = 'auto'; sheet.style.bottom = `${vh - r.top + 6}px`; } else { sheet.style.bottom = 'auto'; sheet.style.top = `${r.bottom + 6}px`; }
-  };
+  const root = el('div', { class: `uni-root ${isNarrow() ? 'sheet-mode' : 'center-mode'}` }, back, sheet);
+  where.append(root);
 
   const onKey = (e) => {
     if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(true); }
@@ -117,23 +126,19 @@ function open(sel, trigger, onPick) {
     else if (e.key === 'ArrowUp') { e.preventDefault(); setActive(active - 1); }
     else if (e.key === 'Enter') { e.preventDefault(); items[active]?.click(); }
     else if (e.key === 'Tab') close(false);
-    else if (!search && e.key.length === 1) { // type-ahead
-      const i = items.findIndex((r, n) => n > active && r.textContent.trim().toLowerCase().startsWith(e.key.toLowerCase())); if (i >= 0) setActive(i);
-    }
   };
   const close = (refocus) => {
     if (openMenu?.root !== root) return;
-    openMenu = null; document.removeEventListener('keydown', onKey, true); removeEventListener('resize', place);
-    trigger.setAttribute('aria-expanded', 'false');
-    root.classList.add('out'); setTimeout(() => root.remove(), 140);
+    openMenu = null; document.removeEventListener('keydown', onKey, true);
+    root.classList.add('out'); setTimeout(() => root.remove(), 220);
     if (refocus) trigger.focus({ preventScroll: true });
   };
   back.addEventListener('click', () => close(true));
-  document.addEventListener('keydown', onKey, true); addEventListener('resize', place);
-  openMenu = { root, close }; trigger.setAttribute('aria-expanded', 'true');
+  document.addEventListener('keydown', onKey, true);
+  openMenu = { root, close };
   search?.addEventListener('input', () => draw(search.value));
-  draw(); place();
-  requestAnimationFrame(() => { root.classList.add('in'); (search && !narrow ? search : list).focus({ preventScroll: true }); active >= 0 && items[active]?.scrollIntoView({ block: 'center' }); });
+  draw();
+  requestAnimationFrame(() => { root.classList.add('in'); (search && !isNarrow() ? search : list).focus({ preventScroll: true }); });
 }
 
 function scan(root = document) { root.querySelectorAll?.('select').forEach(enhance); if (root.tagName === 'SELECT') enhance(root); }
