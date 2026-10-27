@@ -29,13 +29,14 @@ function enhance(sel) {
   const multi = sel.multiple;
 
   const host = el('div', { class: 'uni-ctl' });
+  sel._host = host;
   sel.before(host);
   host.addEventListener('click', (e) => { if (e.target.closest?.('button')) e.preventDefault(); }); // inside a <label>, a tap would otherwise be forwarded to the first button
   let filter = '';
 
   const paint = () => {
     const opts = flat(sel), real = opts.filter((x) => x.o), l = labelOf(sel);
-    const chipsOk = multi || (real.length <= 8 && !opts.some((x) => x.group != null) && real.every((x) => clean(x.o.textContent).trim().length <= 24));
+    const chipsOk = multi || (sel.dataset.sheet == null && real.length <= 8 && !opts.some((x) => x.group != null) && real.every((x) => clean(x.o.textContent).trim().length <= 24));
     host.textContent = '';
     host.classList.toggle('disabled', sel.disabled);
     if (chipsOk) {
@@ -141,6 +142,9 @@ function openSheet(sel, trigger, onPick) {
   requestAnimationFrame(() => { root.classList.add('in'); (search && !isNarrow() ? search : list).focus({ preventScroll: true }); });
 }
 
-function scan(root = document) { root.querySelectorAll?.('select').forEach(enhance); if (root.tagName === 'SELECT') enhance(root); }
+// A select that was moved into a new parent (a form that redraws itself) must bring its visible control along, or it vanishes.
+function rehome(sel) { const h = sel._host; if (h && (sel.previousElementSibling !== h || !h.isConnected)) sel.before(h); }
+function enhanceOrRehome(sel) { if (sel._uni) rehome(sel); else enhance(sel); }
+function scan(root = document) { root.querySelectorAll?.('select').forEach(enhanceOrRehome); if (root.tagName === 'SELECT') enhanceOrRehome(root); }
 scan();
 new MutationObserver((muts) => { for (const m of muts) for (const n of m.addedNodes) if (n.nodeType === 1) scan(n); }).observe(document.documentElement, { childList: true, subtree: true });

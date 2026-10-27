@@ -35,8 +35,8 @@ export function txnSheet({ txn = null, preset = {}, onDone = () => {} } = {}) {
   const types = editing ? [txn.type] : ['expense', 'income', 'transfer', 'refund', 'adjustment'];
   const err = h('p', { class: 'err', role: 'alert' }), body = h('div', {});
   const amount = h('input', { type: 'text', inputmode: 'decimal', autocomplete: 'off', placeholder: '0.00', class: 'big-amount', value: txn ? decimal(txn.amountMinor, txn.currency) : base.amount || '', 'aria-label': 'Amount' });
-  const accountSel = select(accountOptions(), base.accountId || S.accounts.find((a) => !a.archived)?.id);
-  const toSel = select(accountOptions({ blank: 'Choose…' }), base.toAccountId || '');
+  const accountSel = select(accountOptions(), base.accountId || S.accounts.find((a) => !a.archived)?.id, { 'data-sheet': '' });
+  const toSel = select(accountOptions({ blank: 'Choose…' }), base.toAccountId || '', { 'data-sheet': '' });
   const catSel = () => select(categoryOptions(type === 'income' ? 'income' : 'expense', { selected: base.categoryId }), base.categoryId || '');
   let cat = catSel();
   const date = h('input', { type: 'date', value: txn?.localDate || base.date || S.today, max: '' }), time = h('input', { type: 'time', value: '' });

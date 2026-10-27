@@ -1,6 +1,6 @@
 import '/shared/select.js';
 // Orbit — by Universe. Shell, routing, and the lock lifecycle.
-import { api, h, toast, setHooks, lockNow } from './lib/api.js';
+import { api, h, toast, setHooks, lockNow, clearCache } from './lib/api.js';
 import { S, loadBase } from './lib/forms.js';
 import { setCurrencies } from './lib/fmt.js';
 import { lockScreen } from './views/lock.js';
@@ -39,7 +39,7 @@ export const goto = (hash) => { if (location.hash === hash) route(); else locati
 
 async function lock() { try { await api('POST', '/lock'); } catch { /* already locked */ } showLock('unlock'); }
 function showLock(mode, notice = '') {
-  state.unlocked = false; S.accounts = []; S.cats = []; S.settings = null; // drop everything held in memory
+  clearCache(); state.unlocked = false; S.accounts = []; S.cats = []; S.settings = null; // drop everything held in memory
   root.replaceChildren(); document.title = 'Orbit — by Universe';
   lockScreen(root, { mode, notice, onUnlocked: start, onSignOut: async () => { try { await rootApi('POST', '/api/auth/logout'); } catch { /* ignore */ } state.me = null; boot(); } });
 }

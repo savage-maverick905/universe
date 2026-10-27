@@ -9,6 +9,7 @@ import { renderMarkdown } from '/shared/markdown.js';
 import * as pl from './lib/player.js';
 import * as offline from './lib/offline.js';
 import { readTags, guessFromName, audioDuration, shrinkImage } from './lib/tags.js';
+import { convertSheet, isVideo } from './lib/convert.js';
 
 const root = document.getElementById('app');
 registerServiceWorker('/apps/jupiter/sw.js', '/apps/jupiter/');
@@ -337,11 +338,12 @@ function askArtist(names, hasPic, songTitle) {
   });
 }
 function uploadView() {
-  const input = h('input', { type: 'file', multiple: '', accept: 'audio/*,.mp3,.m4a,.aac,.flac,.ogg,.oga,.opus,.wav', 'aria-label': 'Choose audio files', style: 'display:none' }), cards = h('div', {}), go = h('button', { class: 'btn big', hidden: '' }, icon('upload'), 'Upload'), note = h('p', { class: 'fine muted' });
+  const input = h('input', { type: 'file', multiple: '', accept: 'audio/*,video/*,.mp4,.mov,.m4v,.webm,.mkv,.mp3,.m4a,.aac,.flac,.ogg,.oga,.opus,.wav', 'aria-label': 'Choose audio files', style: 'display:none' }), cards = h('div', {}), go = h('button', { class: 'btn big', hidden: '' }, icon('upload'), 'Upload'), note = h('p', { class: 'fine muted' });
   const drop = h('div', { class: 'upl', ondragover: (e) => { e.preventDefault(); drop.classList.add('over'); }, ondragleave: () => drop.classList.remove('over'), ondrop: (e) => { e.preventDefault(); drop.classList.remove('over'); add([...e.dataTransfer.files]); } },
-    icon('upload', 40), h('p', {}, 'Drag & drop your audio files here', h('br'), h('small', { class: 'muted' }, 'or')), h('button', { class: 'btn', onclick: () => input.click() }, 'Choose Files'), input, h('p', { class: 'fine muted' }, `Supports MP3, M4A, AAC, FLAC, OGG, WAV. Up to ${S.meta.maxFileMb} MB per song.`));
+    icon('upload', 40), h('p', {}, 'Drag & drop your audio files here', h('br'), h('small', { class: 'muted' }, 'or')), h('button', { class: 'btn', onclick: () => input.click() }, 'Choose Files'), input, h('p', { class: 'fine muted' }, `Supports MP3, M4A, AAC, FLAC, OGG, WAV, and videos (converted to audio on your device). Up to ${S.meta.maxFileMb} MB per song.`));
   async function add(files) {
-    for (const file of files) {
+    for (let file of files) {
+      if (isVideo(file)) { const conv = await convertSheet(file, { required: true }); if (!conv) continue; file = conv; }
       const [tags, dur] = await Promise.all([readTags(file), audioDuration(file)]), guess = guessFromName(file.name), tagName = tags.artists[0] || guess.artist;
       const match = tagName && S.artists.find((a) => norm(a.name) === norm(tagName)), pick = artistPicker(match ? [match.id] : []);
       const f = { title: h('input', { value: tags.title || guess.title, maxlength: 200, 'aria-label': 'Title' }), album: h('input', { value: tags.album, placeholder: 'Unknown album' }), genre: h('input', { value: tags.genre, placeholder: 'e.g. Afrobeats' }), tags: h('input', { placeholder: 'chill, 2022 (comma separated)' }) };
@@ -349,7 +351,7 @@ function uploadView() {
       const names = [...new Map((tags.artists.length ? tags.artists : guess.artist ? [guess.artist] : []).map((n) => [norm(n), n.trim()]).filter(([k]) => k)).values()];
       const item = { file, tags, dur, f, pick, st, bar, names, state: 'ready' };
       const hint = tagName && !match ? h('p', { class: 'fine' }, `The file says the artist is "${tagName}". `, h('a', { href: '#', onclick: async (e) => { e.preventDefault(); const a = await newArtist(tagName); if (a) { pick.add(a.id); pick.redraw(); e.target.closest('p').remove(); } } }, `Create "${tagName}" as an artist`)) : null;
-      item.el = h('div', { class: 'card upcard' }, h('div', { class: 'between' }, h('b', { class: 'ttl' }, file.name), h('button', { class: 'iconbtn', 'aria-label': 'Remove', onclick: () => { uploadQueue.splice(uploadQueue.indexOf(item), 1); item.el.remove(); sync(); } }, icon('x'))),
+      item.el = h('div', { class: 'card upcard' }, h('div', { class: 'between' }, h('b', { class: 'ttl' }, file.name), h('button', { class: 'btn ghost small', type: 'button', onclick: async () => { const t = await convertSheet(item.file); if (!t) return; item.file = t; item.dur = await audioDuration(t); item.el.querySelector('.ttl').textContent = t.name; item.st.textContent = 'Trimmed. Ready to upload.'; } }, 'Trim'), h('button', { class: 'iconbtn', 'aria-label': 'Remove', onclick: () => { uploadQueue.splice(uploadQueue.indexOf(item), 1); item.el.remove(); sync(); } }, icon('x'))),
         h('label', {}, 'Title *'), f.title, h('label', {}, 'Artist'), pick.el, hint, h('div', { class: 'field-row' }, h('div', {}, h('label', {}, 'Album'), f.album), h('div', {}, h('label', {}, 'Genre'), f.genre)), h('label', {}, 'Tags'), f.tags, st, h('div', { class: 'prog' }, bar));
       uploadQueue.push(item); cards.append(item.el);
     }

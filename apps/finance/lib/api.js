@@ -4,11 +4,27 @@ export { h, toast };
 export const B = '/api/apps/finance';
 const hooks = { locked: () => {}, signedOut: () => {} };
 export const setHooks = (x) => Object.assign(hooks, x);
+// Smoother navigation: GET answers are kept in memory for this tab only (never written to disk), shown instantly when you
+// come back to a screen, and refreshed in the background. Any write, lock or sign-out clears them, so numbers never go stale after a change.
+const mem = new Map(), TTL = 30_000;
+export const clearCache = () => mem.clear();
 export async function api(method, path, body) {
+  if (method === 'GET') {
+    const hit = mem.get(path);
+    if (hit && Date.now() - hit.at < TTL) return structuredClone(hit.data);
+    if (hit?.pending) return hit.pending.then((d) => structuredClone(d));
+    const pending = real('GET', path).then((d) => { mem.set(path, { at: Date.now(), data: d }); return d; }, (e) => { mem.delete(path); throw e; });
+    mem.set(path, { at: 0, pending, data: null });
+    return pending.then((d) => structuredClone(d));
+  }
+  mem.clear();
+  return real(method, path, body);
+}
+async function real(method, path, body) {
   try { return await call(method, B + path, body); }
   catch (e) {
-    if (e.status === 401 && e.code === 'unauthenticated') hooks.signedOut();
-    if (e.status === 423) hooks.locked(e);
+    if (e.status === 401 && e.code === 'unauthenticated') { mem.clear(); hooks.signedOut(); }
+    if (e.status === 423) { mem.clear(); hooks.locked(e); }
     throw e;
   }
 }
