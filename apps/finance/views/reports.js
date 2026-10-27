@@ -37,7 +37,7 @@ const legend = () => h('div', { class: 'legend' }, h('i', { class: 'b' }), 'Inco
 export async function render({ frame }) {
   const st = { range: 'this_month', from: S.today.slice(0, 8) + '01', to: S.today, accountId: '', kind: 'expense', g: 'day' }, out = h('div', {});
   const qs = (x = {}) => new URLSearchParams({ range: st.range, ...(st.range === 'custom' ? { from: st.from, to: st.to } : {}), ...(st.accountId ? { accountIds: st.accountId } : {}), currency: S.settings.currency, ...x }).toString();
-  const range = select(RANGES.map(([value, label]) => ({ value, label })), st.range), acc = select(accountOptions({ blank: 'All accounts' }), ''), from = h('input', { type: 'date', value: st.from }), to = h('input', { type: 'date', value: st.to }), gran = select(['day', 'week', 'month'].map((v) => ({ value: v, label: `By ${v}` })), 'day');
+  const sh = (l) => ({ 'data-sheet': '', 'aria-label': l }), range = select(RANGES.map(([value, label]) => ({ value, label })), st.range, sh('Period')), acc = select(accountOptions({ blank: 'All accounts' }), '', sh('Account')), from = h('input', { type: 'date', value: st.from }), to = h('input', { type: 'date', value: st.to }), gran = select(['day', 'week', 'month'].map((v) => ({ value: v, label: `By ${v}` })), 'day', sh('Group by'));
   const bar = h('div', { class: 'filters' }, range, acc, gran, h('span', { class: 'row tight', hidden: '' }, from, to));
   const customRow = bar.lastChild;
   let last = null;

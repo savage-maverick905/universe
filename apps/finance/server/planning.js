@@ -51,7 +51,7 @@ export function netWorth({ accounts, balances, debts, debtStates, items }) {
   const byCur = {}; const C = (c) => (byCur[c] ??= { assets: 0, liabilities: 0, netWorth: 0, lines: [] });
   const add = (cur, kind, label, minor) => { if (!minor) return; const c = C(cur); c[kind === 'asset' ? 'assets' : 'liabilities'] += minor; c.lines.push({ kind, label, minor }); };
   for (const a of accounts) {
-    if (a.excludeFromNetWorth) continue;
+    if (a.excludeFromNetWorth || (a.parentId && !a.countsInParent)) continue;
     const bal = balances.get(a.id) || 0;
     if (a.archived && bal === 0) continue;
     if (bal >= 0) add(a.currency, 'asset', `Account: ${a.name}`, bal); else add(a.currency, 'liability', `Account overdrawn: ${a.name}`, -bal);

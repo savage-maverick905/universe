@@ -66,7 +66,7 @@ function renderList() {
 }
 
 function sel(options, value, onchange, label) {
-  return h('select', { 'aria-label': label, onchange: (e) => onchange(e.target.value) }, options.map(([v, t]) => h('option', { value: v, selected: v === value ? '' : null }, t)));
+  return h('select', { 'aria-label': label, 'data-sheet': '', onchange: (e) => onchange(e.target.value) }, options.map(([v, t]) => h('option', { value: v, selected: v === value ? '' : null }, t)));
 }
 async function itemsPage() {
   const f = S.f;

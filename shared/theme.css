@@ -528,3 +528,8 @@ html:not(.touch) .ptr { display: none; }
 #splash.out { opacity: 0; pointer-events: none; }
 @keyframes splashpop { from { transform: scale(.85); opacity: 0; } to { transform: none; opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { #splash img { animation: none; } }
+
+/* Filter bars: dropdown rows sit two per line */
+.filters > .uni-ctl.is-row, .tools > .uni-ctl.is-row { grid-column: auto; }
+.filters > .uni-ctl.is-row:last-child:nth-child(odd), .tools > .uni-ctl.is-row:last-child:nth-child(odd) { grid-column: 1 / -1; }
+.filters .uni-row, .tools .uni-row { font-size: .95rem; }

@@ -38,7 +38,7 @@ function enhance(sel) {
     const opts = flat(sel), real = opts.filter((x) => x.o), l = labelOf(sel);
     const chipsOk = multi || (sel.dataset.sheet == null && real.length <= 8 && !opts.some((x) => x.group != null) && real.every((x) => clean(x.o.textContent).trim().length <= 24));
     host.textContent = '';
-    host.classList.toggle('disabled', sel.disabled);
+    host.classList.toggle('disabled', sel.disabled); host.classList.toggle('is-row', !chipsOk);
     if (chipsOk) {
       const set = el('div', { class: `uni-chipset${multi ? ' multi' : ''}`, role: multi ? 'group' : 'radiogroup', 'aria-label': l || null });
       let box = set;

@@ -81,3 +81,6 @@ dialog details { margin-top: .9rem; }
 .tabs a { scroll-snap-align: center; white-space: nowrap; }
 .crow-h .cn { display: flex; align-items: center; }
 .line .catname { gap: 0; }
+
+.subacc { margin-left: 1.1rem; padding-left: .6rem; border-left: 2px solid var(--line); }
+.subacc .acc { border-top: 0; }

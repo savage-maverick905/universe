@@ -20,11 +20,11 @@ export async function render({ frame, goto, rest, openAdd }) {
   }
   const search = h('input', { type: 'search', placeholder: 'Search description, payee, tag, category…', value: F.q, 'aria-label': 'Search', maxlength: 100 });
   let tm; search.addEventListener('input', () => { clearTimeout(tm); tm = setTimeout(() => { F.q = search.value; load(true); }, 250); });
-  const sel = (key, opts) => { const s = select(opts, F[key]); s.addEventListener('change', () => { F[key] = s.value; load(true); }); return s; };
-  const filters = h('div', { class: 'filters' }, sel('type', [{ value: '', label: 'All types' }, ...S.meta.types.map((t) => ({ value: t, label: TYPE_LABEL[t] }))]), sel('accountId', accountOptions({ blank: 'All accounts' })),
-    sel('range', [{ value: '', label: 'Any date' }, ...['today', 'this_week', 'this_month', 'last_month', 'this_year'].map((r) => ({ value: r, label: r.replace('_', ' ') }))]),
-    sel('categoryId', [{ value: '', label: 'All categories' }, { value: 'none', label: 'Uncategorised' }, ...categoryOptions('expense', { blank: '—' }).slice(1), ...categoryOptions('income', { blank: '—' }).slice(1)]),
-    sel('sort', [{ value: 'date', label: 'Sort: date' }, { value: 'amount', label: 'Sort: amount' }]));
+  const sel = (key, opts, label) => { const s = select(opts, F[key], { 'data-sheet': '', 'aria-label': label }); s.addEventListener('change', () => { F[key] = s.value; load(true); }); return s; };
+  const filters = h('div', { class: 'filters' }, sel('type', [{ value: '', label: 'All types' }, ...S.meta.types.map((t) => ({ value: t, label: TYPE_LABEL[t] }))], 'Type'), sel('accountId', accountOptions({ blank: 'All accounts' }), 'Account'),
+    sel('range', [{ value: '', label: 'Any date' }, ...['today', 'this_week', 'this_month', 'last_month', 'this_year'].map((r) => ({ value: r, label: r.replace('_', ' ').replace(/^./, (c) => c.toUpperCase()) }))], 'Date'),
+    sel('categoryId', [{ value: '', label: 'All categories' }, { value: 'none', label: 'Uncategorised' }, ...categoryOptions('expense', { blank: '—' }).slice(1), ...categoryOptions('income', { blank: '—' }).slice(1)], 'Category'),
+    sel('sort', [{ value: 'date', label: 'Sort: date' }, { value: 'amount', label: 'Sort: amount' }], 'Sort by'));
   more.addEventListener('click', () => load(false));
   const add = () => txnSheet({ onDone: () => load(true) });
   frame('activity', h('div', { class: 'page-head' }, h('h1', {}, 'Activity'), h('button', { class: 'btn small', onclick: add }, icon('plus'), 'Add')), search, filters, list, h('div', { class: 'row center' }, more), count,

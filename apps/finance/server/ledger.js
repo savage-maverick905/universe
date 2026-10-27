@@ -14,6 +14,9 @@
 export const TYPES = ['income', 'expense', 'transfer', 'refund', 'adjustment', 'loan_out', 'loan_in', 'repay_in', 'repay_out'];
 export const DEBT_TYPES = ['loan_out', 'loan_in', 'repay_in', 'repay_out'];
 
+// A sub-account's money is part of the totals only when it is set to count in its parent.
+export const countsInTotal = (a) => !a.parentId || !!a.countsInParent;
+
 export const isPosted = (t) => t.status !== 'voided';
 
 // Signed balance changes caused by one transaction: [{ accountId, currency, deltaMinor }]

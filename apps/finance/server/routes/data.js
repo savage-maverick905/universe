@@ -4,7 +4,7 @@ import { newId, nowIso } from '../../../../shared/ids.js';
 import { reply } from '../../../../http/http.js';
 import { parseMoney, MoneyError, currencyInfo, CURRENCIES } from '../money.js';
 import { isDateStr, todayIn, namedRange, RANGE_NAMES } from '../dates.js';
-import { accountBalances, accountHistory, queryTransactions, isPosted } from '../ledger.js';
+import { accountBalances, accountHistory, queryTransactions, isPosted, countsInTotal } from '../ledger.js';
 import { byId, pathOf, descendantIds, parentProblem, depthOf, KINDS } from '../categories.js';
 
 export const ACCOUNT_KINDS = ['cash', 'bank', 'mobile_money', 'savings', 'wallet', 'credit', 'investment', 'other'];
@@ -52,12 +52,29 @@ export function dataRoutes({ router, s, store, txn, guard, P }) {
     if ('notes' in b) out.notes = v.string(b.notes ?? '', 'notes', { max: 500 });
     if ('sortOrder' in b) { if (!Number.isInteger(b.sortOrder)) throw badRequest('sortOrder must be a whole number'); out.sortOrder = b.sortOrder; }
     if ('excludeFromNetWorth' in b) out.excludeFromNetWorth = !!b.excludeFromNetWorth;
+    if ('parentId' in b) out.parentId = b.parentId ? v.string(b.parentId, 'parentId', { max: 80 }) : null;
+    if ('countsInParent' in b) out.countsInParent = !!b.countsInParent;
     return out;
   }
-  const ACC_KEYS = ['name', 'kind', 'provider', 'currency', 'openingBalance', 'openingBalanceMinor', 'openingDate', 'group', 'color', 'icon', 'notes', 'sortOrder', 'excludeFromNetWorth', 'expectedVersion'];
+  // Sub-accounts: one level deep, same owner, same currency. countsInParent decides whether the sub's money is part of the totals.
+  async function checkParent(user, f, old) {
+    const parentId = 'parentId' in f ? f.parentId : old?.parentId;
+    if (!parentId) { if ('parentId' in f) f.countsInParent = false; return; }
+    const accts = await all(col.accounts, user.id), p = accts.find((x) => x.id === parentId);
+    if (!p) throw badRequest('Parent account not found', 'unknown_parent');
+    if (old && p.id === old.id) throw badRequest('An account cannot sit inside itself', 'bad_parent');
+    if (p.parentId) throw badRequest('Sub-accounts cannot have their own sub-accounts', 'bad_parent');
+    if (p.archived && (!old || old.parentId !== p.id)) throw badRequest(`${p.name} is archived`, 'parent_archived');
+    if (old && accts.some((x) => x.parentId === old.id && !x.archived)) throw badRequest('This account has sub-accounts, so it cannot be a sub-account itself', 'bad_parent');
+    const cur = f.currency ?? old?.currency;
+    if (cur && p.currency !== cur) throw badRequest('A sub-account must use the same currency as its parent', 'currency_mismatch');
+    if (!('countsInParent' in f) && !old) f.countsInParent = true;
+  }
+  const ACC_KEYS = ['name', 'kind', 'provider', 'currency', 'openingBalance', 'openingBalanceMinor', 'openingDate', 'group', 'color', 'icon', 'notes', 'sortOrder', 'excludeFromNetWorth', 'parentId', 'countsInParent', 'expectedVersion'];
 
   router.add('POST', `${P}/accounts`, use(async ({ user, body }) => {
     const b = allowKeys(v.object(body), ACC_KEYS), st = await col.settings.get(user.id), f = parseAccount(b, st, null);
+    await checkParent(user, f, null);
     return storage.transaction(async () => {
       const existing = (await all(col.accounts, user.id)).filter((a) => !a.archived && a.name.toLowerCase() === f.name.toLowerCase());
       if (existing.length) throw conflict(`You already have an account called "${f.name}"`, 'duplicate_name');
@@ -85,6 +102,7 @@ export function dataRoutes({ router, s, store, txn, guard, P }) {
       const f = parseAccount(b, st, old);
       if (f.currency && f.currency !== old.currency && (await col.txns.count({ ownerId: user.id, accountId: old.id })) + (await col.txns.count({ ownerId: user.id, toAccountId: old.id }))) throw conflict('The currency cannot change once an account has transactions.', 'currency_locked');
       if (f.name && (await all(col.accounts, user.id)).some((a) => a.id !== old.id && !a.archived && a.name.toLowerCase() === f.name.toLowerCase())) throw conflict(`You already have an account called "${f.name}"`, 'duplicate_name');
+      await checkParent(user, f, old);
       const a = await col.accounts.update(old.id, { ...f, ...bump(old) });
       await audit(user.id, { action: 'account.update', entityType: 'account', entityId: a.id, source: 'manual', changes: diff(old, a, Object.keys(f)) });
       return { account: strip(a) };
@@ -93,11 +111,33 @@ export function dataRoutes({ router, s, store, txn, guard, P }) {
   for (const [action, archived] of [['archive', true], ['restore', false]]) {
     router.add('POST', `${P}/accounts/:id/${action}`, use(async ({ user, params }) => storage.transaction(async () => {
       const old = await own(col.accounts, params.id, user.id, 'Account');
+      if (archived && (await all(col.accounts, user.id)).some((x) => x.parentId === old.id && !x.archived)) throw conflict('This account still has active sub-accounts. Dissolve them first.', 'has_subaccounts');
       const a = await col.accounts.update(old.id, { archived, ...bump(old) });
       await audit(user.id, { action: `account.${action}`, entityType: 'account', entityId: a.id, source: 'manual' });
       return { account: strip(a) };
     })));
   }
+  // Dissolve a sub-account (or any account): move what is left to another account of the same currency, then archive it. History is kept.
+  router.add('POST', `${P}/accounts/:id/dissolve`, use(async ({ user, params, body }) => {
+    const b = allowKeys(v.object(body ?? {}), ['toAccountId']);
+    const accts = await all(col.accounts, user.id), a = accts.find((x) => x.id === params.id);
+    if (!a) throw notFound('Account not found');
+    if (a.archived) throw conflict('Already dissolved', 'archived');
+    if (accts.some((x) => x.parentId === a.id && !x.archived)) throw conflict('Dissolve its sub-accounts first.', 'has_subaccounts');
+    const txns = (await all(col.txns, user.id)).filter((t) => t.accountId === a.id || t.toAccountId === a.id), bal = accountBalances([a], txns).get(a.id) || 0;
+    if (bal < 0) throw conflict('This account is below zero. Bring it back to zero before dissolving it.', 'negative_balance');
+    let moved = null;
+    if (bal > 0) {
+      const dest = accts.find((x) => x.id === (b.toAccountId || a.parentId));
+      if (!dest) throw badRequest('Choose where the remaining money should go', 'destination_required');
+      if (dest.id === a.id || dest.archived || dest.currency !== a.currency) throw badRequest('Choose an active account in the same currency', 'bad_destination');
+      const r = await txn.create(user, { type: 'transfer', accountId: a.id, toAccountId: dest.id, amountMinor: bal, description: `Dissolved ${a.name}`, idempotencyKey: `dissolve-${a.id}-${a.version}` }, { source: 'manual' });
+      moved = { toAccountId: dest.id, amountMinor: bal, transactionId: r.transaction.id };
+    }
+    const cur = await own(col.accounts, a.id, user.id, 'Account');
+    const done = await storage.transaction(async () => { const u = await col.accounts.update(cur.id, { archived: true, ...bump(cur) }); await audit(user.id, { action: 'account.dissolve', entityType: 'account', entityId: u.id, source: 'manual' }); return u; });
+    return { account: strip(done), moved };
+  }));
   router.add('DELETE', `${P}/accounts/:id`, use(async ({ user, params }) => storage.transaction(async () => {
     const a = await own(col.accounts, params.id, user.id, 'Account');
     const n = (await col.txns.count({ ownerId: user.id, accountId: a.id })) + (await col.txns.count({ ownerId: user.id, toAccountId: a.id }));

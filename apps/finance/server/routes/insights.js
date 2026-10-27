@@ -3,7 +3,7 @@ import { v } from '../../../../shared/validate.js';
 import { badRequest } from '../../../../shared/errors.js';
 import { HttpError } from '../../../../shared/errors.js';
 import { todayIn, namedRange, bucketKey, RANGE_NAMES, addDays } from '../dates.js';
-import { accountBalances, summarize, categoryBreakdown, trend } from '../ledger.js';
+import { accountBalances, summarize, categoryBreakdown, trend, countsInTotal } from '../ledger.js';
 import { budgetStatus } from '../budgets.js';
 import { debtState } from '../debts.js';
 import { goalProgress, dueOccurrences } from '../planning.js';
@@ -28,7 +28,7 @@ export function insightRoutes({ router, s, store, pins, guard, P }) {
 
   router.add('GET', `${P}/dashboard`, use(async ({ user, query }) => {
     const c = await scope(user, query), { st, accounts, txns, cats, today, range, accountIds } = c;
-    const sel = accountIds ? accounts.filter((a) => accountIds.includes(a.id)) : accounts.filter((a) => !a.archived);
+    const sel = accountIds ? accounts.filter((a) => accountIds.includes(a.id)) : accounts.filter((a) => !a.archived && countsInTotal(a));
     const bal = accountBalances(accounts, txns), totals = {};
     for (const a of sel) totals[a.currency] = (totals[a.currency] || 0) + (bal.get(a.id) || 0);
     const summary = summarize(txns, { range, accountIds: accountIds || accounts.map((a) => a.id) });

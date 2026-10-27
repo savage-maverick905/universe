@@ -11,7 +11,7 @@ export async function loadBase() {
   Object.assign(S, { meta, settings: settings.settings, accounts: accounts.accounts, cats: cats.categories, today: meta.today });
   return S;
 }
-export const acctName = (id) => S.accounts.find((a) => a.id === id)?.name || 'Unknown account';
+export const acctName = (id) => { const a = S.accounts.find((x) => x.id === id); if (!a) return 'Unknown account'; const p = a.parentId && S.accounts.find((x) => x.id === a.parentId); return p ? `${p.name} › ${a.name}` : a.name; };
 export const acct = (id) => S.accounts.find((a) => a.id === id);
 export const catPath = (id) => S.cats.find((c) => c.id === id)?.path || '';
 export const defaultCurrency = () => S.settings?.currency || 'NGN';
@@ -22,7 +22,7 @@ export function select(options, value, props = {}) {
   s.value = value ?? options[0]?.value ?? ''; return s;
 }
 export const accountOptions = ({ include = true, blank = null, exclude = null, currency = null } = {}) =>
-  [...(blank ? [{ value: '', label: blank }] : []), ...S.accounts.filter((a) => !a.archived && a.id !== exclude && (!currency || a.currency === currency)).map((a) => ({ value: a.id, label: `${a.name} · ${a.currency}` }))];
+  [...(blank ? [{ value: '', label: blank }] : []), ...S.accounts.filter((a) => !a.archived && a.id !== exclude && (!currency || a.currency === currency)).map((a) => ({ value: a.id, label: `${acctName(a.id)} · ${a.currency}` }))];
 export function categoryOptions(kind, { blank = 'No category', selected = null } = {}) {
   const list = S.cats.filter((c) => c.kind === kind && (!c.archived || c.id === selected)).sort((a, b) => a.path.localeCompare(b.path));
   return [{ value: '', label: blank }, ...list.map((c) => ({ value: c.id, label: `${'\u2003'.repeat(c.depth)}${c.name}` }))];
