@@ -1,3 +1,4 @@
+import './native.js';
 // Installable-app helpers shared by the dashboard and every app.
 let deferred = null;
 const listeners = new Set();

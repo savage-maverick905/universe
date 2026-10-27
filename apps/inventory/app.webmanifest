@@ -61,5 +61,11 @@
         }
       ]
     }
-  ]
+  ],
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "portrait-primary",
+  "prefer_related_applications": false
 }

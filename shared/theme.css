@@ -33,7 +33,7 @@
 
   --r: 14px;
   --r-sm: 10px;
-  --font: "Poppins", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI Variable", "Segoe UI", Roboto, "Helvetica Neue", system-ui, sans-serif;
   --toast-bottom: 1rem;
   --safe-b: env(safe-area-inset-bottom, 0px);
 }
@@ -479,3 +479,52 @@ details.more > summary { padding: .5rem 0; }
 .line { display: flex; justify-content: space-between; gap: .6rem; min-width: 0; } .line > * { min-width: 0; overflow-wrap: anywhere; }
 
 .mark.logo { background: none !important; padding: 0; overflow: hidden; } .mark.logo img { width: 100%; height: 100%; display: block; border-radius: inherit; }
+
+/* ---------- Native-app feel ---------- */
+:root { --font-native: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI Variable", "Segoe UI", Roboto, "Helvetica Neue", system-ui, sans-serif; }
+html, body { font-family: var(--font-native); -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: optimizeLegibility; }
+button, input, select, textarea { font-family: inherit; }
+body { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; overscroll-behavior: none; }
+input, textarea, [contenteditable], .selectable, .selectable * { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
+img, svg, a { -webkit-user-drag: none; }
+a, button, [role=button], label, summary, .card, .row { -webkit-tap-highlight-color: transparent; }
+:focus:not(:focus-visible) { outline: none; }
+html.touch input, html.touch select, html.touch textarea { font-size: max(16px, 1em); }
+html.touch ::-webkit-scrollbar { display: none; } html.touch * { scrollbar-width: none; }
+html.standalone body { padding-left: env(safe-area-inset-left, 0px); padding-right: env(safe-area-inset-right, 0px); }
+
+/* Instant pressed states, no sticky hover on phones */
+@media (hover: none) { a:hover, button:hover, .card:hover { filter: none; } }
+a:active, button:active, [role=button]:active, summary:active { transition: opacity .06s, transform .06s; }
+.side nav a:active, .row:active, .uni-row:active, li.tap:active { opacity: .6; }
+a, button, [role=button], .card, .side nav a { transition: opacity .18s, transform .18s cubic-bezier(.2,.85,.25,1), background-color .18s, border-color .18s, color .18s; }
+
+/* Translucent, blurred bars like iOS */
+@media (max-width: 900px) {
+  .side nav { background: color-mix(in srgb, var(--bg) 72%, transparent); -webkit-backdrop-filter: saturate(180%) blur(22px); backdrop-filter: saturate(180%) blur(22px); padding-bottom: calc(.25rem + env(safe-area-inset-bottom, 0px)); }
+  .side nav a[aria-current=page] .icon { transform: scale(1.08); }
+}
+
+/* Sheets: dim follows the swipe, smooth spring-ish motion */
+dialog { overscroll-behavior: contain; will-change: transform; }
+dialog::backdrop { opacity: var(--dim, 1); }
+@media (max-width: 640px) { dialog { border-radius: 20px 20px 0 0; } }
+
+/* Pull to refresh */
+.ptr { position: fixed; top: calc(env(safe-area-inset-top, 0px) + 6px); left: 50%; width: 34px; height: 34px; margin-left: 0; border-radius: 50%; display: grid; place-items: center; background: var(--card, #121933); border: 1px solid var(--line-strong); box-shadow: 0 6px 20px rgba(0,0,0,.4); opacity: 0; transform: translate(-50%, -40px); transition: transform .25s cubic-bezier(.2,.85,.25,1), opacity .2s; z-index: 200; pointer-events: none; }
+.ptr i { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--line-strong); border-top-color: var(--orange); }
+.ptr.ready i { border-color: var(--orange); border-top-color: transparent; }
+.ptr.spin i { animation: ptrspin .7s linear infinite; }
+@keyframes ptrspin { to { transform: rotate(360deg); } }
+html:not(.touch) .ptr { display: none; }
+
+/* Offline pill */
+.net-pill { position: fixed; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 8px); transform: translate(-50%, -140%); padding: .3rem .8rem; border-radius: 99px; font-size: .75rem; font-weight: 600; color: #fff; background: rgba(60, 66, 100, .95); border: 1px solid var(--line-strong); z-index: 300; transition: transform .3s cubic-bezier(.2,.85,.25,1); pointer-events: none; }
+.net-pill.on { transform: translate(-50%, 0); }
+
+/* Launch splash */
+#splash { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; background: #04060f; transition: opacity .3s ease; }
+#splash img { width: 96px; height: 96px; border-radius: 22px; animation: splashpop .5s cubic-bezier(.2,.85,.25,1); }
+#splash.out { opacity: 0; pointer-events: none; }
+@keyframes splashpop { from { transform: scale(.85); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { #splash img { animation: none; } }

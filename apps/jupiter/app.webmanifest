@@ -1,11 +1,60 @@
 {
-  "id": "/apps/jupiter/", "name": "Jupiter", "short_name": "Jupiter", "description": "Your own music, in your own pocket.",
-  "start_url": "/apps/jupiter/", "scope": "/apps/jupiter/", "display": "standalone", "background_color": "#121212", "theme_color": "#121212", "categories": ["music", "entertainment"],
-  "icons": [
-    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
-    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  "id": "/apps/jupiter/",
+  "name": "Jupiter",
+  "short_name": "Jupiter",
+  "description": "Your own music, in your own pocket.",
+  "start_url": "/apps/jupiter/",
+  "scope": "/apps/jupiter/",
+  "display": "standalone",
+  "background_color": "#121212",
+  "theme_color": "#121212",
+  "categories": [
+    "music",
+    "entertainment"
   ],
-  "shortcuts": [{ "name": "Downloads", "short_name": "Downloads", "url": "/apps/jupiter/#/downloads", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] }]
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Downloads",
+      "short_name": "Downloads",
+      "url": "/apps/jupiter/#/downloads",
+      "icons": [
+        {
+          "src": "icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ],
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "portrait-primary",
+  "prefer_related_applications": false
 }

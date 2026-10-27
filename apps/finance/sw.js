@@ -1,9 +1,9 @@
 // Caches only Orbit's own app shell (HTML, JS, CSS, icons). /api/ is never cached (sw-core.js), so no balances or transactions ever land in a browser cache.
-self.UNIVERSE_SW = { prefix: 'universe-finance', version: 'v12-d11', shell: [
+self.UNIVERSE_SW = { prefix: 'universe-finance', version: 'v12-d11-n1', shell: [
   '/apps/finance/', '/apps/finance/app.js', '/apps/finance/styles.css', '/apps/finance/lib/api.js', '/apps/finance/lib/fmt.js', '/apps/finance/lib/charts.js', '/apps/finance/lib/forms.js',
   '/apps/finance/views/lock.js', '/apps/finance/views/home.js', '/apps/finance/views/activity.js', '/apps/finance/views/accounts.js', '/apps/finance/views/categories.js',
   '/apps/finance/views/plan.js', '/apps/finance/views/reports.js', '/apps/finance/views/settings.js',
-  '/shared/pdf.js', '/shared/notify.js', '/shared/theme.css', '/shared/icons.js', '/shared/select.js', '/shared/ui.js', '/shared/auth.js', '/shared/account.js', '/shared/pwa.js',
+  '/shared/pdf.js', '/shared/notify.js', '/shared/theme.css', '/shared/icons.js', '/shared/select.js', '/shared/ui.js', '/shared/auth.js', '/shared/account.js', '/shared/pwa.js', '/shared/native.js',
   '/apps/finance/icons/icon-192.png', '/apps/finance/icons/icon.svg',
 ] };
 importScripts('/shared/sw-core.js');
