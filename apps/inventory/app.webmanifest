@@ -6,8 +6,8 @@
   "start_url": "/apps/inventory/",
   "scope": "/apps/inventory/",
   "display": "standalone",
-  "background_color": "#090d1b",
-  "theme_color": "#090d1b",
+  "background_color": "#04060f",
+  "theme_color": "#04060f",
   "categories": [
     "productivity",
     "utilities"

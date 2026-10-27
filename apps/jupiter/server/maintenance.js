@@ -20,7 +20,7 @@ export function makeMaintenance(s, media, lib) {
     const files = await media.list(), keep = new Set();
     const tracks = await lib.cols.tracks.find({ limit: 10000 });
     for (const t of tracks) { t.parts.forEach((_, i) => keep.add(lib.partPath(t.id, i))); if (t.artKey) keep.add(`art/${t.artKey}`); }
-    for (const c of [lib.cols.albums, lib.cols.artists]) for (const d of await c.find({ limit: 10000 })) if (d.artKey) keep.add(`art/${d.artKey}`);
+    for (const c of [lib.cols.albums, lib.cols.artists, lib.cols.playlists]) for (const d of await c.find({ limit: 10000 })) if (d.artKey) keep.add(`art/${d.artKey}`);
     const orphans = files.filter((f) => (f.path.startsWith('tracks/') || f.path.startsWith('art/')) && !keep.has(f.path));
     const missing = [...keep].filter((p) => !files.some((f) => f.path === p));
     return { files: files.length, orphanCount: orphans.length, orphanBytes: orphans.reduce((n, f) => n + f.size, 0), orphans: orphans.slice(0, 50).map((f) => f.path), missingCount: missing.length, missing: missing.slice(0, 50), note: 'Report only. Nothing is deleted automatically.' };

@@ -35,7 +35,7 @@ export function makeLibrary(s, media) {
       artists: artists.map((a) => ({ id: a.id, name: a.name, artKey: a.artKey || null, description: a.description || '' })).sort((x, y) => x.name.localeCompare(y.name)),
     };
   }
-  const publicPlaylist = (p) => ({ id: p.id, name: p.name, description: p.description || '', trackIds: p.trackIds, createdAt: p.createdAt, updatedAt: p.updatedAt });
+  const publicPlaylist = (p) => ({ id: p.id, name: p.name, description: p.description || '', trackIds: p.trackIds, artKey: p.artKey || null, createdAt: p.createdAt, updatedAt: p.updatedAt });
 
   // ---------- tracks ----------
   async function createTrack(user, meta, file, artKey = null, id = newId('trk')) {
@@ -75,7 +75,7 @@ export function makeLibrary(s, media) {
   // ---------- artwork bookkeeping ----------
   async function artInUse(user, artKey, exceptTrackId = null) {
     for (const t of await mine(cols.tracks, user)) if (t.artKey === artKey && t.id !== exceptTrackId) return true;
-    for (const c of [cols.albums, cols.artists]) for (const d of await mine(c, user)) if (d.artKey === artKey) return true;
+    for (const c of [cols.albums, cols.artists, cols.playlists]) for (const d of await mine(c, user)) if (d.artKey === artKey) return true;
     return false;
   }
   async function ownsArt(user, artKey) { return ART_RE.test(artKey) && artInUse(user, artKey); }
@@ -98,6 +98,7 @@ export function makeLibrary(s, media) {
   async function setProfile(user, kind, id, patch) {
     const { removeArt, ...rest } = patch; if (removeArt) rest.artKey = null;
     if (kind === 'artist') return updateArtist(user, id, rest);
+    if (kind === 'playlist') { const p = await ownPlaylist(user, id); return cols.playlists.update(p.id, rest); }
     const known = (await albumsOf(user)).get(id); if (!known) throw notFound('Album not found');
     const cur = await cols.albums.get(id);
     return cur ? cols.albums.update(id, rest) : cols.albums.insert({ id, ownerId: user.id, schemaVersion: 1, title: known.title, albumArtist: known.albumArtist, artKey: null, description: '', ...rest });
@@ -132,7 +133,7 @@ export function makeLibrary(s, media) {
     if (prof) await cols.albums.delete(id);
     return { removed: r.removed, deletedSongs: r.tracks.length, keptSongs: deleteSongs ? 0 : al.tracks.length, artKey: prof?.artKey || null };
   }
-  async function profileArtKey(user, kind, id) { const d = await (kind === 'album' ? cols.albums : cols.artists).get(id); return d && d.ownerId === user.id ? d.artKey || null : null; }
+  async function profileArtKey(user, kind, id) { const d = await (kind === 'album' ? cols.albums : kind === 'playlist' ? cols.playlists : cols.artists).get(id); return d && d.ownerId === user.id ? d.artKey || null : null; }
 
   // ---------- renaming an album or artist = editing the tracks that carry the name ----------
   async function renameAlbum(user, id, { title, albumArtist }) {
@@ -150,9 +151,9 @@ export function makeLibrary(s, media) {
     let n = name, i = 2; while (existing.has(norm(n))) n = `${name} (${i++})`;
     return publicPlaylist(await cols.playlists.insert({ id: newId('pl'), ownerId: user.id, schemaVersion: 1, name: n, description, trackIds: ids }));
   }
-  async function updatePlaylist(user, id, patch) { const p = await ownPlaylist(user, id); return publicPlaylist(await cols.playlists.update(p.id, patch)); }
+  async function updatePlaylist(user, id, patch) { const p = await ownPlaylist(user, id); const { removeArt, ...rest } = patch; if (removeArt) rest.artKey = null; return publicPlaylist(await cols.playlists.update(p.id, rest)); }
   // Deleting a playlist never touches audio: it only removes the list.
-  async function deletePlaylist(user, id) { const p = await ownPlaylist(user, id); await cols.playlists.delete(p.id); return { ok: true, name: p.name, tracksKept: p.trackIds.length }; }
+  async function deletePlaylist(user, id) { const p = await ownPlaylist(user, id); await cols.playlists.delete(p.id); return { ok: true, name: p.name, tracksKept: p.trackIds.length, artKey: p.artKey || null }; }
   async function setPlaylistTracks(user, id, trackIds) {
     const p = await ownPlaylist(user, id);
     const known = new Set((await allTracks(user)).map((t) => t.id));

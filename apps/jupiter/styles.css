@@ -1,5 +1,5 @@
-:root { --bg:#090d1b; --bg2:#0d1226; --card:#111830; --raise:#192142; --hover:#222c55; --line:#1f2850; --line-strong:#2d3868; --mini-h:64px; --nav-h:60px; }
-html, body { background: #090d1b; overscroll-behavior-y: none; }
+:root { --bg:#04060f; --bg2:#070a17; --card:#0b1021; --raise:#121935; --hover:#1b2448; --line:#141b38; --line-strong:#212a52; --mini-h:64px; --nav-h:60px; }
+html, body { background: #04060f; overscroll-behavior-y: none; }
 body::before { content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none; background: radial-gradient(1200px 500px at 50% -10%, rgba(0,173,239,.10), transparent 60%), radial-gradient(900px 500px at 100% 10%, rgba(237,102,39,.08), transparent 60%); }
 #app { min-height: 100vh; min-height: 100dvh; }
 .shell { display: grid; grid-template-columns: minmax(0, 1fr); min-height: 100dvh; max-width: 100vw; }
@@ -77,7 +77,7 @@ h2.sec { font-size: 1.05rem; margin: 1.6rem 0 .6rem; display: flex; align-items:
 /* ---- v1.2: no sideways scroll, sticky search, slim sliders, share card ---- */
 html, body { overflow-x: clip; max-width: 100vw; } .main { min-width: 0; overflow-x: clip; } .chips, .scroller, .top, .hero { max-width: 100%; } .chips { min-width: 0; -webkit-overflow-scrolling: touch; } .top h1 { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .row-t, .row-t .meta, .tile, .qtile, .card, .upcard { min-width: 0; } img, canvas { max-width: 100%; }
-.stick { position: sticky; top: 0; z-index: 25; margin: 0 -1rem .5rem; padding: calc(.45rem + env(safe-area-inset-top, 0px)) 1rem .1rem; background: linear-gradient(var(--bg) 88%, rgba(9,13,27,0)); } .stick .chips { margin-bottom: .6rem; } .stick .searchfield { margin-bottom: .5rem; }
+.stick { position: sticky; top: 0; z-index: 25; margin: 0 -1rem .5rem; padding: calc(.45rem + env(safe-area-inset-top, 0px)) 1rem .1rem; background: linear-gradient(var(--bg) 88%, rgba(4,6,15,0)); } .stick .chips { margin-bottom: .6rem; } .stick .searchfield { margin-bottom: .5rem; }
 input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 24px; min-height: 0; padding: 0; margin: 0; background: none; border: 0; box-shadow: none; border-radius: 0; cursor: pointer; --p: 0%; --c: var(--orange); }
 input[type=range]:focus { outline: none; box-shadow: none; border: 0; } input[type=range]:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 4px rgba(255,255,255,.25); }
 input[type=range]::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: linear-gradient(90deg, var(--c) var(--p), rgba(255,255,255,.2) var(--p)); border: 0; }

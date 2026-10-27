@@ -20,7 +20,7 @@ const api = rawApi;
 if (location.pathname === '/') history.replaceState(null, '', `/dashboard/${location.search}${location.hash}`);
 registerServiceWorker('/dashboard/sw.js', '/dashboard/');
 
-const brand = { name: 'Universe', blurb: 'Your apps and assistant, in one place.', mark: () => h('div', { class: 'mark', 'aria-hidden': 'true' }, 'U') };
+const brand = { name: 'Universe', blurb: 'Your apps and assistant, in one place.', mark: () => h('div', { class: 'mark logo', 'aria-hidden': 'true' }, h('img', { src: '/dashboard/icons/icon.svg', alt: '' })) };
 const signOut = () => { me = null; boot(); };
 
 function shell(page, content) {

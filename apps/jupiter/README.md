@@ -12,6 +12,9 @@ Discovered through `manifest.json` like every app. Auth, roles and permissions a
 Artists are **only created by you** (Artists tab → New artist, or while uploading/editing a song). Uploads never create artists from file tags; a song with no artist is filed under the built-in **Unknown artist**. Songs point to artists by id, so renaming an artist updates every song. Albums are groups made from your songs' album field (no album = "Unknown album").
 Deleting: songs (removes the audio file), playlists (never touches songs), artists and albums. Artist/album deletion keeps the songs by default (they move to Unknown artist / Unknown album); a second, clearly labelled option deletes the audio too (for artists, only songs where they are the sole artist). Everything destructive needs `confirm=true` and a confirmation dialog.
 
+## Playlist cover art (v1.3)
+Playlist ⋯ menu → Change cover art (or Remove cover art). Stored like other artwork (`PUT /playlists/:id/artwork`, `PATCH /playlists/:id {removeArt:true}`). Without a cover, a playlist still shows its first song's art. Covered by tests.
+
 ## Permissions
 `jupiter.library.read|write|delete`, `jupiter.stats.read`, `jupiter.admin.maintain`. Granted to **admin only** on install. `resident` gets nothing by default on purpose: public sign-up gives new accounts the resident role, and uploads cost your GitHub storage. Grant per user or role via the Universe API when you want to.
 

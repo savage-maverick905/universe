@@ -70,10 +70,11 @@ export const artistInput = (body) => { const b = allowKeys(v.object(body), ['nam
 export const UNKNOWN_ARTIST = 'Unknown artist';
 
 export function playlistIn(body, { partial = false } = {}) {
-  const b = allowKeys(v.object(body), ['name', 'description']);
+  const b = allowKeys(v.object(body), partial ? ['name', 'description', 'removeArt'] : ['name', 'description']);
   const out = {};
   if (!partial || 'name' in b) out.name = v.string(b.name, 'name', { min: 1, max: 100 });
   if (!partial || 'description' in b) out.description = text(b.description, 'description', 500);
+  if (partial && 'removeArt' in b) out.removeArt = !!b.removeArt;
   return out;
 }
 export const idList = (x, name, max = LIMITS.playlistTracks) => {

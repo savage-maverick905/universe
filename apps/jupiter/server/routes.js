@@ -53,7 +53,7 @@ export function routes({ router, s, lib, media, uploads, analytics, maintenance 
   async function applyArt(user, kind, id, key) {
     if (kind === 'track') { const old = (await lib.ownTrack(user, id)).artKey; const track = await lib.updateTrack(user, id, { artKey: key }); await dropIfUnused(user, old); return { track }; }
     const old = await lib.profileArtKey(user, kind, id); await lib.setProfile(user, kind, id, { artKey: key }); await dropIfUnused(user, old);
-    return { ok: true, artKey: key };
+    return kind === 'playlist' ? { ok: true, artKey: key, playlist: lib.publicPlaylist(await lib.ownPlaylist(user, id)) } : { ok: true, artKey: key };
   }
   async function dropIfUnused(user, old) { if (old && !(await lib.artInUse(user, old))) await media.commit({ remove: [`art/${old}`], message: 'Jupiter: remove replaced artwork' }).catch(() => {}); }
 
@@ -96,9 +96,9 @@ export function routes({ router, s, lib, media, uploads, analytics, maintenance 
     const del = songsMode(query); if (del) await can(user, 'library.delete');
     return finishRemoval(user, await lib.deleteAlbum(user, params.id, { deleteSongs: del }), ip, 'album', params.id);
   });
-  for (const [kind, plural] of [['track', 'tracks'], ['album', 'albums'], ['artist', 'artists']]) {
+  for (const [kind, plural] of [['track', 'tracks'], ['album', 'albums'], ['artist', 'artists'], ['playlist', 'playlists']]) {
     route('PUT', `/${plural}/:id/artwork`, 'library.write', async ({ user, params, req }) => {
-      if (kind === 'track') await lib.ownTrack(user, params.id); else if (kind === 'album' ? !(await lib.albumsOf(user)).get(params.id) : !(await lib.artistsOf(user)).get(params.id)) throw notFound(`${kind} not found`);
+      if (kind === 'track') await lib.ownTrack(user, params.id); else if (kind === 'playlist') await lib.ownPlaylist(user, params.id); else if (kind === 'album' ? !(await lib.albumsOf(user)).get(params.id) : !(await lib.artistsOf(user)).get(params.id)) throw notFound(`${kind} not found`);
       const key = await uploads.addArtwork(user, req);
       try { return await applyArt(user, kind, params.id, key); } catch (e) { media.commit({ remove: [`art/${key}`], message: 'Jupiter: undo artwork' }).catch(() => {}); throw e; }
     }, { raw: true });
@@ -123,11 +123,16 @@ export function routes({ router, s, lib, media, uploads, analytics, maintenance 
     allowKeys(b, ['name', 'description', 'trackIds']);
     return reply(201, { playlist: await lib.createPlaylist(user, meta, 'trackIds' in b ? idList(b.trackIds, 'trackIds') : []) });
   });
-  route('PATCH', '/playlists/:id', 'library.write', async ({ user, params, body }) => ({ playlist: await lib.updatePlaylist(user, params.id, playlistIn(body, { partial: true })) }));
+  route('PATCH', '/playlists/:id', 'library.write', async ({ user, params, body }) => {
+    const old = (await lib.ownPlaylist(user, params.id)).artKey;
+    const playlist = await lib.updatePlaylist(user, params.id, playlistIn(body, { partial: true }));
+    if (old && old !== playlist.artKey) await dropIfUnused(user, old);
+    return { playlist };
+  });
   // Deleting a playlist deletes only the list. The songs stay in the library.
-  route('DELETE', '/playlists/:id', 'library.write', ({ user, params, query }) => {
+  route('DELETE', '/playlists/:id', 'library.write', async ({ user, params, query }) => {
     if (!bool(query, 'confirm')) throw badRequest('Send confirm=true to delete this playlist. Its songs stay in your library.', 'confirm_required');
-    return lib.deletePlaylist(user, params.id);
+    const r = await lib.deletePlaylist(user, params.id); await dropIfUnused(user, r.artKey); const { artKey, ...out } = r; return out;
   });
   route('PUT', '/playlists/:id/tracks', 'library.write', async ({ user, params, body }) => { allowKeys(v.object(body), ['trackIds']); return { playlist: await lib.setPlaylistTracks(user, params.id, idList(body.trackIds, 'trackIds')) }; });
   route('POST', '/playlists/:id/tracks', 'library.write', async ({ user, params, body }) => { allowKeys(v.object(body), ['trackIds']); return { playlist: await lib.addToPlaylist(user, params.id, idList(body.trackIds, 'trackIds', 500)) }; });

@@ -13,11 +13,11 @@
   --blue-soft: rgba(0, 173, 239, .14);
 
   /* Surfaces, darkest to lightest */
-  --bg: #080d24;
-  --bg2: #0c1332;
-  --card: #121b40;
-  --raise: #1a2556;
-  --hover: #25316b;
+  --bg: #04060f;
+  --bg2: #070a17;
+  --card: #0b1021;
+  --raise: #121935;
+  --hover: #1b2448;
 
   /* Text */
   --text: #F2F2F2;
@@ -25,8 +25,8 @@
   --mute: #707070;
 
   /* Borders and status */
-  --line: #212d62;
-  --line-strong: #303f82;
+  --line: #141b38;
+  --line-strong: #212a52;
   --bad: #E5484D;
   --bad-text: #FF8589;
   --bad-soft: rgba(229, 72, 77, .14);
@@ -404,12 +404,12 @@ details > summary + * { padding-bottom: .8rem; }
 @media (hover: none) { .btn:hover { background: var(--orange); } .btn.ghost:hover { background: var(--raise); border-color: var(--line-strong); } }
 
 /* ===== v1.10: the Jupiter app design across every app ===== */
-body::before { background: radial-gradient(1000px 520px at 50% -12%, rgba(0, 173, 239, .13), transparent 62%), radial-gradient(800px 480px at 100% 6%, rgba(237, 102, 39, .10), transparent 60%), linear-gradient(180deg, #0a1030 0%, #070b1f 70%); }
+body::before { background: radial-gradient(1000px 520px at 50% -12%, rgba(0, 173, 239, .07), transparent 62%), radial-gradient(800px 480px at 100% 6%, rgba(237, 102, 39, .06), transparent 60%), linear-gradient(180deg, #060917 0%, #04060f 70%); }
 .card, .panel { border-radius: 18px; border-color: rgba(120, 140, 230, .14); background: linear-gradient(180deg, rgba(255, 255, 255, .035), rgba(255, 255, 255, 0) 60%), var(--card); }
 .btn { min-height: 2.75rem; border-radius: 14px; font-weight: 600; letter-spacing: .005em; }
 .btn.small { min-height: 2.25rem; border-radius: 12px; }
 .btn.ghost { background: rgba(255, 255, 255, .04); border-color: var(--line-strong); }
-input, textarea { background: rgba(8, 13, 36, .7); border-radius: 14px; border-color: var(--line-strong); }
+input, textarea { background: rgba(3, 5, 12, .75); border-radius: 14px; border-color: var(--line-strong); }
 input, select, textarea { min-height: 2.9rem; }
 input:focus, textarea:focus { border-color: var(--orange); box-shadow: 0 0 0 3px var(--orange-soft); }
 .page-head h1, .wrap > h1, .main > h1 { font-size: 1.75rem; font-weight: 600; letter-spacing: -.02em; }
@@ -423,7 +423,7 @@ section > h2, .sec-title { font-size: 1.1rem; font-weight: 600; }
 details { border-radius: 16px; background: var(--card); }
 
 /* bottom tabs: no top rule, orange icon and label on the current tab, like the Jupiter app */
-.side nav { background: rgba(7, 11, 31, .96); border-top-color: rgba(120, 140, 230, .14); padding-top: .4rem; }
+.side nav { background: rgba(4, 6, 15, .97); border-top-color: rgba(120, 140, 230, .14); padding-top: .4rem; }
 .side nav a { color: #8691c2; gap: .25rem; font-size: .6875rem; padding: .45rem .2rem; }
 .side nav a .icon { width: 1.45rem; height: 1.45rem; transition: transform .2s cubic-bezier(.3, 1.4, .5, 1), color .15s; }
 .side nav a[aria-current=page] { color: var(--orange); }
@@ -449,3 +449,33 @@ html[data-motion=smooth] body.route-in * { animation: none; }
 .searchbar .uni-ctl { width: auto; max-width: 50%; }
 .bcard .uni-chip { min-height: 2rem; padding: .2rem .7rem; font-size: .78rem; }
 .bcard .uni-row { min-height: 2.25rem; padding: .25rem .6rem .25rem .75rem; font-size: .85rem; border-radius: 10px; }
+
+/* ===== v1.11: layout fixes shared by every app ===== */
+html, body { max-width: 100%; overflow-x: clip; }
+/* grid cells may shrink; long numbers wrap instead of pushing the page wider than the screen */
+.stats, .grid3, .two, .filters, .tools, .tiles { min-width: 0; }
+.stats > *, .grid3 > *, .two > *, .filters > *, .tools > *, .tiles > * { min-width: 0; }
+.stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.stat b, .stat2 b { font-size: clamp(1rem, 5vw, 1.35rem); overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.card, .panel { min-width: 0; max-width: 100%; }
+/* filter bars: every choice group is ONE full-width row you can swipe, never a squeezed half-width column */
+.filters, .tools, .stick { align-items: start; }
+.filters > .uni-ctl, .tools > .uni-ctl, .filterpanel .uni-ctl { grid-column: 1 / -1; width: 100%; }
+.filters .uni-chipset:not(.multi), .tools .uni-chipset:not(.multi), .filterpanel .uni-chipset:not(.multi), .searchbar .uni-chipset:not(.multi), .stick .uni-chipset:not(.multi) {
+  flex-wrap: nowrap; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; -webkit-overflow-scrolling: touch; padding: .1rem 0 .35rem; margin: 0 -.1rem;
+}
+.filters .uni-chipset::-webkit-scrollbar, .tools .uni-chipset::-webkit-scrollbar, .filterpanel .uni-chipset::-webkit-scrollbar { display: none; }
+.filters .uni-chip, .tools .uni-chip, .filterpanel .uni-chip { flex: none; white-space: nowrap; min-height: 2.25rem; padding: .3rem .9rem; }
+.filters .uni-row, .tools .uni-row { min-height: 2.6rem; }
+.searchbar .uni-ctl { max-width: 100%; }
+/* collapsible rows inside lists (Orbit categories etc.) are plain rows, not boxed cards */
+details.crow, details.more { border: 0; border-radius: 0; background: none; margin: 0; padding: .45rem 0; box-shadow: none; }
+details.crow[open], details.more[open] { padding-bottom: .45rem; }
+details.crow > summary { padding: 0; font-weight: 400; font-size: inherit; display: block; }
+details.crow > summary::after { display: none; }
+details.more > summary { padding: .5rem 0; }
+.crow-h { min-width: 0; } .crow-h .ca { min-width: 0; white-space: nowrap; }
+.crows, .crow, .cbar { max-width: 100%; }
+.line { display: flex; justify-content: space-between; gap: .6rem; min-width: 0; } .line > * { min-width: 0; overflow-wrap: anywhere; }
+
+.mark.logo { background: none !important; padding: 0; overflow: hidden; } .mark.logo img { width: 100%; height: 100%; display: block; border-radius: inherit; }

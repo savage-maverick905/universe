@@ -512,3 +512,25 @@ test('deleting artists and albums: confirm needed, songs kept by default, shared
     assert.equal((await j.api('GET', '/maintenance/orphans')).json.orphanCount, 0);
   } finally { await j.cleanup(); }
 });
+
+test('playlist cover art: can be set, shows in the library, is private, can be removed and goes away with the playlist', async () => {
+  const j = await setup();
+  try {
+    const a = await j.upload(mp3(40000, 1), { title: 'One' });
+    const pl = (await j.api('POST', '/playlists', { name: 'Covers', trackIds: [a.id] })).json.playlist;
+    assert.equal(pl.artKey, null);
+    const put = await j.bin('PUT', `${B}/playlists/${pl.id}/artwork`, { cookie: j.admin.cookie, body: PNG, headers: {} });
+    assert.equal(put.status, 200);
+    const key = JSON.parse(put.buf.toString()).artKey;
+    assert.match(key, /^art_[a-f0-9]{18}\.(png|jpg|webp)$/);
+    assert.equal((await j.bin('GET', `${B}/art/${key}`, { cookie: j.admin.cookie })).status, 200);
+    const lib = (await j.api('GET', '/library')).json;
+    assert.equal(lib.playlists.find((p) => p.id === pl.id).artKey, key);
+    assert.equal((await j.bin('PUT', `${B}/playlists/pl_nope/artwork`, { cookie: j.admin.cookie, body: PNG, headers: {} })).status, 404);
+    assert.equal((await j.api('PATCH', `/playlists/${pl.id}`, { removeArt: true })).json.playlist.artKey, null);
+    assert.equal((await j.bin('GET', `${B}/art/${key}`, { cookie: j.admin.cookie })).status, 404);
+    const again = await j.bin('PUT', `${B}/playlists/${pl.id}/artwork`, { cookie: j.admin.cookie, body: PNG, headers: {} });
+    assert.equal(again.status, 200);
+    assert.equal((await j.api('DELETE', `/playlists/${pl.id}?confirm=true`)).status, 200);
+  } finally { await j.cleanup(); }
+});
