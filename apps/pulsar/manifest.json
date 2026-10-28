@@ -1,0 +1,19 @@
+{
+  "manifestVersion": 1,
+  "id": "pulsar",
+  "name": "Pulsar",
+  "version": "1.0.0",
+  "description": "A personal workspace for notes, nested pages, a private journal, databases, images and PDF/Markdown/JSON export.",
+  "icon": "file",
+  "entry": "index.html",
+  "permissions": ["pulsar.page.read", "pulsar.page.write", "pulsar.page.delete", "pulsar.stats.read"],
+  "defaultRolePermissions": {
+    "admin": ["pulsar.page.read", "pulsar.page.write", "pulsar.page.delete", "pulsar.stats.read"],
+    "resident": ["pulsar.page.read", "pulsar.page.write", "pulsar.page.delete", "pulsar.stats.read"],
+    "guest": []
+  },
+  "dataResources": ["pulsar_nodes", "pulsar_assets", "pulsar_settings"],
+  "widgets": [
+    { "id": "summary", "title": "Pulsar", "type": "stat", "dataEndpoint": "/api/apps/pulsar/widget/summary", "requiredPermission": "pulsar.stats.read" }
+  ]
+}
