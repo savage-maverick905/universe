@@ -41,7 +41,7 @@ export function register({ router, services: s }) {
     if (['p', 'h1', 'h2', 'h3', 'ul', 'ol', 'todo', 'quote', 'callout', 'code'].includes(b.type)) o.html = sanitizeHtml(str(b.html, 'html', 200000));
     if (b.type === 'todo') o.checked = bool(b.checked);
     if (b.type === 'code') { o.html = str(b.html, 'html', 200000); o.lang = str(b.lang, 'lang', 30); }
-    if (b.type === 'callout') o.icon = str(b.icon, 'icon', 8);
+    if (b.type === 'callout') o.icon = str(b.icon, 'icon', 24);
     if (b.type === 'table') { if (!Array.isArray(b.rows) || b.rows.length > 300) throw badRequest('Invalid table'); o.rows = b.rows.map((r) => { if (!Array.isArray(r) || r.length > 20) throw badRequest('Invalid table row'); return r.map((c) => sanitizeHtml(str(c, 'cell', 20000))); }); o.header = b.header !== false; }
     if (b.type === 'image') { Object.assign(o, img(b)); o.w = int(b.w, 10, 100, 100); o.align = ['left', 'center', 'right'].includes(b.align) ? b.align : 'center'; o.caption = sanitizeHtml(str(b.caption, 'caption', 2000)); }
     if (b.type === 'gallery') { if (!Array.isArray(b.imgs) || b.imgs.length > 12) throw badRequest('Invalid image row'); o.imgs = b.imgs.map(img); o.caption = sanitizeHtml(str(b.caption, 'caption', 2000)); }
@@ -81,7 +81,7 @@ export function register({ router, services: s }) {
     let parentId = b.parentId || null;
     if (parentId) { const p = await own(parentId, user); if (p.trashedAt) throw badRequest('That parent is in the trash'); if (kind === 'entry' && p.kind !== 'database') throw badRequest('Entries must live in a database'); if (p.kind === 'entry') throw badRequest('Entries cannot have sub-pages'); }
     else if (kind === 'entry') throw badRequest('Entries must live in a database');
-    const n = derive({ id: keepId && b.id ? v.anyId(b.id, 'id') : newId('pg'), ownerId: user.id, kind, parentId, dbId: kind === 'entry' ? parentId : null, title: str(b.title ?? 'Untitled', 'title', 200), icon: str(b.icon, 'icon', 8), cover: str(b.cover, 'cover', 600),
+    const n = derive({ id: keepId && b.id ? v.anyId(b.id, 'id') : newId('pg'), ownerId: user.id, kind, parentId, dbId: kind === 'entry' ? parentId : null, title: str(b.title ?? 'Untitled', 'title', 200), icon: str(b.icon, 'icon', 24), cover: str(b.cover, 'cover', 600),
       tags: v.stringArray(b.tags || [], 'tags', { max: 30, itemMax: 40 }), favorite: bool(b.favorite), journalDate: date(b.journalDate), trashedAt: null, trashRoot: null, order: Number.isFinite(b.order) ? b.order : Date.now(),
       blocks: cleanBlocks(b.blocks || []), props: b.props ? cleanValues(b.props) : {}, schema: kind === 'database' ? cleanSchema(b.schema || {}) : null, rev: 1, schemaVersion: 1 });
     if (b.cover && !srcOk(n.cover) && !/^grad:[a-z0-9-]+$/.test(n.cover)) n.cover = '';
@@ -101,14 +101,20 @@ export function register({ router, services: s }) {
     return { nodes: all.filter((n) => !!n.trashedAt === trashed).map((n) => meta(n)).sort((a, b) => (a.order || 0) - (b.order || 0)) };
   });
   router.add('GET', `${P}/nodes/:id`, async ({ user, params }) => { await can(user, 'page.read'); return { node: await own(params.id, user) }; });
-  router.add('POST', `${P}/nodes`, async ({ user, body }) => { await can(user, 'page.write'); allowKeys(v.object(body), ['kind', 'parentId', 'title', 'icon', 'cover', 'tags', 'favorite', 'journalDate', 'blocks', 'props', 'schema', 'order']); return reply(201, { node: await create(user, body) }); }, { bodyLimit: 4 * 1024 * 1024 });
+  router.add('POST', `${P}/nodes`, async ({ user, body }) => { await can(user, 'page.write'); allowKeys(v.object(body), ['id', 'kind', 'parentId', 'title', 'icon', 'cover', 'tags', 'favorite', 'journalDate', 'blocks', 'props', 'schema', 'order']);
+    if (body.id !== undefined) { // a page made offline keeps the id the device gave it, so syncing twice never makes a copy
+      if (!/^pg_[a-z0-9]{6,40}$/.test(String(body.id))) throw badRequest('Invalid id'); const ex = await nodes.get(body.id);
+      if (ex) { if (ex.ownerId !== user.id) throw badRequest('Invalid id'); return { node: ex }; }
+      return reply(201, { node: await create(user, body, { keepId: true }) });
+    }
+    return reply(201, { node: await create(user, body) }); }, { bodyLimit: 4 * 1024 * 1024 });
 
   router.add('PATCH', `${P}/nodes/:id`, async ({ user, params, body }) => {
     await can(user, 'page.write'); const n = await own(params.id, user); if (n.trashedAt) throw conflict('This page is in the trash. Restore it to edit.', 'trashed');
     const b = allowKeys(v.object(body), ['rev', 'title', 'icon', 'cover', 'tags', 'favorite', 'blocks', 'parentId', 'props', 'schema', 'order']);
     if (Number.isInteger(b.rev) && b.rev !== n.rev) return reply(409, { error: { code: 'conflict', message: 'This page was changed somewhere else.' }, node: n });
     const p = {};
-    if ('title' in b) p.title = str(b.title, 'title', 200); if ('icon' in b) p.icon = str(b.icon, 'icon', 8);
+    if ('title' in b) p.title = str(b.title, 'title', 200); if ('icon' in b) p.icon = str(b.icon, 'icon', 24);
     if ('cover' in b) { const c = str(b.cover, 'cover', 600); p.cover = srcOk(c) || /^grad:[a-z0-9-]+$/.test(c) ? c : ''; }
     if ('tags' in b) p.tags = v.stringArray(b.tags, 'tags', { max: 30, itemMax: 40 }); if ('favorite' in b) p.favorite = bool(b.favorite); if ('order' in b && Number.isFinite(b.order)) p.order = b.order;
     if ('blocks' in b) { p.blocks = cleanBlocks(b.blocks); p.plain = blocksPlain(p.blocks); p.links = blockLinks(p.blocks); }
@@ -155,7 +161,7 @@ export function register({ router, services: s }) {
   router.add('POST', `${P}/journal/:date`, async ({ user, params, body }) => { // open the entry for a day, creating it if missing
     await can(user, 'page.write'); const d = date(params.date); if (!d) throw badRequest('Invalid date'); const b = allowKeys(v.object(body || {}), ['title', 'blocks', 'icon']);
     const ex = (await mine(user)).find((n) => n.journalDate === d && !n.trashedAt); if (ex) return { node: ex, created: false };
-    return reply(201, { node: await create(user, { kind: 'page', title: b.title || d, icon: b.icon || '📓', blocks: b.blocks || [], journalDate: d }), created: true });
+    return reply(201, { node: await create(user, { kind: 'page', title: b.title || d, icon: b.icon || 'book', blocks: b.blocks || [], journalDate: d }), created: true });
   });
   router.add('GET', `${P}/nodes/:id/backlinks`, async ({ user, params }) => { await can(user, 'page.read'); await own(params.id, user); return { nodes: (await mine(user)).filter((n) => !n.trashedAt && n.id !== params.id && (n.links || []).includes(params.id)).map((n) => meta(n)) }; });
 
@@ -180,7 +186,7 @@ export function register({ router, services: s }) {
     await can(user, 'page.write'); const b = allowKeys(v.object(body), Object.keys(defaults)), cur = await getSettings(user), p = {};
     if ('theme' in b) p.theme = v.enum(b.theme, 'theme', ['dark', 'light', 'system']); if ('fontSize' in b) p.fontSize = int(b.fontSize, 12, 24, 16); if ('width' in b) p.width = v.enum(b.width, 'width', ['narrow', 'normal', 'wide']);
     if ('defaultTemplate' in b) p.defaultTemplate = str(b.defaultTemplate, 'template', 60); if ('spellcheck' in b) p.spellcheck = bool(b.spellcheck);
-    if ('templates' in b) { if (!Array.isArray(b.templates) || b.templates.length > 30) throw badRequest('Too many templates'); p.templates = b.templates.map((t) => ({ id: v.anyId(t.id, 'template id'), name: str(t.name, 'template name', 80, 1), icon: str(t.icon, 'icon', 8), blocks: cleanBlocks(t.blocks || []) })); }
+    if ('templates' in b) { if (!Array.isArray(b.templates) || b.templates.length > 30) throw badRequest('Too many templates'); p.templates = b.templates.map((t) => ({ id: v.anyId(t.id, 'template id'), name: str(t.name, 'template name', 80, 1), icon: str(t.icon, 'icon', 24), blocks: cleanBlocks(t.blocks || []) })); }
     await sets.upsert({ ...cur, ...p, id: `set_${user.id}`, ownerId: user.id }); const { id, ownerId, ...r } = await getSettings(user); return { settings: r };
   }, { bodyLimit: 2 * 1024 * 1024 });
 
@@ -219,7 +225,7 @@ export function register({ router, services: s }) {
         if (ex && ex.ownerId !== user.id) { res.failed.push({ id: x.id, error: 'id belongs to another account' }); continue; }
         if (ex && mode === 'merge') { res.skipped++; continue; }
         const kind = v.enum(x.kind || 'page', 'kind', KINDS);
-        const n = derive({ id: x.id || newId('pg'), ownerId: user.id, kind, parentId: x.parentId ? v.anyId(x.parentId, 'parentId') : null, dbId: kind === 'entry' ? v.anyId(x.dbId || x.parentId, 'dbId') : null, title: str(x.title ?? 'Untitled', 'title', 200), icon: str(x.icon, 'icon', 8), cover: srcOk(x.cover || '') || /^grad:[a-z0-9-]+$/.test(x.cover || '') ? x.cover || '' : '',
+        const n = derive({ id: x.id || newId('pg'), ownerId: user.id, kind, parentId: x.parentId ? v.anyId(x.parentId, 'parentId') : null, dbId: kind === 'entry' ? v.anyId(x.dbId || x.parentId, 'dbId') : null, title: str(x.title ?? 'Untitled', 'title', 200), icon: str(x.icon, 'icon', 24), cover: srcOk(x.cover || '') || /^grad:[a-z0-9-]+$/.test(x.cover || '') ? x.cover || '' : '',
           tags: v.stringArray(x.tags || [], 'tags', { max: 30, itemMax: 40 }), favorite: bool(x.favorite), journalDate: date(x.journalDate), trashedAt: x.trashedAt ? String(x.trashedAt).slice(0, 40) : null, trashRoot: x.trashRoot ? v.anyId(x.trashRoot, 'trashRoot') : null,
           order: Number.isFinite(x.order) ? x.order : Date.now(), blocks: cleanBlocks(x.blocks || []), props: x.props ? cleanValues(x.props) : {}, schema: kind === 'database' ? cleanSchema(x.schema || {}) : null, rev: 1, schemaVersion: 1 });
         await nodes.upsert(n); res.imported++;

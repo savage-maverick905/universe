@@ -1,6 +1,8 @@
 // Pulsar block editor: every block is its own contenteditable (or a media/table block), so images and tables can sit between
 // any two paragraphs. Blocks are plain JSON; inline formatting is a sanitised HTML subset (see lib/inline.js).
 import { h } from '/shared/ui.js';
+import { icon, hasIcon } from '/shared/icons.js';
+const CALLOUT = ['bulb', 'info', 'star', 'flag', 'flame', 'target', 'check', 'zap'];
 import { sanitizeHtml, htmlToText, listNumbers } from './lib/inline.js';
 
 const TEXT = ['p', 'h1', 'h2', 'h3', 'ul', 'ol', 'todo', 'quote', 'callout', 'code'];
@@ -38,8 +40,8 @@ export function createEditor({ blocks = [], readOnly = false, onChange = () => {
   function mk(b) {
     const w = h('div', { class: `blk b-${b.type}`, 'data-id': b.id, 'data-type': b.type, style: b.indent ? `--ind:${b.indent}` : null });
     const gut = readOnly ? null : h('div', { class: 'gut', contenteditable: 'false' },
-      h('button', { class: 'gb', type: 'button', 'aria-label': 'Add block below', title: 'Add block below', tabindex: '-1', onclick: () => { const nb = addAfter(b.id, { type: 'p', html: '' }); focusBlock(nb.id); setTimeout(() => openSlash(nb.id, ''), 0); } }, '+'),
-      h('button', { class: 'gb grip', type: 'button', draggable: 'true', 'aria-label': 'Block options', title: 'Drag to move, click for options', tabindex: '-1', onclick: (e) => blockMenu(b.id, e.currentTarget), ondragstart: (e) => { e.dataTransfer.setData('application/x-pulsar-block', b.id); e.dataTransfer.effectAllowed = 'move'; w.classList.add('dragging'); }, ondragend: () => { w.classList.remove('dragging'); clearDrop(); } }, '⋮⋮'));
+      h('button', { class: 'gb', type: 'button', 'aria-label': 'Add block below', title: 'Add block below', tabindex: '-1', onclick: () => { const nb = addAfter(b.id, { type: 'p', html: '' }); focusBlock(nb.id); setTimeout(() => openSlash(nb.id, ''), 0); } }, icon('plus', 16)),
+      h('button', { class: 'gb grip', type: 'button', draggable: 'true', 'aria-label': 'Block options', title: 'Drag to move, click for options', tabindex: '-1', onclick: (e) => blockMenu(b.id, e.currentTarget), ondragstart: (e) => { e.dataTransfer.setData('application/x-pulsar-block', b.id); e.dataTransfer.effectAllowed = 'move'; w.classList.add('dragging'); }, ondragend: () => { w.classList.remove('dragging'); clearDrop(); } }, icon('grip', 16)));
     const body = h('div', { class: 'body' });
     if (TEXT.includes(b.type)) {
       const t = h('div', { class: `txt t-${b.type}`, contenteditable: readOnly ? 'false' : (b.type === 'code' ? 'plaintext-only' : 'true'), 'data-ph': PH[b.type], role: 'textbox', 'aria-label': PH[b.type] });
@@ -47,7 +49,7 @@ export function createEditor({ blocks = [], readOnly = false, onChange = () => {
       if (b.type === 'todo') body.append(h('input', { type: 'checkbox', class: 'mk chk', checked: b.checked ? '' : null, disabled: readOnly ? '' : null, 'aria-label': 'Done', onchange: (e) => { b.checked = e.target.checked; w.classList.toggle('done', b.checked); changed(true); } }));
       if (b.type === 'ul') body.append(h('span', { class: 'mk', 'aria-hidden': 'true' }, ['•', '◦', '▪'][(b.indent || 0) % 3]));
       if (b.type === 'ol') body.append(h('span', { class: 'mk', 'aria-hidden': 'true' }, '1.'));
-      if (b.type === 'callout') body.append(h('button', { class: 'mk cicon', type: 'button', 'aria-label': 'Change icon', onclick: () => { const ic = prompt('Callout icon (an emoji or a few characters)', b.icon || '💡'); if (ic !== null) { b.icon = ic.slice(0, 8); e2(b); } } }, b.icon || '💡'));
+      if (b.type === 'callout') body.append(h('button', { class: 'mk cicon', type: 'button', 'aria-label': 'Change icon', onclick: () => { const cur = hasIcon(b.icon) ? b.icon : 'bulb'; b.icon = CALLOUT[(CALLOUT.indexOf(cur) + 1) % CALLOUT.length]; e2(b); } }, icon(hasIcon(b.icon) ? b.icon : 'bulb', 20)));
       if (b.type === 'code') body.append(h('input', { class: 'lang', value: b.lang || '', placeholder: 'language', 'aria-label': 'Code language', maxlength: 30, oninput: (e) => { b.lang = e.target.value; changed(); } }));
       if (b.type === 'todo' && b.checked) w.classList.add('done');
       body.append(t);
@@ -56,8 +58,8 @@ export function createEditor({ blocks = [], readOnly = false, onChange = () => {
     else if (b.type === 'table') body.append(mkTable(b));
     else if (b.type === 'image') body.append(mkImage(b, w));
     else if (b.type === 'gallery') body.append(mkGallery(b));
-    else if (b.type === 'pagelink') body.append(h('a', { class: 'plink', href: `#/p/${b.pageId}` }, h('span', {}, '📄'), h('b', {}, b.title || 'Linked page')));
-    else if (b.type === 'file') body.append(h('a', { class: 'filecard', href: b.src, target: '_blank', rel: 'noopener', download: b.name || '' }, h('span', {}, '📎'), h('b', {}, b.name || 'Attachment'), h('small', {}, b.size ? `${Math.max(1, Math.round(b.size / 1024))} KB` : '')));
+    else if (b.type === 'pagelink') body.append(h('a', { class: 'plink', href: `#/p/${b.pageId}` }, h('span', {}, icon('file', 18)), h('b', {}, b.title || 'Linked page')));
+    else if (b.type === 'file') body.append(h('a', { class: 'filecard', href: b.src, target: '_blank', rel: 'noopener', download: b.name || '' }, h('span', {}, icon('paperclip', 18)), h('b', {}, b.name || 'Attachment'), h('small', {}, b.size ? `${Math.max(1, Math.round(b.size / 1024))} KB` : '')));
     w.append(...(gut ? [gut] : []), body);
     return w;
   }
@@ -99,9 +101,9 @@ export function createEditor({ blocks = [], readOnly = false, onChange = () => {
       frame.append(rs);
       const mkb = (t, fn, label, on) => h('button', { type: 'button', class: `ib${on ? ' on' : ''}`, 'aria-label': label, title: label, onmousedown: (e) => e.preventDefault(), onclick: fn }, t);
       fig.append(frame, h('div', { class: 'imgbar', contenteditable: 'false' }, ...[25, 50, 75, 100].map((p) => mkb(`${p}%`, () => { b.w = p; e2(b); selectBlocks([b.id]); }, `Width ${p}%`, (b.w || 100) === p)),
-        ...[['⇤', 'left'], ['↔', 'center'], ['⇥', 'right']].map(([t, a]) => mkb(t, () => { b.align = a; e2(b); selectBlocks([b.id]); }, `Align ${a}`, (b.align || 'center') === a)),
+        ...[['alignleft', 'left'], ['aligncenter', 'center'], ['alignright', 'right']].map(([t, a]) => mkb(icon(t, 16), () => { b.align = a; e2(b); selectBlocks([b.id]); }, `Align ${a}`, (b.align || 'center') === a)),
         mkb('Alt', async () => { const v = await ask?.('Alt text', 'Describe this image for screen readers and exports.', b.alt || ''); if (v !== null && v !== undefined) { b.alt = v.slice(0, 500); e2(b); } }, 'Edit alt text'), mkb('Replace', () => pickFiles('image/*', false, async ([f]) => { const a = await safeUpload(f); if (a) { b.src = a.src; b.assetId = a.assetId; e2(b); } }), 'Replace image'),
-        mkb('🗑', () => removeBlock(b.id), 'Delete image')), cap(b));
+        mkb(icon('trash', 16), () => removeBlock(b.id), 'Delete image')), cap(b));
     } else fig.append(frame, b.caption ? h('figcaption', { innerHTML: '' }, htmlToText(b.caption)) : null);
     frame.addEventListener('click', () => selectBlocks([b.id]));
     return fig;
@@ -168,15 +170,15 @@ export function createEditor({ blocks = [], readOnly = false, onChange = () => {
   const tb = (label, title, fn, cls = '') => h('button', { type: 'button', class: `tbtn ${cls}`, title, 'aria-label': title, onmousedown: (e) => e.preventDefault(), onclick: fn }, label);
   let btnUndo, btnRedo; const marks = {};
   function buildBar() {
-    btnUndo = tb('↶', 'Undo (Ctrl+Z)', undo); btnRedo = tb('↷', 'Redo (Ctrl+Shift+Z)', redo);
+    btnUndo = tb(icon('undo', 18), 'Undo (Ctrl+Z)', undo); btnRedo = tb(icon('redo', 18), 'Redo (Ctrl+Shift+Z)', redo);
     const mark = (k, label, title, cmd, cls) => (marks[k] = tb(label, title, () => fmt(cmd), cls));
     const turn = h('select', { class: 'tsel', 'aria-label': 'Block type', onchange: (e) => { const id = curBlockId() || selectedId(); if (id && e.target.value) turnInto(id, e.target.value); e.target.value = ''; } }, h('option', { value: '' }, 'Turn into…'), SLASH.slice(0, 9).map(([l, t]) => h('option', { value: t }, l)));
     turn.addEventListener('mousedown', () => { savedRange = sel().rangeCount ? sel().getRangeAt(0).cloneRange() : null; });
     const color = tb('A', 'Text color', (e) => { savedRange = sel().rangeCount && inEl(sel().anchorNode) ? sel().getRangeAt(0).cloneRange() : savedRange; popup(COLORS.map(([label, c]) => ({ label, c })), e.currentTarget.getBoundingClientRect(), { cls: 'colors', onPick: (it) => fmt('foreColor', it.c || '#' + (matchMedia('(prefers-color-scheme: light)').matches ? '111111' : 'f2f2f2')) }); }, 'colorbtn');
-    const link = tb('🔗', 'Link', async () => { savedRange = sel().rangeCount && inEl(sel().anchorNode) ? sel().getRangeAt(0).cloneRange() : savedRange; const cur = savedRange?.startContainer?.parentElement?.closest?.('a')?.getAttribute('href') || ''; const url = await ask?.('Link', 'Web address (https://…), or leave empty to remove the link.', cur); if (url === null || url === undefined) return; if (savedRange) { sel().removeAllRanges(); sel().addRange(savedRange); } if (!url.trim()) fmt('unlink'); else { let u = url.trim(); if (!/^(https?:|mailto:|tel:|#\/)/i.test(u)) u = `https://${u}`; fmt('createLink', u); } });
-    const pg = tb('📄', 'Link to a page', async () => { savedRange = sel().rangeCount && inEl(sel().anchorNode) ? sel().getRangeAt(0).cloneRange() : savedRange; const p = await pickPage?.(); if (!p) return; if (savedRange) { sel().removeAllRanges(); sel().addRange(savedRange); } if (sel().isCollapsed) document.execCommand('insertHTML', false, `<a href="#/p/${p.id}">${p.title.replace(/[<>&]/g, '')}</a>&nbsp;`); else fmt('createLink', `#/p/${p.id}`); const id = curBlockId(); id && wrap(id)?.querySelector('.txt')?.dispatchEvent(new Event('input', { bubbles: true })); });
-    toolbar.replaceChildren(btnUndo, btnRedo, h('span', { class: 'sep' }), mark('b', 'B', 'Bold (Ctrl+B)', 'bold', 'bold'), mark('i', 'I', 'Italic (Ctrl+I)', 'italic', 'ital'), mark('u', 'U', 'Underline (Ctrl+U)', 'underline', 'und'), mark('s', 'S', 'Strikethrough', 'strikeThrough', 'strk'), tb('‹›', 'Inline code', () => { const t = sel().toString(); if (t) { document.execCommand('insertHTML', false, `<code>${t.replace(/[<>&]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]))}</code>`); const id = curBlockId(); id && wrap(id)?.querySelector('.txt')?.dispatchEvent(new Event('input', { bubbles: true })); } }), color, link, pg, h('span', { class: 'sep' }), turn, h('span', { class: 'sep' }),
-      tb('🖼', 'Insert image', () => insertAfterCursor('image')), tb('▦', 'Insert table', () => insertAfterCursor('table')), tb('＋', 'Insert block…', (e) => { const id = curBlockId() || B[B.length - 1].id; popup(SLASH.map(([label, type, hint]) => ({ label, hint, type })), e.currentTarget.getBoundingClientRect(), { cls: 'slash', onPick: (it) => insertType(id, it.type) }); }));
+    const link = tb(icon('link', 18), 'Link', async () => { savedRange = sel().rangeCount && inEl(sel().anchorNode) ? sel().getRangeAt(0).cloneRange() : savedRange; const cur = savedRange?.startContainer?.parentElement?.closest?.('a')?.getAttribute('href') || ''; const url = await ask?.('Link', 'Web address (https://…), or leave empty to remove the link.', cur); if (url === null || url === undefined) return; if (savedRange) { sel().removeAllRanges(); sel().addRange(savedRange); } if (!url.trim()) fmt('unlink'); else { let u = url.trim(); if (!/^(https?:|mailto:|tel:|#\/)/i.test(u)) u = `https://${u}`; fmt('createLink', u); } });
+    const pg = tb(icon('file', 18), 'Link to a page', async () => { savedRange = sel().rangeCount && inEl(sel().anchorNode) ? sel().getRangeAt(0).cloneRange() : savedRange; const p = await pickPage?.(); if (!p) return; if (savedRange) { sel().removeAllRanges(); sel().addRange(savedRange); } if (sel().isCollapsed) document.execCommand('insertHTML', false, `<a href="#/p/${p.id}">${p.title.replace(/[<>&]/g, '')}</a>&nbsp;`); else fmt('createLink', `#/p/${p.id}`); const id = curBlockId(); id && wrap(id)?.querySelector('.txt')?.dispatchEvent(new Event('input', { bubbles: true })); });
+    toolbar.replaceChildren(btnUndo, btnRedo, h('span', { class: 'sep' }), mark('b', 'B', 'Bold (Ctrl+B)', 'bold', 'bold'), mark('i', 'I', 'Italic (Ctrl+I)', 'italic', 'ital'), mark('u', 'U', 'Underline (Ctrl+U)', 'underline', 'und'), mark('s', 'S', 'Strikethrough', 'strikeThrough', 'strk'), tb(icon('code', 18), 'Inline code', () => { const t = sel().toString(); if (t) { document.execCommand('insertHTML', false, `<code>${t.replace(/[<>&]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]))}</code>`); const id = curBlockId(); id && wrap(id)?.querySelector('.txt')?.dispatchEvent(new Event('input', { bubbles: true })); } }), color, link, pg, h('span', { class: 'sep' }), turn, h('span', { class: 'sep' }),
+      tb(icon('image', 18), 'Insert image', () => insertAfterCursor('image')), tb(icon('table', 18), 'Insert table', () => insertAfterCursor('table')), tb(icon('plus', 18), 'Insert block…', (e) => { const id = curBlockId() || B[B.length - 1].id; popup(SLASH.map(([label, type, hint]) => ({ label, hint, type })), e.currentTarget.getBoundingClientRect(), { cls: 'slash', onPick: (it) => insertType(id, it.type) }); }));
     syncBar();
   }
   const insertAfterCursor = (type) => insertType(curBlockId() || selectedId() || B[B.length - 1].id, type);

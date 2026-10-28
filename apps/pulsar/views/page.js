@@ -1,5 +1,5 @@
 // Page / collection views, autosave, uploads.
-import { h, toast, S, B, api, byId, kids, pathOf, iconOf, ago, goto, ask, confirmBox, pickNode, menu, dialog, closer, createNode, loadNodes, coverCss, GRADS, EMOJI, allTemplates, uid, fmtDay, stripBlocks, descendantsOf } from '../lib/state.js';
+import { h, toast, S, B, api, byId, kids, pathOf, iconOf, ago, goto, ask, confirmBox, pickNode, menu, dialog, closer, createNode, loadNodes, coverCss, GRADS, pickIcon, icon, crumb, allTemplates, uid, fmtDay, stripBlocks, descendantsOf } from '../lib/state.js';
 import { createEditor } from '../editor.js';
 import { makeExporter, download, safeName } from '../lib/export.js';
 import { renderDb } from './db.js';
@@ -44,11 +44,12 @@ export async function rawUpload(f, name = f.name) {
 
 export function makeSaver(node, setStatus, onSaved) {
   let rev = node.rev, pending = {}, timer, inflight = false, dead = false; const key = `pulsar:draft:${node.id}`;
+  const onRev = (e) => { if (e.detail.id === node.id) { rev = e.detail.rev; node.rev = rev; } }; window.addEventListener('pulsar:rev', onRev);
   const persist = () => { try { localStorage.setItem(key, JSON.stringify({ baseRev: rev, ts: Date.now(), patch: pending })); } catch { /* storage full or blocked */ } };
   const has = () => Object.keys(pending).length > 0;
   async function flush() {
     clearTimeout(timer); if (dead || inflight || !has()) return; inflight = true; const sent = pending; pending = {}; setStatus('saving');
-    try { const r = await api('PATCH', `/nodes/${node.id}`, { ...sent, rev }); rev = r.node.rev; node.rev = rev; onSaved?.(r.node); if (has()) { persist(); inflight = false; return flush(); } try { localStorage.removeItem(key); } catch { /* ignore */ } setStatus('saved'); }
+    try { const r = await api('PATCH', `/nodes/${node.id}`, { ...sent, rev }); rev = r.node.rev; node.rev = rev; onSaved?.(r.node); if (has()) { persist(); inflight = false; return flush(); } try { localStorage.removeItem(key); } catch { /* ignore */ } setStatus(r.queued ? 'offline' : 'saved'); }
     catch (e) {
       pending = { ...sent, ...pending }; persist();
       if (e.status === 409 && e.code === 'conflict') { setStatus('error', 'Changed elsewhere'); conflict(); }
@@ -61,7 +62,7 @@ export function makeSaver(node, setStatus, onSaved) {
     const d = dialog('This page changed somewhere else', h('p', { class: 'sub' }, 'Another tab or device saved this page after you opened it. Your edits are kept safe on this device. Choose which version to keep.'),
       h('div', { class: 'row actions' }, h('button', { class: 'btn ghost', onclick: () => { pending = {}; try { localStorage.removeItem(key); } catch { /* ignore */ } dead = true; d.close(); location.reload(); } }, 'Load the other version'), h('button', { class: 'btn', onclick: () => { rev = latest.rev; d.close(); flush(); } }, 'Keep my version')));
   }
-  return { set(p) { if (dead) return; Object.assign(pending, p); persist(); setStatus('unsaved'); clearTimeout(timer); timer = setTimeout(flush, 900); }, flush, dirty: () => has() || inflight, stop() { dead = true; clearTimeout(timer); },
+  return { set(p) { if (dead) return; Object.assign(pending, p); persist(); setStatus('unsaved'); clearTimeout(timer); timer = setTimeout(flush, 900); }, flush, dirty: () => has() || inflight, stop() { dead = true; clearTimeout(timer); window.removeEventListener('pulsar:rev', onRev); },
     beacon() { if (!has() || dead) return; const body = JSON.stringify({ ...pending, rev }); if (body.length < 60000) fetch(`${B}/nodes/${node.id}`, { method: 'PATCH', keepalive: true, headers: { 'X-Requested-With': 'universe', 'Content-Type': 'application/json' }, body }).catch(() => {}); },
     recover() { try { const d = JSON.parse(localStorage.getItem(key) || 'null'); if (d && d.baseRev === rev && d.patch && Object.keys(d.patch).length) return d.patch; } catch { /* ignore */ } return null; } };
 }
@@ -87,14 +88,14 @@ function header(node, saver, ctx, { cover = true } = {}) {
   const titleEl = h('h1', { class: 'title', contenteditable: 'plaintext-only', 'data-ph': 'Untitled', role: 'textbox', 'aria-label': 'Page title', spellcheck: 'true' }); titleEl.textContent = node.title === 'Untitled' ? '' : node.title;
   titleEl.addEventListener('input', () => { node.title = titleEl.textContent.replace(/\n/g, ' ').slice(0, 200) || ''; saver.set({ title: node.title || 'Untitled' }); const m = byId(node.id); if (m) { m.title = node.title || 'Untitled'; ctx.sidebarSoon(); } });
   titleEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); ctx.focusBody?.(); } });
-  const iconBtn = h('button', { class: 'pageicon', type: 'button', 'aria-label': 'Change icon', title: 'Change icon', onclick: (e) => menu([...EMOJI.map((em) => ({ label: em, run: () => setIcon(em) })), { sep: true }, { label: 'Remove icon', run: () => setIcon('') }], e.currentTarget) }, iconOf(node));
-  function setIcon(i) { node.icon = i; iconBtn.textContent = iconOf(node); saver.set({ icon: i }); const m = byId(node.id); if (m) m.icon = i; ctx.sidebarSoon(); }
+  const iconBtn = h('button', { class: 'pageicon', type: 'button', 'aria-label': 'Change icon', title: 'Change icon', onclick: async () => { const v = await pickIcon(); if (v !== null) setIcon(v); } }, iconOf(node, 34));
+  function setIcon(i) { node.icon = i; iconBtn.replaceChildren(iconOf(node, 34)); saver.set({ icon: i }); const m = byId(node.id); if (m) m.icon = i; ctx.sidebarSoon(); }
   const coverEl = h('div', { class: 'cover', hidden: node.cover ? null : '' }); const paintCover = () => { coverEl.style.background = coverCss(node.cover); coverEl.hidden = !node.cover; };
   const setCover = (c) => { node.cover = c; saver.set({ cover: c }); paintCover(); };
   const coverMenu = (e) => menu([...Object.keys(GRADS).map((g) => ({ label: `Gradient: ${g}`, run: () => setCover(`grad:${g}`) })), { label: 'Upload image…', run: () => { const i = h('input', { type: 'file', accept: 'image/*', style: 'position:fixed;left:-999px', onchange: async () => { try { const a = await uploadFile(i.files[0]); setCover(a.src); } catch (x) { toast(x.message); } i.remove(); } }); document.body.append(i); i.click(); } }, { sep: true }, { label: 'Remove cover', run: () => setCover('') }], e.currentTarget);
   coverEl.append(h('div', { class: 'cb' }, h('button', { class: 'btn ghost small', type: 'button', onclick: coverMenu }, 'Change cover'))); paintCover();
   const tags = h('div', { class: 'meta' }); const drawTags = () => { const inp = h('input', { class: 'tagadd', placeholder: '+ tag', maxlength: 40, 'aria-label': 'Add tag', onkeydown: (e) => { if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); const t = inp.value.trim().replace(/,/g, ''); if (t && !node.tags.includes(t)) { node.tags = [...node.tags, t]; saver.set({ tags: node.tags }); const m = byId(node.id); if (m) m.tags = node.tags; drawTags(); tags.querySelector('input').focus(); } } } });
-    tags.replaceChildren(...node.tags.map((t) => h('span', { class: 'chip' }, t, h('button', { type: 'button', 'aria-label': `Remove tag ${t}`, onclick: () => { node.tags = node.tags.filter((x) => x !== t); saver.set({ tags: node.tags }); const m = byId(node.id); if (m) m.tags = node.tags; drawTags(); } }, '×'))), inp, h('span', {}, node.journalDate ? '🔒 Private journal entry' : `Edited ${ago(node.updatedAt)}`)); };
+    tags.replaceChildren(...node.tags.map((t) => h('span', { class: 'chip' }, t, h('button', { type: 'button', 'aria-label': `Remove tag ${t}`, onclick: () => { node.tags = node.tags.filter((x) => x !== t); saver.set({ tags: node.tags }); const m = byId(node.id); if (m) m.tags = node.tags; drawTags(); } }, icon('x', 12)))), inp, h('span', { class: 'ni' }, node.journalDate ? [icon('lock', 13), 'Private journal entry'] : `Edited ${ago(node.updatedAt)}`)); };
   drawTags();
   return { coverEl, iconBtn, titleEl, tags, setCover, coverMenu };
 }
@@ -104,8 +105,8 @@ export async function pageView(id, ctx) {
   const saver = makeSaver(node, (s, msg) => ctx.setStatus(s, msg), (n) => { const m = byId(node.id); if (m) Object.assign(m, stripBlocks(n)); node.updatedAt = n.updatedAt; });
   const recov = saver.recover(); if (recov) { Object.assign(node, recov); saver.set(recov); toast('Recovered unsaved changes from this device'); }
   const hd = header(node, saver, ctx); let ed = null; const dispose = [];
-  const crumbs = pathOf(node).map((p) => ({ label: `${iconOf(p)} ${p.title || 'Untitled'}`, href: `#/p/${p.id}` }));
-  ctx.setCrumbs(node.journalDate ? [{ label: '📓 Journal', href: '#/journal' }, { label: node.title || node.journalDate }] : node.kind === 'entry' ? [...crumbs, { label: iconOf(node) + ' ' + (node.title || 'Untitled') }] : [...crumbs, { label: `${iconOf(node)} ${node.title || 'Untitled'}` }]);
+  const crumbs = pathOf(node).map((p) => ({ label: [iconOf(p, 15), p.title || 'Untitled'], href: `#/p/${p.id}` }));
+  ctx.setCrumbs(node.journalDate ? [crumb('book', 'Journal', '#/journal'), { label: node.title || node.journalDate }] : node.kind === 'entry' ? [...crumbs, { label: [iconOf(node, 15), node.title || 'Untitled'] }] : [...crumbs, { label: [iconOf(node, 15), node.title || 'Untitled'] }]);
   const body = h('div');
   const actions = (e) => {
     const m = byId(node.id) || node, items = [{ label: node.favorite ? 'Remove from favorites' : 'Add to favorites', run: async () => { node.favorite = !node.favorite; saver.set({ favorite: node.favorite }); m.favorite = node.favorite; ctx.sidebarSoon(); toast(node.favorite ? 'Added to favorites' : 'Removed from favorites'); } },
@@ -116,7 +117,7 @@ export async function pageView(id, ctx) {
     items.push({ sep: true }, { label: 'Move to trash', danger: true, run: async () => { if (!(await confirmBox('Move to trash?', `“${node.title || 'Untitled'}”${kids(node.id).length ? ' and its sub-pages' : ''} will go to the trash. You can restore it later.`, 'Move to trash', true))) return; await saver.flush(); try { await api('POST', `/nodes/${node.id}/trash`); await loadNodes(); toast('Moved to trash'); goto(node.parentId && byId(node.parentId) ? `#/p/${node.parentId}` : '#/'); ctx.sidebarSoon(); } catch (x) { toast(x.message); } } });
     menu(items, e.currentTarget);
   };
-  ctx.setActions([h('button', { class: 'ib2', type: 'button', title: node.favorite ? 'Unfavorite' : 'Favorite', 'aria-label': 'Toggle favorite', onclick: (e) => { node.favorite = !node.favorite; saver.set({ favorite: node.favorite }); const m = byId(node.id); if (m) m.favorite = node.favorite; e.currentTarget.textContent = node.favorite ? '★' : '☆'; ctx.sidebarSoon(); } }, node.favorite ? '★' : '☆'), h('button', { class: 'ib2', type: 'button', 'aria-label': 'Page options', title: 'Page options', onclick: actions }, '⋯')]);
+  ctx.setActions([h('button', { class: `ib2 fav${node.favorite ? ' on' : ''}`, type: 'button', title: 'Favorite', 'aria-label': 'Toggle favorite', onclick: (e) => { node.favorite = !node.favorite; saver.set({ favorite: node.favorite }); const m = byId(node.id); if (m) m.favorite = node.favorite; e.currentTarget.classList.toggle('on', node.favorite); ctx.sidebarSoon(); } }, icon('star', 19)), h('button', { class: 'ib2', type: 'button', 'aria-label': 'Page options', title: 'Page options', onclick: actions }, icon('more', 20))]);
   const wrap = h('div', { class: 'pagewrap' }, hd.coverEl, h('div', { class: 'content', style: hd.coverEl.hidden ? '' : 'padding-top:0' }, hd.iconBtn, hd.titleEl, hd.tags, body));
   ctx.main(wrap);
   if (node.kind === 'collection') {
@@ -130,7 +131,7 @@ export async function pageView(id, ctx) {
     ed = createEditor({ blocks: node.blocks, onChange: (bl) => { saver.set({ blocks: bl }); }, uploadFile, pickPage: () => pickNode({ title: 'Link to a page' }), openPage: (i) => goto(`#/p/${i}`), notify: (m, err) => toast(m), ask: (t, l, v) => ask(t, l, v) });
     body.append(ed.toolbar, ed.el); ctx.focusBody = () => ed.focusStart();
     if (!node.blocks.length || (node.blocks.length === 1 && !node.blocks[0].html && !node.title)) setTimeout(() => hd.titleEl.focus(), 50); else if (node.title === 'Untitled' && !node.journalDate) setTimeout(() => hd.titleEl.focus(), 50);
-    if (node.journalDate) { const d = new Date(`${node.journalDate}T12:00:00`), add = (n) => { const x = new Date(d); x.setDate(x.getDate() + n); return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`; }; body.prepend(h('div', { class: 'row', style: 'margin-bottom:.6rem' }, h('a', { class: 'btn ghost small', href: `#/journal/${add(-1)}` }, '← Previous day'), h('span', { class: 'sub', style: 'margin:0' }, fmtDay(node.journalDate)), h('a', { class: 'btn ghost small', href: `#/journal/${add(1)}` }, 'Next day →'))); }
+    if (node.journalDate) { const d = new Date(`${node.journalDate}T12:00:00`), add = (n) => { const x = new Date(d); x.setDate(x.getDate() + n); return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`; }; body.prepend(h('div', { class: 'row', style: 'margin-bottom:.6rem' }, h('a', { class: 'btn ghost small', href: `#/journal/${add(-1)}` }, icon('chevleft', 15), 'Previous day'), h('span', { class: 'sub', style: 'margin:0' }, fmtDay(node.journalDate)), h('a', { class: 'btn ghost small', href: `#/journal/${add(1)}` }, 'Next day', icon('chevright', 15)))); }
     const ch = kids(node.id); if (ch.length) body.append(h('div', { class: 'h2s' }, 'Sub-pages'), h('div', { class: 'grid' }, ch.map((c) => h('a', { class: 'card2', href: `#/p/${c.id}` }, h('span', { class: 'ic' }, iconOf(c)), h('b', {}, c.title || 'Untitled')))));
     if (node.kind === 'page' && !node.journalDate) body.append(h('div', { class: 'row', style: 'margin-top:1rem' }, h('button', { class: 'btn ghost small', onclick: async () => { await saver.flush(); const n = await createNode({ parentId: node.id }); ctx.sidebarSoon(); goto(`#/p/${n.id}`); } }, '+ Add sub-page')));
     api('GET', `/nodes/${node.id}/backlinks`).then((r) => { if (r.nodes.length) body.append(h('div', { class: 'h2s' }, `Linked from (${r.nodes.length})`), h('div', { class: 'grid' }, r.nodes.map((c) => h('a', { class: 'card2', href: `#/p/${c.id}` }, h('span', { class: 'ic' }, iconOf(c)), h('b', {}, c.title || 'Untitled'))))); }).catch(() => {});
