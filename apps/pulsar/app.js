@@ -26,7 +26,7 @@ function applySettings() {
 
 // ---- shell ----
 let cleanup = null, treeSoon, expanded = new Set(JSON.parse(localStorage.getItem('pulsar:open') || '[]'));
-const shell = { side: h('aside', { class: 'side', 'aria-label': 'Navigation' }), crumbs: h('div', { class: 'crumbs' }), actions: h('div', { class: 'row', style: 'gap:0' }), status: h('span', { class: 'status', role: 'status' }), main: h('main', { class: 'main-body', style: 'flex:1' }) };
+const shell = { side: h('aside', { class: 'psb', 'aria-label': 'Navigation' }), crumbs: h('div', { class: 'crumbs' }), actions: h('div', { class: 'row', style: 'gap:0' }), status: h('span', { class: 'status', role: 'status' }), main: h('main', { class: 'main-body', style: 'flex:1' }) };
 const ctx = {
   main: (el) => { shell.main.replaceChildren(el); applySettings(); window.scrollTo(0, 0); },
   setCrumbs: (cs) => shell.crumbs.replaceChildren(...cs.flatMap((c, i) => [i ? h('span', {}, '/') : null, c.href ? h('a', { href: c.href }, c.label) : h('b', {}, c.label)])),
@@ -41,8 +41,8 @@ function drawSide() {
       n.kind !== 'database' ? h('button', { class: 'add', type: 'button', 'aria-label': `Add page inside ${n.title || 'Untitled'}`, title: 'Add a page inside', onclick: async () => { expanded.add(n.id); const p = await createNode({ parentId: n.id }); goto(`#/p/${p.id}`); drawSide(); } }, '+') : null);
     return [r, ...(isOpen ? ch.map((c) => row(c, lv + 1)).flat() : [])]; };
   const favs = S.nodes.filter((n) => n.favorite && !n.trashedAt), hash = location.hash || '#/'; const nav = (href, label, ic) => h('a', { href, 'aria-current': hash === href || (href !== '#/' && hash.startsWith(href)) ? 'page' : null, onclick: () => document.body.classList.remove('nav-open') }, h('span', {}, ic), label);
-  shell.side.replaceChildren(h('a', { class: 'brand', href: '#/' }, h('i', {}, '◉'), 'Pulsar'),
-    h('div', { class: 'scroll' }, h('nav', { class: 'nav' }, h('button', { type: 'button', onclick: () => { document.body.classList.remove('nav-open'); quickSwitcher(); } }, h('span', {}, '🔍'), 'Quick search', h('small', { style: 'margin-left:auto;color:var(--mute)' }, 'Ctrl K')), nav('#/', 'Home', '🏠'), nav('#/journal', 'Journal', '📓'), nav('#/search', 'Search', '🔎'), nav('#/export', 'Export & backup', '⬇'), nav('#/trash', 'Trash', '🗑'), nav('#/settings', 'Settings', '⚙')),
+  shell.side.replaceChildren(h('a', { class: 'pbrand', href: '#/' }, h('i', {}, '◉'), 'Pulsar'),
+    h('div', { class: 'scroll' }, h('div', { class: 'nav', role: 'navigation', 'aria-label': 'Main' }, h('button', { type: 'button', onclick: () => { document.body.classList.remove('nav-open'); quickSwitcher(); } }, h('span', {}, '🔍'), 'Quick search', h('small', { style: 'margin-left:auto;color:var(--mute)' }, 'Ctrl K')), nav('#/', 'Home', '🏠'), nav('#/journal', 'Journal', '📓'), nav('#/search', 'Search', '🔎'), nav('#/export', 'Export & backup', '⬇'), nav('#/trash', 'Trash', '🗑'), nav('#/settings', 'Settings', '⚙')),
       favs.length ? [h('div', { class: 'sec' }, 'Favorites'), ...favs.map((n) => h('a', { class: `trow${cur === n.id ? ' cur' : ''}`, href: `#/p/${n.id}`, style: 'text-decoration:none', onclick: () => document.body.classList.remove('nav-open') }, h('span', {}, iconOf(n)), h('span', { class: 'tt' }, n.title || 'Untitled')))] : null,
       h('div', { class: 'sec' }, 'Workspace', h('span', {}, h('button', { class: 'ib2', style: 'min-width:30px;min-height:30px', type: 'button', 'aria-label': 'New page or collection', onclick: (e) => menu([{ label: 'New page…', run: () => newPage(null) }, { label: 'New collection', run: async () => { const n = await createNode({ kind: 'collection', title: 'Untitled' }); goto(`#/p/${n.id}`); drawSide(); } }, { label: 'New database', run: async () => { const n = await createNode({ kind: 'database', title: 'Untitled' }); goto(`#/p/${n.id}`); drawSide(); } }], e.currentTarget) }, '+'))),
       ...(kids(null).length ? kids(null).flatMap((n) => row(n, 0)) : [h('p', { class: 'sub', style: 'padding:.4rem .6rem' }, 'No pages yet. Use + to create one.')])));
@@ -51,7 +51,7 @@ window.addEventListener('pulsar:tree', () => drawSide());
 window.addEventListener('pulsar:retry', () => route());
 
 function frame() {
-  root.replaceChildren(shell.side, h('div', { class: 'scrim', onclick: () => document.body.classList.remove('nav-open') }), h('div', { class: 'main', style: 'flex:1;min-width:0;display:flex;flex-direction:column' }, h('header', { class: 'top' }, h('button', { class: 'ib2 hamb', type: 'button', 'aria-label': 'Open menu', onclick: () => document.body.classList.toggle('nav-open') }, '☰'), shell.crumbs, shell.status, shell.actions), shell.main));
+  root.replaceChildren(shell.side, h('div', { class: 'scrim', onclick: () => document.body.classList.remove('nav-open') }), h('div', { class: 'pmain', style: 'flex:1;min-width:0;display:flex;flex-direction:column' }, h('header', { class: 'top' }, h('button', { class: 'ib2 hamb', type: 'button', 'aria-label': 'Open menu', onclick: () => document.body.classList.toggle('nav-open') }, '☰'), shell.crumbs, shell.status, shell.actions), shell.main));
 }
 async function route() {
   if (!S.me || !S.meta) return; if (cleanup) { const c = cleanup; cleanup = null; try { await c(); } catch { /* ignore */ } }
