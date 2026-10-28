@@ -228,7 +228,11 @@ function artistRows(q = []) {
       !a.virtual && S.meta.can.write ? h('button', { class: 'iconbtn', 'aria-label': 'Artist options', onclick: (e) => { e.stopPropagation(); artistMenu(a); } }, icon('more')) : null)));
 }
 function artistsView() { frame('artists', h('div', { class: 'top' }, h('h1', {}, 'Artists')), artistRows()); }
-function pickPlaylistArt(p) { const f = h('input', { type: 'file', accept: 'image/*', style: 'display:none' }); f.addEventListener('change', async () => { if (!f.files[0]) return; try { toast('Uploading cover…'); await putArt('playlist', p.id, f.files[0]); await loadLibrary(); toast('Cover updated'); route(); } catch (x) { toast(x.message); } f.remove(); }); document.body.append(f); f.click(); }
+function pickPlaylistArt(p) {
+  const finish = async (file) => { try { toast('Uploading cover…'); await putArt('playlist', p.id, file); await loadLibrary(); toast('Cover updated'); route(); } catch (x) { toast(x.message); } };
+  const f = h('input', { type: 'file', accept: 'image/*', style: 'display:none' }); f.addEventListener('change', async () => { if (f.files[0]) await finish(f.files[0]); f.remove(); }); document.body.append(f);
+  const d = dialog('Playlist cover', h('div', { class: 'actions' }, h('button', { class: 'btn', type: 'button', onclick: () => { d.close(); f.click(); } }, 'From this device'), h('button', { class: 'btn', type: 'button', onclick: () => { d.close(); f.remove(); webArtDialog(p.name, finish); } }, 'Find online'), closer()));
+}
 function playlistMenu(p) { menu(p.name, plural(p.trackIds.length, 'song'), [['pencil', 'Rename', () => renamePlaylist(p)], ['disc', 'Change cover art', () => pickPlaylistArt(p)], p.artKey && ['x', 'Remove cover art', async () => { try { await api('PATCH', `/playlists/${p.id}`, { removeArt: true }); await loadLibrary(); route(); } catch (x) { toast(x.message); } }], p.trackIds.length && ['x', 'Clear all songs from playlist…', () => confirmPlaylist(p, 'clear'), 'danger'], ['trash', 'Delete playlist…', () => confirmPlaylist(p, 'delete'), 'danger']]); }
 function artistMenu(a) { menu(a.name, plural(a.tracks.length, 'song'), [['pencil', 'Edit artist', () => editArtist(a)], ['trash', 'Delete artist…', () => confirmDeleteArtist(a), 'danger']]); }
 
@@ -282,12 +286,36 @@ function confirmDeleteAlbum(a) {
 }
 
 // ---------------- editing ----------------
-const artPicker = () => h('input', { type: 'file', accept: 'image/jpeg,image/png,image/webp' });
+// Online covers: search by name, paste an image/page link, or open a web search and paste what you found. The server fetches it.
+const webImg = (url) => `${B}/web-art/image?url=${encodeURIComponent(url)}`;
+async function webBlob(url) { const r = await fetch(webImg(url), { headers: { 'X-Requested-With': 'universe' } }); if (!r.ok) { const j = await r.json().catch(() => null); throw new Error(j?.error?.message || 'Could not get that image.'); } return r.blob(); }
+function webArtDialog(hint, onPick) {
+  const q = h('input', { type: 'search', value: hint || '', placeholder: 'Song, album or artist', 'aria-label': 'Search for cover art' }), grid = h('div', { class: 'webart-grid' }), msg = h('p', { class: 'sub' }, 'Search finds album covers. For anything else, paste a link below.');
+  const link = h('input', { type: 'url', placeholder: 'Paste an image link or a web page link', 'aria-label': 'Image link' });
+  let d; const done = (blob) => { d.close(); onPick(blob); };
+  const use = async (url, btn) => { try { msg.textContent = 'Getting the image…'; if (btn) btn.disabled = true; done(await webBlob(url)); } catch (x) { msg.textContent = x.message; if (btn) btn.disabled = false; } };
+  const search = async () => { const term = q.value.trim(); if (term.length < 2) { msg.textContent = 'Type at least 2 letters.'; return; } grid.replaceChildren(); msg.textContent = 'Searching…';
+    try { const r = await api('GET', `/web-art/search?q=${encodeURIComponent(term)}`); msg.textContent = r.results.length ? 'Tap a cover to use it.' : 'Nothing found. Try fewer words, or paste a link below.';
+      grid.replaceChildren(...r.results.map((x) => { const b = h('button', { type: 'button', class: 'webart-item', title: `${x.title} · ${x.artist}`, onclick: () => use(x.full, b) }, h('img', { src: webImg(x.thumb), alt: x.title, loading: 'lazy' }), h('small', {}, x.title)); return b; })); } catch (x) { msg.textContent = x.message; } };
+  const browse = () => { window.open(`https://www.google.com/search?tbm=isch&q=${encodeURIComponent(q.value.trim() || hint || 'album cover')}`, '_blank', 'noopener'); msg.textContent = 'Found one? Long-press the picture, choose “Copy image address” (or copy the page link), then come back here.'; };
+  const peek = async () => { if (document.visibilityState !== 'visible') return; try { const t = (await navigator.clipboard.readText()).trim(); if (/^https:\/\/\S+$/.test(t) && !link.value) { link.value = t; msg.textContent = 'Link pasted from your clipboard. Tap “Use link”.'; } } catch { /* clipboard access is optional */ } };
+  document.addEventListener('visibilitychange', peek);
+  q.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); search(); } }); link.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); if (link.value.trim()) use(link.value.trim()); } });
+  d = dialog('Find cover art online', h('label', {}, 'Search'), q, h('div', { class: 'actions' }, h('button', { class: 'btn', type: 'button', onclick: search }, 'Search'), h('button', { class: 'btn ghost', type: 'button', onclick: browse }, 'Browse the web')), msg, grid,
+    h('label', {}, 'Or paste a link'), link, h('div', { class: 'actions' }, h('button', { class: 'btn', type: 'button', onclick: (e) => link.value.trim() ? use(link.value.trim(), e.currentTarget) : (msg.textContent = 'Paste a link first.') }, 'Use link'), closer()));
+  d.addEventListener('close', () => document.removeEventListener('visibilitychange', peek)); if (hint) search();
+}
+const artPicker = (hint = '') => {
+  const input = h('input', { type: 'file', accept: 'image/jpeg,image/png,image/webp' }), note = h('small', { class: 'sub' }); let web = null;
+  const box = h('div', { class: 'artpick' }, input, h('button', { class: 'btn ghost', type: 'button', onclick: () => webArtDialog(hint, (b) => { web = b; input.value = ''; note.textContent = 'Online image chosen. It saves when you tap Save.'; }) }, 'Find online'), note);
+  input.addEventListener('change', () => { web = null; note.textContent = ''; });
+  Object.defineProperty(box, 'files', { get: () => (web ? [web] : input.files) }); return box;
+};
 async function putArt(kind, id, file) { const small = (await shrinkImage(file)) || file; if (small.size > 2 * 1024 * 1024) throw new Error('That image is too large (2 MB max).'); return sendBytes(`/${kind}s/${id}/artwork`, small); }
 function editTrack(t) {
   const f = (k, label, props = {}) => [h('label', {}, label), h('input', { value: t[k] ?? '', ...props })];
   const title = f('title', 'Title', { maxlength: 200 }), album = f('album', 'Album'), aa = f('albumArtist', 'Album artist (optional)'), genre = f('genre', 'Genre'), tn = f('trackNo', 'Track no.', { type: 'number', min: 1 }), dn = f('discNo', 'Disc no.', { type: 'number', min: 1 }), yr = f('year', 'Year', { type: 'number' }), rd = f('releaseDate', 'Release date', { placeholder: '2024-05-31' });
-  const tags = [h('label', {}, 'Custom tags (comma separated)'), h('input', { value: t.tags.join(', ') })], desc = [h('label', {}, 'Description'), h('textarea', { rows: 3, maxlength: 2000 }, t.description || '')], art = artPicker(), err = h('p', { class: 'err', role: 'alert' }), pick = artistPicker(t.artistIds);
+  const tags = [h('label', {}, 'Custom tags (comma separated)'), h('input', { value: t.tags.join(', ') })], desc = [h('label', {}, 'Description'), h('textarea', { rows: 3, maxlength: 2000 }, t.description || '')], art = artPicker(`${t.artists?.[0] || ''} ${t.album || t.title || ''}`.trim()), err = h('p', { class: 'err', role: 'alert' }), pick = artistPicker(t.artistIds);
   const csv = (s) => s.split(',').map((x) => x.trim()).filter(Boolean), n = (el) => (el.value === '' ? null : Number(el.value));
   const d = dialog('Edit song', ...title, h('label', {}, 'Artists'), pick.el, h('div', { class: 'field-row' }, h('div', {}, ...album), h('div', {}, ...aa)), h('div', { class: 'field-row' }, h('div', {}, ...genre), h('div', {}, ...yr)), h('div', { class: 'field-row' }, h('div', {}, ...tn), h('div', {}, ...dn)), ...rd, ...tags, ...desc,
     h('label', {}, 'Replace cover art'), art, err, h('div', { class: 'actions' }, h('button', { class: 'btn', onclick: async (e) => { e.currentTarget.disabled = true; try {
@@ -296,12 +324,12 @@ function editTrack(t) {
       t.artKey ? h('button', { class: 'btn ghost', onclick: async () => { try { await api('PATCH', `/tracks/${t.id}`, { removeArt: true }); d.close(); await loadLibrary(); route(); } catch (x) { err.textContent = x.message; } } }, 'Remove art') : null, closer()));
 }
 function editArtist(a) {
-  const name = h('input', { value: a.name, maxlength: 200 }), desc = h('textarea', { rows: 4, maxlength: 2000 }, a.description || ''), art = artPicker(), err = h('p', { class: 'err', role: 'alert' });
+  const name = h('input', { value: a.name, maxlength: 200 }), desc = h('textarea', { rows: 4, maxlength: 2000 }, a.description || ''), art = artPicker(a.name), err = h('p', { class: 'err', role: 'alert' });
   const d = dialog('Edit artist', h('label', {}, 'Name'), name, h('label', {}, 'About'), desc, h('label', {}, 'Picture'), art, err, h('div', { class: 'actions' }, h('button', { class: 'btn', onclick: async () => { try { await api('PATCH', `/artists/${a.id}`, { name: name.value, description: desc.value }); if (art.files[0]) await putArt('artist', a.id, art.files[0]); d.close(); await loadLibrary(); toast('Saved'); route(); } catch (x) { err.textContent = x.message; } } }, 'Save'),
     S.artistArt.get(a.id) ? h('button', { class: 'btn ghost', onclick: async () => { try { await api('PATCH', `/artists/${a.id}`, { removeArt: true }); d.close(); await loadLibrary(); route(); } catch (x) { err.textContent = x.message; } } }, 'Remove picture') : null, closer()));
 }
 function editAlbum(a, prof) {
-  const title = h('input', { value: a.title }), desc = h('textarea', { rows: 4, maxlength: 2000 }, prof?.description || ''), art = artPicker(), err = h('p', { class: 'err', role: 'alert' });
+  const title = h('input', { value: a.title }), desc = h('textarea', { rows: 4, maxlength: 2000 }, prof?.description || ''), art = artPicker(a.title), err = h('p', { class: 'err', role: 'alert' });
   const d = dialog('Edit album', h('label', {}, 'Album title (renames it on all its songs)'), title, h('label', {}, 'Description'), desc, h('label', {}, 'Cover picture'), art, err, h('div', { class: 'actions' }, h('button', { class: 'btn', onclick: async () => { try {
     const renamed = title.value.trim() && title.value.trim() !== a.title; let id = a.id;
     await api('PATCH', `/albums/${id}`, { description: desc.value }); if (art.files[0]) await putArt('album', id, art.files[0]); if (renamed) await api('POST', `/albums/${id}/rename`, { title: title.value.trim() });

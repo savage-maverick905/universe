@@ -7,6 +7,7 @@ import { reply } from '../../../http/http.js';
 import { LIMITS, ART_RE, artistInput, idList, playlistIn, profileIn, trackMetaIn } from './schema.js';
 import { streamAudio, streamArt } from './stream.js';
 import { PART_SIZE } from './library.js';
+import { fetchImage, searchArt } from './webart.js';
 
 export const P = '/api/apps/jupiter';
 const bool = (q, k) => q.get(k) === 'true';
@@ -96,6 +97,13 @@ export function routes({ router, s, lib, media, uploads, analytics, maintenance 
     const del = songsMode(query); if (del) await can(user, 'library.delete');
     return finishRemoval(user, await lib.deleteAlbum(user, params.id, { deleteSongs: del }), ip, 'album', params.id);
   });
+  // ---- online artwork (search + fetch a link through the server) ----
+  route('GET', '/web-art/search', 'library.write', async ({ query }) => searchArt(query.get('q')));
+  route('GET', '/web-art/image', 'library.write', async ({ query, res }) => {
+    const { buf, mime } = await fetchImage(query.get('url'));
+    res.statusCode = 200; res.setHeader('Content-Type', mime); res.setHeader('Content-Length', buf.length); res.setHeader('Cache-Control', 'private, max-age=600'); res.setHeader('X-Content-Type-Options', 'nosniff'); res.end(buf);
+    return { __handled: true };
+  }, { raw: true });
   for (const [kind, plural] of [['track', 'tracks'], ['album', 'albums'], ['artist', 'artists'], ['playlist', 'playlists']]) {
     route('PUT', `/${plural}/:id/artwork`, 'library.write', async ({ user, params, req }) => {
       if (kind === 'track') await lib.ownTrack(user, params.id); else if (kind === 'playlist') await lib.ownPlaylist(user, params.id); else if (kind === 'album' ? !(await lib.albumsOf(user)).get(params.id) : !(await lib.artistsOf(user)).get(params.id)) throw notFound(`${kind} not found`);
