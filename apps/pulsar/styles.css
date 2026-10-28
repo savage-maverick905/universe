@@ -158,3 +158,26 @@ h1.pt{font-size:1.8rem;letter-spacing:-.02em;margin-bottom:.4rem}
 .dbt{border-radius:14px}
 .lock h2.ni{justify-content:center}
 .okc,.warn{display:flex;gap:.4rem}
+
+/* ---- Compact database + property controls, no sideways scrolling ---- */
+.props .uni-ctl,.dbt .uni-ctl,.bcard .uni-ctl{width:auto;max-width:100%}
+.props .uni-row,.dbt .uni-row,.bcard .uni-row{width:auto;min-height:2.1rem;padding:.25rem .6rem .25rem .8rem;font-size:.88rem;border-radius:999px;gap:.4rem}
+.props .uni-row .uni-text,.dbt .uni-row .uni-text,.bcard .uni-row .uni-text{white-space:normal;overflow-wrap:anywhere}
+.props .row,.dbt td>div{display:flex;flex-wrap:wrap;gap:.35rem;align-items:center}
+.board{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:.7rem;overflow:visible;align-items:start}
+.col{flex:none;min-width:0}
+.bcard{min-width:0}.bcard a,.bcard small{overflow-wrap:anywhere}
+@media (max-width:640px){
+  .props{grid-template-columns:1fr;gap:.15rem}.props>label{margin-top:.5rem}
+  .board{grid-template-columns:1fr}
+  .dbt{overflow:visible;border:0;border-radius:0}
+  .dbt table,.dbt thead,.dbt tbody,.dbt tr,.dbt td{display:block;width:100%;min-width:0}
+  .dbt thead tr{display:flex;flex-wrap:wrap;gap:.35rem;margin-bottom:.5rem}
+  .dbt thead th{display:inline-block;width:auto;min-width:0;border:1px solid var(--line);border-radius:999px;padding:.25rem .7rem}
+  .dbt tbody tr{border:1px solid var(--line);border-radius:14px;background:var(--card);margin:.6rem 0;padding:.5rem .7rem;position:relative}
+  .dbt td{border:0;padding:.3rem 0;min-width:0}
+  .dbt td.nm{padding-right:2.4rem;font-size:1rem}
+  .dbt td[data-label]::before{content:attr(data-label);display:block;font-size:.72rem;color:var(--dim);margin-bottom:.15rem}
+  .dbt td:last-child{position:absolute;top:.35rem;right:.4rem;width:auto;padding:0}
+  .dbt td input:not([type=checkbox]){width:100%;border:1px solid var(--line);border-radius:10px;padding:.3rem .6rem;background:var(--bg2)}
+}
