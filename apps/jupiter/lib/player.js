@@ -7,7 +7,7 @@ const KEY = 'jupiter.player', EVKEY = 'jupiter.events', uid = () => `${Date.now(
 const audio = new Audio(); audio.preload = 'auto'; audio.crossOrigin = 'use-credentials';
 const ls = { get(k, d) { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* full or private mode */ } } };
 
-export const P = { queue: [], index: -1, shuffle: false, repeat: 'off', volume: 1, src: 'library', tracks: new Map(), listeners: new Set(), offlineIds: new Set(), onError: () => {}, getArt: () => null };
+export const P = { queue: [], index: -1, shuffle: false, repeat: 'off', volume: 1, src: 'library', tracks: new Map(), listeners: new Set(), offlineIds: new Set(), onError: () => {}, onQueueEnd: null, getArt: () => null };
 const emit = () => { P.listeners.forEach((f) => f()); };
 export const on = (f) => { P.listeners.add(f); return () => P.listeners.delete(f); };
 export const current = () => P.tracks.get(P.queue[P.index]) || null;
@@ -102,6 +102,7 @@ export function next(auto = false) {
   if (auto && P.repeat === 'one') { closeSession('complete'); return load(current()); }
   if (at < order.length - 1) { closeSession(auto ? 'complete' : 'skip'); P.index = order[at + 1]; persist(); return load(current()); }
   if (P.repeat === 'all') { closeSession(auto ? 'complete' : 'skip'); buildOrder(); P.index = order[0]; persist(); return load(current()); }
+  if (auto && P.onQueueEnd && P.repeat === 'off') { const more = P.onQueueEnd(current()); if (more?.length) { closeSession('complete'); enqueue(more, 'append'); const nat = posInOrder(); if (nat < order.length - 1) { P.index = order[nat + 1]; persist(); return load(current()); } } }
   if (auto) { closeSession('complete'); audio.pause(); audio.currentTime = 0; emit(); }
 }
 export function prev() { if (P.index < 0) return; if (audio.currentTime > 3) { audio.currentTime = 0; return; } const at = posInOrder(); if (at > 0) { closeSession('skip'); P.index = order[at - 1]; persist(); return load(current()); } audio.currentTime = 0; }

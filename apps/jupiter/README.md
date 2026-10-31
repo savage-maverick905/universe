@@ -15,6 +15,12 @@ Deleting: songs (removes the audio file), playlists (never touches songs), artis
 ## Playlist cover art (v1.3)
 Playlist ⋯ menu → Change cover art (or Remove cover art). Stored like other artwork (`PUT /playlists/:id/artwork`, `PATCH /playlists/:id {removeArt:true}`). Without a cover, a playlist still shows its first song's art. Covered by tests.
 
+## Smarter Jupiter (v1.4)
+A small taste engine (`lib/smart.js`, no external service) learns from likes, full plays, skips, listening time and recency.
+- **Home mixes**: For You, Rediscover, Hidden Gems, On Repeat, More <your top artists>, plus mood mixes (Chill, Workout, Focus, Happy, Sad) built from your own genres and tags. Stable per day, with artist spreading so one artist never takes over.
+- **Smart autoplay**: when the queue ends (repeat off), Jupiter keeps going with similar songs. Turn off with `localStorage['jupiter.autoplay']='off'`.
+- **Nebula**: new tools `jupiter.recommend`, `jupiter.tasteProfile`, `jupiter.libraryHealth` (missing info, duplicates; read-only).
+
 ## Permissions
 `jupiter.library.read|write|delete`, `jupiter.stats.read`, `jupiter.admin.maintain`. Granted to **admin only** on install. `resident` gets nothing by default on purpose: public sign-up gives new accounts the resident role, and uploads cost your GitHub storage. Grant per user or role via the Universe API when you want to.
 

@@ -8,6 +8,7 @@ import { registerServiceWorker, canPromptInstall, promptInstall, isStandalone } 
 import { renderMarkdown } from '/shared/markdown.js';
 import * as pl from './lib/player.js';
 import * as offline from './lib/offline.js';
+import { smartMixes, similarTo } from './lib/smart.js';
 import { readTags, guessFromName, audioDuration, shrinkImage } from './lib/tags.js';
 import { convertSheet, isVideo } from './lib/convert.js';
 
@@ -24,6 +25,8 @@ const artUrl = (k) => (k ? `${B}/art/${k}` : null);
 function artEl(key, { cls = '', ic = 'music', blue = false } = {}) { const a = h('div', { class: `art ${cls} ${blue ? 'blue' : ''}` }); if (key && !S.offlineMode) a.append(h('img', { src: artUrl(key), alt: '', loading: 'lazy', onerror: (e) => { const i = e.target; if (!i.dataset.r) { i.dataset.r = 1; setTimeout(() => { i.src = `${artUrl(key)}?r=1`; }, 1500); } else i.remove(); } })); else a.append(icon(ic)); return a; }
 pl.P.getArt = (t) => (artKeyOf(t) ? new URL(artUrl(artKeyOf(t)), location.origin).href : null);
 pl.P.onError = (m) => toast(m);
+// Smart autoplay: when the queue ends, keep going with songs similar to what just played (never repeats what is already queued).
+pl.P.onQueueEnd = (cur) => { if (!cur || S.offlineMode || localStorage.getItem('jupiter.autoplay') === 'off') return []; const used = new Set(pl.P.queue); const pool = S.tracks.filter((t) => !S.offlineMode || S.offline.has(t.id)); const more = similarTo(cur, pool, { limit: 10, exclude: used }); if (more.length) toast('Keeping it going with similar songs'); return more; };
 const fmtDur = (ms) => { const m = Math.round(ms / 60000); return m >= 60 ? `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, '0')}m` : `${m}m`; };
 const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
 
@@ -179,7 +182,8 @@ function homeView() {
   const rnd = dayRand(), daily = [...S.tracks].map((t) => [rnd(), t]).sort((a, b) => a[0] - b[0]).map((x) => x[1]).slice(0, 30);
   const top = [...S.tracks].filter((t) => t.playCount).sort((a, b) => b.playCount - a.playCount).slice(0, 30);
   const fresh = [...S.tracks].filter((t) => !t.playCount).slice(0, 30).concat([...S.tracks].filter((t) => t.playCount).sort((a, b) => (a.lastPlayedAt || '').localeCompare(b.lastPlayedAt || ''))).slice(0, 30);
-  const mixes = [['Daily Mix', 'Fresh picks, changes daily', daily, 'm1', true], ['Top Hits', 'What you play most', top, 'm2', false], ['Rediscover', 'Songs you have not heard lately', fresh, 'm3', true], ['Liked Mix', 'Your favourites, shuffled', liked, 'm4', true]].filter((m) => m[2].length > 1);
+  const smart = smartMixes(S.tracks, { size: 40 }).map((m) => [m.title, m.sub, m.tracks, m.cls, m.shuffle]);
+  const mixes = (smart.length ? smart : [['Daily Mix', 'Fresh picks, changes daily', daily, 'm1', true], ['Top Hits', 'What you play most', top, 'm2', false], ['Rediscover', 'Songs you have not heard lately', fresh, 'm3', true], ['Liked Mix', 'Your favourites, shuffled', liked, 'm4', true]]).filter((m) => m[2].length > 1);
   const quick = [['heart', 'Liked Songs', plural(liked.length, 'song'), 'blue', () => { S.tab = 'songs'; S.likedOnly = true; location.hash = '#/library'; }], ['play', 'Recently Played', plural(Math.min(50, played.length), 'song'), 'orange', () => { if (played.length) pl.playList(played.slice(0, 50), 0, { src: 'library' }); }],
     ['user', 'Your Artists', plural(artistsList().length, 'artist'), 'violet', () => { location.hash = '#/artists'; }], ['disc', 'Your Albums', plural(albumsFrom(S.tracks).length, 'album'), 'indigo', () => { S.tab = 'albums'; location.hash = '#/library'; }]];
   const search = h('input', { type: 'search', placeholder: 'Search songs, artists, albums, tags…', 'aria-label': 'Search', onkeydown: (e) => { if (e.key === 'Enter') { S.q = e.target.value; S.tab = 'songs'; location.hash = '#/library'; } } });

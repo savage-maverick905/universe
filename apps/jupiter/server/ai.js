@@ -4,6 +4,7 @@
 // by a tool: the tool only produces a "confirm" card the person must tap.
 import { badRequest } from '../../../shared/errors.js';
 import { norm } from './schema.js';
+import { smartMixes, similarTo, libraryHealth, tasteProfile, moodOf } from '../lib/smart.js';
 
 const str = (n = 200, extra = {}) => ({ type: 'string', maxLength: n, ...extra });
 const SORTS = ['relevance', 'mostPlayed', 'favourites', 'recentlyPlayed', 'recentlyAdded', 'random', 'title', 'album'];
@@ -124,6 +125,36 @@ export function makeAi(s, lib, analytics) {
         await lib.addToPlaylist(user, p.id, fresh.map((t) => t.id));
         return { added: fresh.length, playlist: p.name, clientActions: [{ type: 'refresh' }] };
       } });
+
+    // ---- smarter tools: taste-based recommendations, mixes, similar songs and library tidy-up ----
+    reg('jupiter.recommend', { parameters: { properties: { basedOn: str(100, { description: 'Optional: a track id, or a song/artist name, to find similar music' }), mood: str(30, { description: 'Optional mood: chill, workout, focus, happy, sad' }), mix: { type: 'string', enum: ['foryou', 'rediscover', 'gems', 'repeat'], description: 'foryou = best guess for now, rediscover = forgotten favourites, gems = unplayed songs you may like, repeat = current obsessions' }, play: { type: 'boolean', description: 'true to start playing the result' }, limit: { type: 'integer', minimum: 1, maximum: 50 } } },
+      handler: async (a, ctx) => {
+        await can(ctx.user, 'library.read');
+        const all = await lib.allTracks(ctx.user); if (!all.length) return { count: 0, note: 'The library is empty.' };
+        let rows, label;
+        if (a.basedOn) {
+          const byId = all.find((t) => t.id === a.basedOn); const seed = byId || (await lib.select(ctx.user, { text: a.basedOn, limit: 1 }))[0] || (await lib.select(ctx.user, { artist: a.basedOn, sort: 'mostPlayed', limit: 1 }))[0];
+          if (!seed) return { count: 0, note: `Nothing in the library matches \"${a.basedOn}\".` };
+          rows = similarTo(seed, all, { limit: a.limit || 20 }); label = `More like ${seed.title}`;
+          if (!rows.length) return { count: 0, note: `Nothing else in the library is similar to ${seed.title} yet. Adding genres or tags to your songs helps.` };
+        } else {
+          const mixes = smartMixes(all, { seed: new Date().toISOString().slice(0, 10), size: a.limit || 25 });
+          const m = a.mood ? mixes.find((x) => x.id === `mood-${moodOf(a.mood)}`) : mixes.find((x) => x.id === (a.mix || 'foryou'));
+          if (!m) return { count: 0, note: a.mood ? `Not enough songs tagged or genred as \"${a.mood}\" to make a mix.` : 'Not enough listening history for that mix yet. Play and like some songs first.' };
+          rows = m.tracks; label = m.title;
+        }
+        rows = rows.slice(0, a.limit || 25);
+        const res = { count: rows.length, label, tracks: rows.slice(0, 12).map(brief) };
+        if (a.play) { res.final = `Playing ${label} (${rows.length} songs).`; res.clientActions = [{ type: 'play', trackIds: rows.map((t) => t.id), mode: 'replace', shuffle: false, label }]; }
+        return res;
+      } });
+
+    reg('jupiter.tasteProfile', { parameters: { properties: {} }, handler: async (_a, { user }) => {
+      await can(user, 'library.read'); const all = await lib.allTracks(user), p = tasteProfile(all), top = (m) => [...m].sort((x, y) => y[1] - x[1]).slice(0, 6).map(([name, score]) => ({ name, score: Math.round(score * 100) / 100 }));
+      return { topArtists: top(p.artist), topGenres: top(p.genre), topTags: top(p.tag), note: 'Scores are 0 to 1, relative to your favourite. Based on likes, plays, skips and recency.' };
+    } });
+
+    reg('jupiter.libraryHealth', { parameters: { properties: {} }, handler: async (_a, { user }) => { await can(user, 'library.read'); return libraryHealth(await lib.allTracks(user)); } });
 
     reg('jupiter.requestDelete', { parameters: { required: ['action'], properties: { action: { type: 'string', enum: ['deleteTrack', 'deletePlaylist', 'clearPlaylist'] }, trackId: str(100), playlist: str(100) } },
       handler: async (a, { user }) => {

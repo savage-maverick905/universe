@@ -63,3 +63,15 @@ test('build: static output has the app but no server code and no manifest.json',
   assert.ok(existsSync('dist/apps/jupiter/icons/icon-192.png'));
   const vj = JSON.parse(readFileSync('vercel.json', 'utf8')); assert.equal(vj.crons[0].path, '/api/apps/jupiter/maintenance/weekly'); assert.match(vj.headers[0].headers.find((h) => h.key === 'Content-Security-Policy').value, /media-src 'self' blob:/);
 });
+
+test('smart engine: mixes, similar songs, health', async () => {
+  const { smartMixes, similarTo, libraryHealth, affinity } = await import('../apps/jupiter/lib/smart.js');
+  const mk = (i, o = {}) => ({ id: `t${i}`, title: `Song ${i}`, artists: [i % 2 ? 'Tems' : 'Rema'], artistIds: ['a'], album: 'A', genre: i % 2 ? 'R&B' : 'Afrobeats', tags: [], playCount: 0, skipCount: 0, ...o });
+  const tracks = Array.from({ length: 14 }, (_, i) => mk(i, i < 4 ? { liked: true, playCount: 6, lastPlayedAt: new Date().toISOString() } : {}));
+  assert.ok(affinity(tracks[0]) > affinity(tracks[9]));
+  assert.ok(affinity(mk(1, { playCount: 0, skipCount: 6 })) < affinity(mk(1)));
+  const m = smartMixes(tracks); assert.ok(m.length >= 2); for (const x of m) assert.ok(x.tracks.every((t) => tracks.includes(t)));
+  assert.deepEqual(smartMixes([]), []);
+  const sim = similarTo(tracks[0], tracks, { limit: 5 }); assert.ok(sim.length && !sim.some((t) => t.id === 't0'));
+  assert.equal(libraryHealth([mk(1, { artistIds: [] }), mk(2, { title: 'Song 1 (Remix)', artists: ['Tems'] })]).counts.noArtist, 1);
+});
