@@ -1,0 +1,55 @@
+plugins {
+    id 'com.android.application'
+}
+
+// Your deployed Universe site, e.g. https://my-universe.vercel.app (HTTPS, no trailing slash).
+// Set it with -PuniverseUrl=... or the UNIVERSE_URL environment variable (the GitHub workflow does the latter).
+def universeUrl = (project.findProperty('universeUrl') ?: System.getenv('UNIVERSE_URL') ?: '').toString().trim().replaceAll('/+$', '')
+if (!universeUrl.startsWith('https://')) {
+    throw new GradleException('Set your deployed site URL (must start with https://): -PuniverseUrl=https://your-site.vercel.app or env UNIVERSE_URL. Got: "' + universeUrl + '"')
+}
+
+android {
+    namespace 'app.universe'
+    compileSdk 34
+
+    defaultConfig {
+        minSdk 24
+        targetSdk 34
+        versionCode 1
+        versionName '1.0.0'
+        buildConfigField 'String', 'BASE_URL', '"' + universeUrl + '"'
+    }
+
+    buildFeatures { buildConfig true }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    // A fixed debug key, so every build is signed the same and installs over the previous one.
+    signingConfigs {
+        debug {
+            storeFile file('../debug.keystore')
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+        }
+    }
+
+    // One APK per Universe app. Per-app name, colour, icon and widget endpoints live in src/<flavor>/res.
+    flavorDimensions 'app'
+    productFlavors {
+        dashboard { dimension 'app'; applicationId 'app.universe.dashboard' }
+        nova      { dimension 'app'; applicationId 'app.universe.nova' }
+        finance   { dimension 'app'; applicationId 'app.universe.finance' }
+        pulsar    { dimension 'app'; applicationId 'app.universe.pulsar' }
+        jupiter   { dimension 'app'; applicationId 'app.universe.jupiter' }
+        inventory { dimension 'app'; applicationId 'app.universe.inventory' }
+    }
+}
+
+dependencies {
+    implementation 'androidx.work:work-runtime:2.9.1'
+}

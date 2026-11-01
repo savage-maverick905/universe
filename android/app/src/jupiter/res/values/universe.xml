@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Jupiter</string>
+    <string name="app_path">/apps/jupiter/</string>
+    <color name="theme_color">#121212</color>
+    <bool name="has_widget">true</bool>
+    <string-array name="widget_endpoints">
+        <item>/api/apps/jupiter/widget/summary</item>
+        <item>/api/apps/jupiter/widget/recent</item>
+    </string-array>
+</resources>
