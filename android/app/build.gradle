@@ -9,6 +9,33 @@ if (!universeUrl.startsWith('https://')) {
     throw new GradleException('Set your deployed site URL (must start with https://): -PuniverseUrl=https://your-site.vercel.app or env UNIVERSE_URL. Got: "' + universeUrl + '"')
 }
 
+// ---------------------------------------------------------------------------------------------
+// One APK per Universe app. Everything that differs between them lives HERE, in one table:
+// name, start page, which widgets it offers, which endpoints feed them, which apps it sends
+// notifications for. Names are generated into resources from this table, so two apps can never
+// end up with the same label.
+// ---------------------------------------------------------------------------------------------
+def WIDGET_IDS = ['summary', 'stats', 'list', 'quick', 'player', 'mini']
+def APPS = [
+    dashboard: [name: 'Universe', path: '/dashboard/', widgets: [], data: [], notify: ['nova', 'finance'], listTitle: 'Recent', quickLabel: 'Open', quickPath: ''],
+    nova     : [name: 'Nova', path: '/apps/nova/', widgets: ['summary', 'stats', 'list', 'quick'],
+                data: ['/api/apps/nova/widget/summary', '/api/apps/nova/widget/attention'], notify: ['nova'],
+                listTitle: 'Needs attention', quickLabel: 'New task', quickPath: '#/new'],
+    // Orbit has no widgets on purpose: it sits behind your Finance PIN and a widget would bypass it.
+    finance  : [name: 'Orbit', path: '/apps/finance/', widgets: [], data: [], notify: ['finance'], listTitle: 'Recent', quickLabel: 'Open', quickPath: ''],
+    pulsar   : [name: 'Pulsar', path: '/apps/pulsar/', widgets: ['summary', 'stats', 'quick'],
+                data: ['/api/apps/pulsar/widget/summary'], notify: [], listTitle: 'Recent', quickLabel: 'New page', quickPath: ''],
+    jupiter  : [name: 'Jupiter', path: '/apps/jupiter/', widgets: ['player', 'mini', 'summary', 'stats', 'list'],
+                data: ['/api/apps/jupiter/widget/summary', '/api/apps/jupiter/widget/recent'], notify: [],
+                listTitle: 'Recently played', quickLabel: 'Open', quickPath: ''],
+    inventory: [name: 'Inventory', path: '/apps/inventory/', widgets: ['summary', 'stats', 'list', 'quick'],
+                data: ['/api/apps/inventory/stats/summary', '/api/apps/inventory/stats/recent'], notify: [],
+                listTitle: 'Recent items', quickLabel: 'Add item', quickPath: '#/new'],
+]
+def WIDGET_TITLE = [summary: 'Overview', stats: 'Stats', list: null, quick: null, player: 'Now playing', mini: 'Mini player']
+def WIDGET_TEXT = [summary: 'Key numbers and the latest activity.', stats: 'Your key numbers at a glance.', list: 'The latest items, at a glance.',
+                   quick: 'One tap to jump straight in.', player: 'Artwork, progress and playback controls.', mini: 'A slim player with play, skip and back.']
+
 android {
     namespace 'app.universe'
     compileSdk 34
@@ -16,8 +43,8 @@ android {
     defaultConfig {
         minSdk 24
         targetSdk 34
-        versionCode 1
-        versionName '1.0.0'
+        versionCode 2
+        versionName '2.0.0'
         buildConfigField 'String', 'BASE_URL', '"' + universeUrl + '"'
     }
 
@@ -38,15 +65,29 @@ android {
         }
     }
 
-    // One APK per Universe app. Per-app name, colour, icon and widget endpoints live in src/<flavor>/res.
     flavorDimensions 'app'
     productFlavors {
-        dashboard { dimension 'app'; applicationId 'app.universe.dashboard' }
-        nova      { dimension 'app'; applicationId 'app.universe.nova' }
-        finance   { dimension 'app'; applicationId 'app.universe.finance' }
-        pulsar    { dimension 'app'; applicationId 'app.universe.pulsar' }
-        jupiter   { dimension 'app'; applicationId 'app.universe.jupiter' }
-        inventory { dimension 'app'; applicationId 'app.universe.inventory' }
+        APPS.each { key, a ->
+            create(key) {
+                dimension 'app'
+                applicationId "app.universe.${key}"
+                buildConfigField 'String', 'APP_ID', "\"${key}\""
+                buildConfigField 'String', 'APP_NAME', "\"${a.name}\""
+                buildConfigField 'String', 'APP_PATH', "\"${a.path}\""
+                buildConfigField 'String', 'DATA_ENDPOINTS', "\"${a.data.join(',')}\""
+                buildConfigField 'String', 'NOTIFY_APPS', "\"${a.notify.join(',')}\""
+                buildConfigField 'String', 'QUICK_PATH', "\"${a.quickPath}\""
+                resValue 'string', 'app_name', a.name
+                resValue 'string', 'list_title', a.listTitle
+                resValue 'string', 'quick_label', a.quickLabel
+                WIDGET_IDS.each { wid ->
+                    resValue 'bool', "w_${wid}", a.widgets.contains(wid) ? 'true' : 'false'
+                    def title = WIDGET_TITLE[wid] ?: (wid == 'list' ? a.listTitle : a.quickLabel)
+                    resValue 'string', "wl_${wid}", "${a.name} ${title}".toString()
+                    resValue 'string', "wd_${wid}", WIDGET_TEXT[wid]
+                }
+            }
+        }
     }
 }
 

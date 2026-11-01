@@ -6,6 +6,7 @@ const touch = matchMedia('(hover: none) and (pointer: coarse)').matches;
 const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 if (matchMedia('(display-mode: standalone)').matches || navigator.standalone) root.classList.add('standalone');
 if (touch) root.classList.add('touch');
+if (/UniverseApp\//.test(navigator.userAgent) || window.UniverseNative) root.classList.add('native', 'standalone');
 
 // ---- Launch splash: removed as soon as the app paints something ----
 {

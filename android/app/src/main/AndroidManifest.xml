@@ -3,6 +3,20 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- Notifications (Android 13+ asks once) and the lock-screen / shade music player. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+
+    <!-- Lets one Universe APK see whether the others are installed (to open them from a notification and avoid double alerts). -->
+    <queries>
+        <package android:name="app.universe.dashboard" />
+        <package android:name="app.universe.nova" />
+        <package android:name="app.universe.finance" />
+        <package android:name="app.universe.pulsar" />
+        <package android:name="app.universe.jupiter" />
+        <package android:name="app.universe.inventory" />
+    </queries>
 
     <application
         android:allowBackup="false"
@@ -14,6 +28,7 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
+            android:label="@string/app_name"
             android:launchMode="singleTask"
             android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden|uiMode|density"
             android:windowSoftInputMode="adjustResize">
@@ -23,18 +38,94 @@
             </intent-filter>
         </activity>
 
-        <!-- The home-screen widget. Disabled for apps with no widget data (see has_widget in res/values/universe.xml). -->
+        <!-- Keeps the music player alive and shows the media notification (play / pause / skip, lock screen, headsets). -->
+        <service
+            android:name=".MediaService"
+            android:exported="false"
+            android:foregroundServiceType="mediaPlayback" />
+
+        <!-- Buttons on the media notification and on the player widgets land here. -->
         <receiver
-            android:name=".UniverseWidget"
+            android:name=".MediaCommandReceiver"
+            android:exported="false" />
+
+        <!-- Home-screen widgets. Each is enabled only for the apps that offer it (see the table in app/build.gradle). -->
+        <receiver
+            android:name=".WSummary"
             android:exported="true"
-            android:enabled="@bool/has_widget"
-            android:label="@string/app_name">
+            android:enabled="@bool/w_summary"
+            android:label="@string/wl_summary">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
-                android:resource="@xml/widget_info" />
+                android:resource="@xml/w_summary" />
+        </receiver>
+
+        <receiver
+            android:name=".WStats"
+            android:exported="true"
+            android:enabled="@bool/w_stats"
+            android:label="@string/wl_stats">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/w_stats" />
+        </receiver>
+
+        <receiver
+            android:name=".WList"
+            android:exported="true"
+            android:enabled="@bool/w_list"
+            android:label="@string/wl_list">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/w_list" />
+        </receiver>
+
+        <receiver
+            android:name=".WQuick"
+            android:exported="true"
+            android:enabled="@bool/w_quick"
+            android:label="@string/wl_quick">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/w_quick" />
+        </receiver>
+
+        <receiver
+            android:name=".WPlayer"
+            android:exported="true"
+            android:enabled="@bool/w_player"
+            android:label="@string/wl_player">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/w_player" />
+        </receiver>
+
+        <receiver
+            android:name=".WMini"
+            android:exported="true"
+            android:enabled="@bool/w_mini"
+            android:label="@string/wl_mini">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/w_mini" />
         </receiver>
     </application>
 </manifest>

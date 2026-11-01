@@ -7,7 +7,7 @@ const KEY = 'jupiter.player', EVKEY = 'jupiter.events', uid = () => `${Date.now(
 const audio = new Audio(); audio.preload = 'auto'; audio.crossOrigin = 'use-credentials';
 const ls = { get(k, d) { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* full or private mode */ } } };
 
-export const P = { queue: [], index: -1, shuffle: false, repeat: 'off', volume: 1, src: 'library', tracks: new Map(), listeners: new Set(), offlineIds: new Set(), onError: () => {}, getArt: () => null };
+export const P = { queue: [], index: -1, shuffle: false, repeat: 'off', volume: 1, src: 'library', tracks: new Map(), listeners: new Set(), offlineIds: new Set(), onError: () => {}, onQueueEnd: null, getArt: () => null };
 const emit = () => { P.listeners.forEach((f) => f()); };
 export const on = (f) => { P.listeners.add(f); return () => P.listeners.delete(f); };
 export const current = () => P.tracks.get(P.queue[P.index]) || null;
@@ -95,6 +95,7 @@ export function stopAll() {
   if (objectUrl) { URL.revokeObjectURL(objectUrl); objectUrl = null; }
   clearBuffer(); P.queue = []; P.index = -1; order = []; persist(); emit();
   if ('mediaSession' in navigator) { navigator.mediaSession.metadata = null; navigator.mediaSession.playbackState = 'none'; }
+  NB()?.player(JSON.stringify({ id: '' }));
 }
 export const pause = () => audio.pause(); export const resume = () => { if (audio.paused) toggle(); };
 export function next(auto = false) {
@@ -102,6 +103,7 @@ export function next(auto = false) {
   if (auto && P.repeat === 'one') { closeSession('complete'); return load(current()); }
   if (at < order.length - 1) { closeSession(auto ? 'complete' : 'skip'); P.index = order[at + 1]; persist(); return load(current()); }
   if (P.repeat === 'all') { closeSession(auto ? 'complete' : 'skip'); buildOrder(); P.index = order[0]; persist(); return load(current()); }
+  if (auto && P.onQueueEnd && P.repeat === 'off') { const more = P.onQueueEnd(current()); if (more?.length) { closeSession('complete'); enqueue(more, 'append'); const nat = posInOrder(); if (nat < order.length - 1) { P.index = order[nat + 1]; persist(); return load(current()); } } }
   if (auto) { closeSession('complete'); audio.pause(); audio.currentTime = 0; emit(); }
 }
 export function prev() { if (P.index < 0) return; if (audio.currentTime > 3) { audio.currentTime = 0; return; } const at = posInOrder(); if (at > 0) { closeSession('skip'); P.index = order[at - 1]; persist(); return load(current()); } audio.currentTime = 0; }
@@ -137,6 +139,7 @@ export function restore(tracksById) {
 }
 const setVolumeQuiet = (v) => { P.volume = v; audio.volume = v; };
 function updateMedia() {
+  pushNative(true);
   if (!('mediaSession' in navigator)) return; const t = current(); if (!t) return;
   const art = P.getArt(t); navigator.mediaSession.metadata = new MediaMetadata({ title: t.title, artist: t.artists.join(', '), album: t.album, artwork: art ? [{ src: art, sizes: '512x512' }] : [] });
   navigator.mediaSession.playbackState = audio.paused ? 'paused' : 'playing';
@@ -144,3 +147,24 @@ function updateMedia() {
 if ('mediaSession' in navigator) for (const [a, f] of [['play', () => resume()], ['pause', pause], ['previoustrack', prev], ['nexttrack', () => next()], ['seekto', (d) => seek(d.seekTime)]]) { try { navigator.mediaSession.setActionHandler(a, f); } catch { /* not supported */ } }
 // Snapshot sent to Nebula so it can answer "what's playing?". Ids only; the server checks them against the real library.
 export const snapshot = () => ({ jupiter: { trackId: current()?.id || null, playing: state().playing, positionSec: Math.round(audio.currentTime || 0), queueIds: P.queue.slice(P.index + 1, P.index + 31), shuffle: P.shuffle, repeat: P.repeat }, tzOffset: -new Date().getTimezoneOffset() });
+
+// ---- Android shell bridge: lock-screen, notification-shade and home-screen widget controls ----
+// The shell (window.UniverseNative) shows what is playing and calls window.__uniPlayer(cmd) when a button is tapped.
+// In a normal browser neither exists and nothing here does anything.
+function NB() { return window.UniverseNative && typeof window.UniverseNative.player === 'function' ? window.UniverseNative : null; }
+let lastPush = 0;
+function pushNative(force) {
+  const b = NB(); if (!b) return;
+  const now = Date.now(); if (!force && now - lastPush < 4000) return; lastPush = now;
+  const t = current();
+  try {
+    b.player(JSON.stringify(t ? { id: t.id, title: t.title, artist: (t.artists || []).join(', '), album: t.album || '', art: P.getArt(t) || '', playing: !audio.paused && !audio.ended, pos: Math.round((audio.currentTime || 0) * 1000), dur: Number.isFinite(audio.duration) ? Math.round(audio.duration * 1000) : 0 } : { id: '' }));
+  } catch { /* shell without the player bridge */ }
+}
+audio.addEventListener('timeupdate', () => pushNative(false));
+audio.addEventListener('seeked', () => pushNative(true));
+audio.addEventListener('loadedmetadata', () => pushNative(true));
+window.__uniPlayer = (cmd, arg) => {
+  if (cmd === 'play') resume(); else if (cmd === 'pause') pause(); else if (cmd === 'toggle') toggle();
+  else if (cmd === 'next') next(); else if (cmd === 'prev') prev(); else if (cmd === 'seek') seek(Number(arg) / 1000);
+};

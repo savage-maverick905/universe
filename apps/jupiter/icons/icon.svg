@@ -1,9 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="112" fill="#1E1E1E"/>
-<path d="M118 268C118 160 178 96 256 96s138 64 138 172" fill="none" stroke="#00ADEF" stroke-width="30" stroke-linecap="round"/>
-<circle cx="256" cy="288" r="132" fill="#ED6627"/><ellipse cx="214" cy="226" rx="62" ry="34" fill="#FFAD80" opacity=".35" transform="rotate(-24 214 226)"/>
-<rect x="84" y="244" width="56" height="116" rx="28" fill="#00ADEF"/><rect x="372" y="244" width="56" height="116" rx="28" fill="#00ADEF"/>
-<rect x="100" y="264" width="24" height="76" rx="12" fill="#0086BA"/><rect x="388" y="264" width="24" height="76" rx="12" fill="#0086BA"/>
-<ellipse cx="216" cy="282" rx="22" ry="27" fill="#F2F2F2"/><ellipse cx="296" cy="282" rx="22" ry="27" fill="#F2F2F2"/>
-<circle cx="222" cy="288" r="12" fill="#1E1E1E"/><circle cx="302" cy="288" r="12" fill="#1E1E1E"/><circle cx="226" cy="283" r="4" fill="#F2F2F2"/><circle cx="306" cy="283" r="4" fill="#F2F2F2"/>
-<path d="M214 344c18 22 66 22 84 0" fill="none" stroke="#1E1E1E" stroke-width="12" stroke-linecap="round"/>
-<circle cx="180" cy="334" r="14" fill="#FFAD80" opacity=".6"/><circle cx="332" cy="334" r="14" fill="#FFAD80" opacity=".6"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><defs><radialGradient id="g" cx=".5" cy=".5" r=".62"><stop offset="0" stop-color="#FF6B1A" stop-opacity=".34"/><stop offset="1" stop-color="#FF6B1A" stop-opacity="0"/></radialGradient></defs><rect width="512" height="512" rx="112" fill="#0A0A0A"/><rect width="512" height="512" rx="112" fill="url(#g)"/><g transform="translate(102.4 102.4) scale(12.8)" fill="none" stroke="#FF6B1A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2.133,15.591 A10.5,3.6 -20 1 0 21.867,8.409 A10.5,3.6 -20 1 0 2.133,15.591 Z" stroke-opacity=".45"/><path d="M10,17 L10,6.2 L18.5,4.5 L18.5,15"/><path d="M5.1,17.2 A2.7,2.7 0 1 0 10.5,17.2 A2.7,2.7 0 1 0 5.1,17.2 Z" fill="#FF6B1A" stroke="none"/><path d="M13.6,15.2 A2.7,2.7 0 1 0 19,15.2 A2.7,2.7 0 1 0 13.6,15.2 Z" fill="#FF6B1A" stroke="none"/></g></svg>

@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/root" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:padding="14dp" android:background="@drawable/widget_bg">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
+        <ImageView android:id="@+id/glyph" android:layout_width="22dp" android:layout_height="22dp" android:src="@drawable/ic_glyph" android:contentDescription="@null" />
+        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginStart="8dp" android:orientation="vertical">
+            <TextView android:id="@+id/title" android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:textColor="#FFFFFF" android:textSize="15sp" android:fontFamily="sans-serif-medium" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" />
+            <TextView android:id="@+id/sub" android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:text="@string/list_title" android:textColor="#FF6B1A" android:textSize="11sp" android:fontFamily="sans-serif-medium"
+                android:maxLines="1" android:ellipsize="end" />
+        </LinearLayout>
+        <ImageView android:id="@+id/refresh" android:layout_width="30dp" android:layout_height="30dp" android:padding="6dp"
+            android:src="@drawable/ic_refresh" android:tint="#80FFFFFF" android:contentDescription="Refresh" />
+    </LinearLayout>
+    <ImageView android:id="@+id/div" android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginTop="9dp" android:src="@drawable/divider" android:scaleType="fitXY" android:contentDescription="@null" />
+    
+    <LinearLayout android:id="@+id/rw1" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:orientation="horizontal" android:gravity="center_vertical">
+        <ImageView android:layout_width="6dp" android:layout_height="6dp" android:src="@drawable/dot" android:contentDescription="@null" />
+        <TextView android:id="@+id/rw1t" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginStart="9dp"
+            android:textColor="#F2F2F2" android:textSize="13sp" android:maxLines="1" android:ellipsize="end" />
+        <TextView android:id="@+id/rw1s" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="8dp" android:maxWidth="130dp"
+            android:textColor="#8C8C8C" android:textSize="11sp" android:maxLines="1" android:ellipsize="end" />
+    </LinearLayout>
+    <LinearLayout android:id="@+id/rw2" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:orientation="horizontal" android:gravity="center_vertical">
+        <ImageView android:layout_width="6dp" android:layout_height="6dp" android:src="@drawable/dot" android:contentDescription="@null" />
+        <TextView android:id="@+id/rw2t" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginStart="9dp"
+            android:textColor="#F2F2F2" android:textSize="13sp" android:maxLines="1" android:ellipsize="end" />
+        <TextView android:id="@+id/rw2s" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="8dp" android:maxWidth="130dp"
+            android:textColor="#8C8C8C" android:textSize="11sp" android:maxLines="1" android:ellipsize="end" />
+    </LinearLayout>
+    <LinearLayout android:id="@+id/rw3" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:orientation="horizontal" android:gravity="center_vertical">
+        <ImageView android:layout_width="6dp" android:layout_height="6dp" android:src="@drawable/dot" android:contentDescription="@null" />
+        <TextView android:id="@+id/rw3t" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginStart="9dp"
+            android:textColor="#F2F2F2" android:textSize="13sp" android:maxLines="1" android:ellipsize="end" />
+        <TextView android:id="@+id/rw3s" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="8dp" android:maxWidth="130dp"
+            android:textColor="#8C8C8C" android:textSize="11sp" android:maxLines="1" android:ellipsize="end" />
+    </LinearLayout>
+    <LinearLayout android:id="@+id/rw4" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:orientation="horizontal" android:gravity="center_vertical">
+        <ImageView android:layout_width="6dp" android:layout_height="6dp" android:src="@drawable/dot" android:contentDescription="@null" />
+        <TextView android:id="@+id/rw4t" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginStart="9dp"
+            android:textColor="#F2F2F2" android:textSize="13sp" android:maxLines="1" android:ellipsize="end" />
+        <TextView android:id="@+id/rw4s" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="8dp" android:maxWidth="130dp"
+            android:textColor="#8C8C8C" android:textSize="11sp" android:maxLines="1" android:ellipsize="end" />
+    </LinearLayout>
+    <LinearLayout android:id="@+id/rw5" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:orientation="horizontal" android:gravity="center_vertical">
+        <ImageView android:layout_width="6dp" android:layout_height="6dp" android:src="@drawable/dot" android:contentDescription="@null" />
+        <TextView android:id="@+id/rw5t" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginStart="9dp"
+            android:textColor="#F2F2F2" android:textSize="13sp" android:maxLines="1" android:ellipsize="end" />
+        <TextView android:id="@+id/rw5s" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="8dp" android:maxWidth="130dp"
+            android:textColor="#8C8C8C" android:textSize="11sp" android:maxLines="1" android:ellipsize="end" />
+    </LinearLayout>
+    <LinearLayout android:id="@+id/rw6" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:orientation="horizontal" android:gravity="center_vertical">
+        <ImageView android:layout_width="6dp" android:layout_height="6dp" android:src="@drawable/dot" android:contentDescription="@null" />
+        <TextView android:id="@+id/rw6t" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginStart="9dp"
+            android:textColor="#F2F2F2" android:textSize="13sp" android:maxLines="1" android:ellipsize="end" />
+        <TextView android:id="@+id/rw6s" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="8dp" android:maxWidth="130dp"
+            android:textColor="#8C8C8C" android:textSize="11sp" android:maxLines="1" android:ellipsize="end" />
+    </LinearLayout>
+    <TextView android:id="@+id/msg" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:gravity="center"
+        android:textColor="#A6A6A6" android:textSize="13sp" android:visibility="gone" />
+    <TextView android:id="@+id/status" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp"
+        android:textColor="#66FFFFFF" android:textSize="10sp" android:maxLines="1" android:ellipsize="end" />
+</LinearLayout>

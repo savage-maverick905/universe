@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/root" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="horizontal" android:gravity="center_vertical" android:padding="12dp" android:background="@drawable/widget_bg">
+    <ImageView android:id="@+id/p_art" android:layout_width="86dp" android:layout_height="86dp" android:scaleType="centerCrop" android:src="@drawable/art_placeholder" android:contentDescription="Album art" />
+    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginStart="12dp" android:orientation="vertical">
+        <TextView android:id="@+id/p_title" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="#FFFFFF" android:textSize="15sp" android:fontFamily="sans-serif-medium" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" />
+        <TextView android:id="@+id/p_artist" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="#A6A6A6" android:textSize="12sp" android:maxLines="1" android:ellipsize="end" />
+        <ProgressBar android:id="@+id/p_progress" style="?android:attr/progressBarStyleHorizontal" android:layout_width="match_parent" android:layout_height="4dp" android:layout_marginTop="9dp" android:minHeight="4dp" android:maxHeight="4dp" android:max="1000" android:progress="0" android:progressDrawable="@drawable/progress_bar" />
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:orientation="horizontal" android:gravity="center_vertical">
+            <TextView android:id="@+id/p_time" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textColor="#8C8C8C" android:textSize="10sp" android:maxLines="1" />
+            <ImageView android:id="@+id/p_prev" android:layout_width="36dp" android:layout_height="36dp" android:padding="7dp" android:src="@drawable/ic_prev" android:tint="#FFFFFF" android:contentDescription="p_prev" />
+            <View android:layout_width="6dp" android:layout_height="1dp" />
+            <ImageView android:id="@+id/p_play" android:layout_width="42dp" android:layout_height="42dp" android:padding="10dp" android:background="@drawable/btn_circle" android:src="@drawable/ic_play" android:tint="#000000" android:contentDescription="p_play" />
+            <View android:layout_width="6dp" android:layout_height="1dp" />
+            <ImageView android:id="@+id/p_next" android:layout_width="36dp" android:layout_height="36dp" android:padding="7dp" android:src="@drawable/ic_next" android:tint="#FFFFFF" android:contentDescription="p_next" />
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>

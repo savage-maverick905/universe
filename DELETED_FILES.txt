@@ -1,0 +1,10 @@
+Delete these from your repo (replaced by the new widget code):
+android/app/src/dashboard/res/values/universe.xml
+android/app/src/finance/res/values/universe.xml
+android/app/src/inventory/res/values/universe.xml
+android/app/src/jupiter/res/values/universe.xml
+android/app/src/main/java/app/universe/UniverseWidget.java
+android/app/src/main/res/layout/widget.xml
+android/app/src/main/res/xml/widget_info.xml
+android/app/src/nova/res/values/universe.xml
+android/app/src/pulsar/res/values/universe.xml

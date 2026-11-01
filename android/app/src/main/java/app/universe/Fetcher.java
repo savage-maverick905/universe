@@ -1,6 +1,8 @@
 package app.universe;
 
 import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -13,11 +15,11 @@ import org.json.JSONObject;
 /**
  * Calls the app's own widget endpoints (the same ones the Universe dashboard uses) with the session cookie
  * the WebView received at sign-in, and flattens the three widget shapes (stat / list / chart) into one
- * {"stats":[{label,value}], "rows":[{t,s}]} document for the home-screen widget.
+ * {"stats":[{label,value}], "rows":[{t,s}]} document for the home-screen widgets.
  */
 final class Fetcher {
     static final int MAX_STATS = 4;
-    static final int MAX_ROWS = 5;
+    static final int MAX_ROWS = 6;
 
     private Fetcher() {}
 
@@ -26,7 +28,8 @@ final class Fetcher {
         String cookie = Store.cookie(ctx);
         if (cookie.isEmpty()) return "signin";
 
-        String[] endpoints = ctx.getResources().getStringArray(R.array.widget_endpoints);
+        String[] endpoints = BuildConfig.DATA_ENDPOINTS.isEmpty() ? new String[0] : BuildConfig.DATA_ENDPOINTS.split(",");
+        if (endpoints.length == 0) return "ok";
         JSONArray stats = new JSONArray();
         JSONArray rows = new JSONArray();
         boolean ok = false;
@@ -44,7 +47,7 @@ final class Fetcher {
                 int code = c.getResponseCode();
                 if (code == 401) { unauthorized = true; continue; }
                 if (code != 200) continue;
-                merge(new JSONObject(read(c.getInputStream())), stats, rows);
+                merge(new JSONObject(new String(readAll(c.getInputStream()), "UTF-8")), stats, rows);
                 ok = true;
             } catch (Exception e) {
                 // offline or an unreadable reply: carry on with the next endpoint
@@ -63,6 +66,56 @@ final class Fetcher {
             return "error";
         }
         return "ok";
+    }
+
+    /** GET a JSON document from the site with the session cookie; null on any failure. */
+    static JSONObject getJson(String path, String cookie) {
+        HttpURLConnection c = null;
+        try {
+            c = (HttpURLConnection) new URL(BuildConfig.BASE_URL + path).openConnection();
+            c.setConnectTimeout(10000);
+            c.setReadTimeout(15000);
+            c.setRequestProperty("Cookie", cookie);
+            c.setRequestProperty("Accept", "application/json");
+            if (c.getResponseCode() != 200) return null;
+            return new JSONObject(new String(readAll(c.getInputStream()), "UTF-8"));
+        } catch (Exception e) {
+            return null;
+        } finally {
+            if (c != null) c.disconnect();
+        }
+    }
+
+    /** Downloads an image (sending the cookie for our own site) and shrinks it so its longest side is at most max pixels. */
+    static Bitmap bitmap(String url, String cookie, int max) {
+        HttpURLConnection c = null;
+        try {
+            c = (HttpURLConnection) new URL(url).openConnection();
+            c.setConnectTimeout(10000);
+            c.setReadTimeout(20000);
+            if (!cookie.isEmpty() && url.startsWith(BuildConfig.BASE_URL)) c.setRequestProperty("Cookie", cookie);
+            if (c.getResponseCode() != 200) return null;
+            byte[] data = readAll(c.getInputStream());
+            BitmapFactory.Options bounds = new BitmapFactory.Options();
+            bounds.inJustDecodeBounds = true;
+            BitmapFactory.decodeByteArray(data, 0, data.length, bounds);
+            int sample = 1;
+            while (bounds.outWidth / (sample * 2) >= max && bounds.outHeight / (sample * 2) >= max) sample *= 2;
+            BitmapFactory.Options opts = new BitmapFactory.Options();
+            opts.inSampleSize = sample;
+            Bitmap b = BitmapFactory.decodeByteArray(data, 0, data.length, opts);
+            if (b == null) return null;
+            int side = Math.max(b.getWidth(), b.getHeight());
+            if (side > max) {
+                float k = (float) max / side;
+                b = Bitmap.createScaledBitmap(b, Math.round(b.getWidth() * k), Math.round(b.getHeight() * k), true);
+            }
+            return b;
+        } catch (Exception e) {
+            return null;
+        } finally {
+            if (c != null) c.disconnect();
+        }
     }
 
     private static void merge(JSONObject j, JSONArray stats, JSONArray rows) throws JSONException {
@@ -92,12 +145,12 @@ final class Fetcher {
         }
     }
 
-    private static String read(InputStream in) throws IOException {
+    private static byte[] readAll(InputStream in) throws IOException {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
-        byte[] buf = new byte[4096];
+        byte[] buf = new byte[8192];
         int n;
         while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
         in.close();
-        return out.toString("UTF-8");
+        return out.toByteArray();
     }
 }

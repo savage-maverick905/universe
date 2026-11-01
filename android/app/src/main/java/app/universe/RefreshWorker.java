@@ -4,7 +4,7 @@ import android.content.Context;
 import androidx.work.Worker;
 import androidx.work.WorkerParameters;
 
-/** Runs in the background (every ~15 min while a widget exists, or on demand) and redraws the widget. */
+/** Runs in the background (about every 15 min, or on demand): refreshes widget data and checks for new notifications. */
 public class RefreshWorker extends Worker {
     public RefreshWorker(Context context, WorkerParameters params) {
         super(context, params);
@@ -13,8 +13,15 @@ public class RefreshWorker extends Worker {
     @Override
     public Result doWork() {
         Context c = getApplicationContext();
-        Store.setState(c, Fetcher.refresh(c));
-        UniverseWidget.renderAll(c);
+        try {
+            if (!BuildConfig.DATA_ENDPOINTS.isEmpty()) {
+                Store.setState(c, Fetcher.refresh(c));
+                Widgets.updateAll(c);
+            }
+            Notifier.poll(c);
+        } catch (Exception ignored) {
+            // try again next time
+        }
         return Result.success();
     }
 }

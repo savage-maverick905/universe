@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/root" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="horizontal" android:gravity="center_vertical" android:padding="12dp" android:background="@drawable/widget_bg">
+    <ImageView android:id="@+id/glyph" android:layout_width="34dp" android:layout_height="34dp" android:src="@drawable/ic_glyph" android:contentDescription="@null" />
+    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginStart="12dp" android:orientation="vertical">
+        <TextView android:id="@+id/title" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="#FFFFFF" android:textSize="15sp" android:fontFamily="sans-serif-medium" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" />
+        <TextView android:id="@+id/sub" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="#A6A6A6" android:textSize="12sp" android:maxLines="1" android:ellipsize="end" />
+    </LinearLayout>
+    <LinearLayout android:id="@+id/action" android:layout_width="wrap_content" android:layout_height="40dp" android:orientation="horizontal" android:gravity="center" android:paddingStart="14dp" android:paddingEnd="16dp" android:background="@drawable/btn_pill">
+        <ImageView android:layout_width="16dp" android:layout_height="16dp" android:src="@drawable/ic_add" android:tint="#000000" android:contentDescription="@null" />
+        <TextView android:id="@+id/action_t" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="6dp" android:text="@string/quick_label" android:textColor="#000000" android:textSize="13sp" android:fontFamily="sans-serif-medium" android:textStyle="bold" android:maxLines="1" />
+    </LinearLayout>
+</LinearLayout>
