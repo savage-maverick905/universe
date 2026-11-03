@@ -21,17 +21,21 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const req = event.request, url = new URL(req.url);
   if (req.method !== 'GET' || url.origin !== self.location.origin || url.pathname.startsWith('/api/')) return;
-  // The app's own files are answered from the device first, so it opens instantly and works with no connection. In the
-  // background the newest copy is fetched and kept for next time (each deploy also bumps the version in sw.js, which
-  // replaces the whole set at once). If a file is not stored yet it comes from the network, and a page that cannot be
-  // loaded at all falls back to the app's own start page, so the screens and navigation are still there.
-  const cached = async () => (await caches.match(req, { ignoreSearch: true })) || (req.mode === 'navigate' ? await caches.match(shell[0]) : null);
-  const refresh = fetch(req, { cache: 'no-cache' }).then((res) => { if (res.ok && res.type === 'basic') { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(req, copy)); } return res; });
+  // Online: always the newest files (so a deploy never mixes old and new code). No answer within 4 seconds, or offline:
+  // the copy kept on the device, so the app still opens with its screens and navigation. A page that was never stored
+  // falls back to the app's own start page. Only this app's own cache is ever read.
   event.respondWith((async () => {
-    const hit = await cached();
-    if (hit) { event.waitUntil(refresh.catch(() => {})); return hit; }
-    try { return await refresh; }
-    catch { return new Response("You're offline.", { status: 503, headers: { 'Content-Type': 'text/plain; charset=utf-8' } }); }
+    const cache = await caches.open(CACHE);
+    const stored = () => cache.match(req, { ignoreSearch: true }).then((hit) => hit || (req.mode === 'navigate' ? cache.match(shell[0]) : undefined));
+    try {
+      const res = await Promise.race([fetch(req), new Promise((_, no) => setTimeout(() => no(new Error('slow')), 4000))]);
+      if (res.ok && res.type === 'basic') cache.put(req, res.clone()).catch(() => {});
+      return res;
+    } catch (err) {
+      const hit = await stored().catch(() => undefined);
+      if (hit) return hit;
+      throw err; // nothing stored: let the browser show its normal error
+    }
   })());
 });
 

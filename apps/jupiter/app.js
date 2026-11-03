@@ -52,7 +52,7 @@ function frame(page, ...content) {
   root.className = pl.current() ? '' : 'has-no-mini';
   root.replaceChildren(h('div', { class: 'shell' },
     h('aside', { class: 'side' }, h('a', { class: 'brand', href: '#/' }, h('img', { src: '/apps/jupiter/icons/icon-192.png', alt: '' }), 'Jupiter'), nav.map(link), S.offlineMode ? null : link(['#/downloads', 'Offline', 'downloads', 'download'])),
-    h('main', { class: fresh ? 'main pagein' : 'main' }, S.offlineMode ? h('div', { class: 'offline-banner' }, 'You're offline. Only tracks you downloaded can play. ', h('a', { href: '#', onclick: (e) => { e.preventDefault(); S.me = null; boot(); } }, 'Retry connection')) : null, ...content),
+    h('main', { class: fresh ? 'main pagein' : 'main' }, S.offlineMode ? h('div', { class: 'offline-banner' }, "You're offline. Only tracks you downloaded can play. ", h('a', { href: '#', onclick: (e) => { e.preventDefault(); S.me = null; boot(); } }, 'Retry connection')) : null, ...content),
     h('nav', { class: 'bottom', 'aria-label': 'Main' }, nav.map(link))));
   const key = location.hash || '#/'; if (key === S.lastKey) window.scrollTo(0, keepY); else window.scrollTo(0, 0); S.lastKey = key; drawMini();
 }
@@ -489,7 +489,7 @@ async function shareCard(t) {
   toast('Making picture…'); const blob = await makeCard(t); if (!blob) return toast('Could not make the picture.');
   const name = `${t.title.replace(/[^\w\- ]+/g, '').trim().slice(0, 40) || 'jupiter'}.png`, url = URL.createObjectURL(blob);
   const d = dialog('Share picture', h('img', { class: 'sharepv', src: url, alt: `Share card for ${t.title}` }), h('div', { class: 'actions two' },
-    canShareFiles() ? h('button', { class: 'btn', onclick: async () => { try { const r = await shareFile(blob, name, { type: 'image/png', title: t.title, text: `${t.title} · ${t.artists.join(', ')}` }); if (r === 'saved' || r === 'downloaded') toast('Sharing is not available here, so the picture was saved instead.'); } catch { toast('Sharing was not possible. Use Save image.'); } } }, icon('share'), 'Share') : null,
+    canShareFiles() ? h('button', { class: 'btn', onclick: async () => { try { const r = await shareFile(blob, name, { type: 'image/png', title: t.title, text: `${t.title} · ${t.artists.join(', ')}` }); if (r === 'saved' || r === 'downloaded') toast('Sharing is not available here, so the picture was saved instead.'); } catch (e) { toast(e.message || 'Sharing was not possible. Use Save image.'); } } }, icon('share'), 'Share') : null,
     h('button', { class: 'btn ghost', onclick: async () => { try { await saveFile(blob, name, 'image/png'); } catch (e) { toast(e.message || 'Could not save the picture.'); } } }, icon('download'), 'Save image')), closer());
   d.addEventListener('close', () => URL.revokeObjectURL(url));
 }
