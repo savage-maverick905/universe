@@ -38,6 +38,17 @@
             </intent-filter>
         </activity>
 
+        <!-- Lets the share sheet read files we hand it (statements, exports, share pictures). -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.files"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
         <!-- Keeps the music player alive and shows the media notification (play / pause / skip, lock screen, headsets). -->
         <service
             android:name=".MediaService"

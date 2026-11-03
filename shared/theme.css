@@ -547,3 +547,8 @@ html.native button, html.native .btn, html.native [role=button], html.native .bo
 html.native button:active:not(:disabled), html.native .btn:active:not(:disabled), html.native [role=button]:active, html.native .tile:active, html.native .row-t:active { transform: scale(.965); }
 html.native .bottom { background: rgba(0, 0, 0, .94); border-top-color: rgba(255, 255, 255, .06); }
 html.native .bottom a[aria-current=page] { color: var(--orange); text-shadow: 0 0 18px rgba(255, 107, 26, .55); }
+
+/* ---- "You're offline" notice (shared/offline.js) ---- */
+.uni-offline { display: flex; flex-direction: column; align-items: center; gap: .6rem; max-width: 28rem; margin: 2.5rem auto; padding: 2rem 1.4rem; text-align: center; border: 1px dashed var(--line-strong); border-radius: 18px; background: rgba(255, 255, 255, .02); }
+.uni-offline h2 { margin: 0; font-size: 1.25rem; } .uni-offline p { margin: 0 0 .6rem; color: var(--dim); line-height: 1.45; }
+.uni-offline-ico { display: grid; place-items: center; width: 3.2rem; height: 3.2rem; border-radius: 50%; color: var(--orange); background: var(--orange-soft); } .uni-offline-ico .icon { width: 1.5rem; height: 1.5rem; }

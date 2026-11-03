@@ -1,6 +1,7 @@
 // Native-app feel, shared by every Universe app (imported from pwa.js).
 // Page transitions, swipe-to-dismiss sheets, pull-to-refresh, Android back closes sheets,
 // haptics, tap-active-tab-to-top, scroll restore, offline pill, launch splash.
+import './files.js'; // Android app: makes blob downloads and file sharing work (no-op in a browser)
 const root = document.documentElement;
 const touch = matchMedia('(hover: none) and (pointer: coarse)').matches;
 const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;

@@ -1,5 +1,6 @@
 import '/shared/select.js';
-import { api as rootApi } from '/shared/ui.js';
+import { api as rootApi, isOffline } from '/shared/ui.js';
+import { showOfflineScreen } from '/shared/offline.js';
 import { icon } from '/shared/icons.js';
 import { showAuth } from '/shared/auth.js';
 import { registerServiceWorker } from '/shared/pwa.js';
@@ -80,7 +81,7 @@ async function route() {
   drawSide();
 }
 async function boot(note = '') {
-  try { S.me = await rootApi('GET', '/api/auth/me', undefined, AbortSignal.timeout?.(8000)); offline.rememberMe(S.me); } catch (e) { const c = !e.status && offline.cachedMe(); S.me = c || await showAuth({ root, brand, note }); }
+  try { S.me = await rootApi('GET', '/api/auth/me', undefined, AbortSignal.timeout?.(8000)); offline.rememberMe(S.me); } catch (e) { const c = !e.status && offline.cachedMe(); if (!c && isOffline(e)) return showOfflineScreen({ root, brand, retry: () => boot(note) }); S.me = c || await showAuth({ root, brand, note }); }
   await offline.init(S.me.user.id, rawApi);
   try { S.meta = await api('GET', '/meta'); } catch (x) { if (x.status === 401) return; root.replaceChildren(h('div', { class: 'content' }, h('h1', {}, 'Pulsar'), h('p', { class: 'sub' }, x.status === 403 || x.status === 404 ? 'Pulsar is not available for your account. Ask an admin to install it and give you access.' : `Pulsar could not load: ${x.message}`), h('button', { class: 'btn ghost', onclick: () => { S.me = null; boot(); } }, 'Sign out'))); return; }
   try { S.settings = { ...S.settings, ...(await api('GET', '/settings')).settings }; } catch { /* defaults */ } applySettings(); await showLock(); frame(); paintNet(); await loadNodes().catch(() => {}); await route(); offline.sync().then(() => offline.prefetch(S.nodes, (id) => api('GET', `/nodes/${id}`)));

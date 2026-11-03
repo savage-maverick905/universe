@@ -2,7 +2,8 @@ import '/shared/select.js';
 // Nova: Universe's project, task and execution manager. Its own installable app with its own sign-in, navigation and settings.
 import { api, h, toast, setUnauthorizedHandler } from './services/api.js';
 import { icon } from '/shared/icons.js';
-import { api as rootApi, dialog, closer } from '/shared/ui.js';
+import { api as rootApi, dialog, closer, cachedMe, isOffline } from '/shared/ui.js';
+import { offlinePanel, showOfflineScreen, cachedMeta, rememberMeta } from '/shared/offline.js';
 import { showAuth } from '/shared/auth.js';
 import { registerServiceWorker, canPromptInstall, promptInstall, onInstallChange, isStandalone } from '/shared/pwa.js';
 import { startNotifier } from '/shared/notify.js';
@@ -10,6 +11,7 @@ import { S } from './lib.js';
 import { overviewView } from './views/overview.js';
 import { tasksView, boardView } from './views/tasks.js';
 import { scheduleView } from './views/schedule.js';
+import { timetablesView } from './views/timetables.js';
 import { calendarView } from './views/calendar.js';
 import { projectsView, projectView } from './views/projects.js';
 import { settingsView } from './views/settings.js';
@@ -20,10 +22,12 @@ registerServiceWorker('/apps/nova/sw.js', '/apps/nova/');
 const brand = { name: 'Nova', blurb: 'Turn ideas into plans, and plans into finished work.', mark: () => h('div', { class: 'mark nova', 'aria-hidden': 'true' }, icon('target')) };
 setUnauthorizedHandler(() => { if (S.me) { S.me = null; boot('Your session ended. Sign in again.'); } });
 const signOut = () => { S.me = null; boot(); };
+// What Nova assumes when it opens with no connection and nothing remembered yet: read-only, nothing to show but the navigation.
+const OFFLINE_META = { statuses: [], priorities: [], projectStatuses: [], eventKinds: [], icons: [], limits: {}, settings: { timezone: 'UTC', configured: true }, today: '', canWriteProjects: false, canWriteTasks: false, canDeleteTasks: false, canDeleteProjects: false, ai: false };
 
 // Phones show five tabs; Schedule, Board and Settings live under More. The sidebar on larger screens shows everything.
 const MAIN = ['overview', 'tasks', 'calendar', 'projects'];
-const NAV = [['#/', 'Today', 'overview', 'home'], ['#/tasks', 'Tasks', 'tasks', 'check'], ['#/schedule', 'Schedule', 'schedule', 'calendar'], ['#/board', 'Board', 'board', 'columns'], ['#/calendar', 'Calendar', 'calendar', 'calendar'], ['#/projects', 'Projects', 'projects', 'target'], ['#/settings', 'Settings', 'settings', 'settings']];
+const NAV = [['#/', 'Today', 'overview', 'home'], ['#/tasks', 'Tasks', 'tasks', 'check'], ['#/schedule', 'Schedule', 'schedule', 'calendar'], ['#/timetables', 'Timetables', 'timetables', 'clock'], ['#/board', 'Board', 'board', 'columns'], ['#/calendar', 'Calendar', 'calendar', 'calendar'], ['#/projects', 'Projects', 'projects', 'target'], ['#/settings', 'Settings', 'settings', 'settings']];
 let lastHash = null, keepY = null;
 function frame(page, ...content) {
   const link = ([href, text, id, ic]) => h('a', { href, class: MAIN.includes(id) ? null : 'extra', 'aria-current': page === id ? 'page' : null }, icon(ic), h('span', {}, text));
@@ -55,6 +59,7 @@ async function route() {
     if (page === 'tasks') await tasksView(ctx);
     else if (page === 'board') await boardView(ctx);
     else if (page === 'schedule') await scheduleView(ctx);
+    else if (page === 'timetables') await timetablesView(ctx);
     else if (page === 'calendar') await calendarView(ctx);
     else if (page === 'projects') await projectsView(ctx);
     else if (page === 'project' && arg) await projectView(arg, ctx);
@@ -63,16 +68,22 @@ async function route() {
     else await overviewView(ctx);
   } catch (x) {
     if (x.status === 401) return;
+    if (isOffline(x)) { frame(({ '': 'overview', project: 'projects' })[page] ?? page, offlinePanel({ app: 'Nova', retry: S.meta?.offline ? boot : route })); return; }
     frame('overview', h('h1', {}, 'Nova'), h('p', { class: 'err', role: 'alert' }, `Something went wrong: ${x.message}`), h('div', { class: 'row' }, h('button', { class: 'btn ghost', onclick: route }, 'Try again')));
   }
 }
 
 async function boot(note = '') {
   try { S.me = await rootApi('GET', '/api/auth/me'); }
-  catch { S.me = await showAuth({ root, brand, note }); }
-  try { S.meta = await api('GET', '/meta'); }
+  catch (e) {
+    if (!isOffline(e)) S.me = await showAuth({ root, brand, note });
+    else if (cachedMe()) S.me = cachedMe();
+    else return showOfflineScreen({ root, brand, retry: () => boot(note) });
+  }
+  try { S.meta = await api('GET', '/meta'); rememberMeta('nova', S.meta); }
   catch (x) {
     if (x.status === 401) return;
+    if (isOffline(x)) { S.meta = { ...(cachedMeta('nova') || OFFLINE_META), offline: true }; await route(); return; }
     frame('overview', h('h1', {}, 'Nova'), h('p', { class: 'muted' }, x.status === 403 ? 'Your account does not have access to Nova yet. Ask an admin to give you access.' : `Nova could not load: ${x.message}`),
       h('div', { class: 'row' }, h('button', { class: 'btn ghost', onclick: signOut }, 'Sign out')));
     return;

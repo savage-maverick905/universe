@@ -6,11 +6,12 @@ import { reply } from '../../../http/http.js';
 import { addDays, isDate } from './dates.js';
 import { EVENT_KINDS, PRIORITIES, PRIORITY_IDS, PROJECT_ICONS, PROJECT_STATUSES, PROJECT_STATUS_IDS, STATUS_IDS, TASK_STATUSES, eventIn, milestoneIn, projectIn, settingsIn, taskIn } from './schema.js';
 import { LIMITS } from './core.js';
+import { timetableRoutes } from './timetables.js';
 
 export const P = '/api/apps/nova';
 const SORTS = ['dueDate', 'priority', 'status', 'title', 'createdAt', 'updatedAt'];
 
-export function routes({ router, s, core, ai }) {
+export function routes({ router, s, core, ai, tt }) {
   const can = (user, perm) => s.permissions.assert(user, `nova.${perm}`);
   const route = (method, path, perm, fn) => router.add(method, `${P}${path}`, async (ctx) => { await can(ctx.user, perm); return fn(ctx); });
   const opt = (q, k, allowed) => { const x = q.get(k); if (!x) return undefined; if (allowed && !allowed.includes(x)) throw badRequest(`${k} must be one of: ${allowed.join(', ')}`); return x; };
@@ -32,6 +33,9 @@ export function routes({ router, s, core, ai }) {
     const from = query.get('from'), to = query.get('to') || (isDate(from) ? addDays(from, 41) : null);
     return core.calendar(user, from, to);
   });
+
+  // ---- Timetables (weekly plans, clash checking, per-day statuses, task links) ----
+  timetableRoutes({ route, tt });
 
   // ---- Projects ----
   route('GET', '/projects', 'project.read', async ({ user, query }) => ({ projects: await core.listProjects(user, { archived: bool(query, 'archived') }) }));

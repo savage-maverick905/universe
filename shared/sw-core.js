@@ -1,7 +1,7 @@
 // Service-worker logic shared by every Universe app. Each app has a tiny sw.js that sets
 // self.UNIVERSE_SW = { prefix, version, shell: [urls] } and then importScripts('/shared/sw-core.js').
 //
-// What it does: keeps the app's own files so it opens instantly and shows its shell offline.
+// What it does: keeps the app's own files so it opens instantly and shows its screens offline ("You're offline" appears only where data is needed).
 // What it never does: cache /api/ (your data is always live) or touch other websites.
 const { prefix, version, shell } = self.UNIVERSE_SW;
 const CACHE = `${prefix}-${version}`;
@@ -21,17 +21,18 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const req = event.request, url = new URL(req.url);
   if (req.method !== 'GET' || url.origin !== self.location.origin || url.pathname.startsWith('/api/')) return;
-  // Network first, so updates show up as soon as you are online. On a weak connection we do not wait forever:
-  // after 4 seconds the cached copy is used (the network request keeps going and refreshes the cache when it lands).
-  const net = fetch(req).then((res) => {
-    if (res.ok && res.type === 'basic') { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(req, copy)); }
-    return res;
-  });
+  // The app's own files are answered from the device first, so it opens instantly and works with no connection. In the
+  // background the newest copy is fetched and kept for next time (each deploy also bumps the version in sw.js, which
+  // replaces the whole set at once). If a file is not stored yet it comes from the network, and a page that cannot be
+  // loaded at all falls back to the app's own start page, so the screens and navigation are still there.
   const cached = async () => (await caches.match(req, { ignoreSearch: true })) || (req.mode === 'navigate' ? await caches.match(shell[0]) : null);
-  event.respondWith(Promise.race([net, new Promise((_, rej) => setTimeout(rej, 4000))]).catch(async () => {
-    const hit = await cached(); if (hit) { net.catch(() => {}); return hit; }
-    try { return await net; } catch { return new Response('You are offline.', { status: 503, headers: { 'Content-Type': 'text/plain; charset=utf-8' } }); }
-  }));
+  const refresh = fetch(req, { cache: 'no-cache' }).then((res) => { if (res.ok && res.type === 'basic') { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(req, copy)); } return res; });
+  event.respondWith((async () => {
+    const hit = await cached();
+    if (hit) { event.waitUntil(refresh.catch(() => {})); return hit; }
+    try { return await refresh; }
+    catch { return new Response("You're offline.", { status: 503, headers: { 'Content-Type': 'text/plain; charset=utf-8' } }); }
+  })());
 });
 
 // Tapping a notification opens (or focuses) the app page it points to.

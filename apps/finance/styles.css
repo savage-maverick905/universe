@@ -84,3 +84,9 @@ dialog details { margin-top: .9rem; }
 
 .subacc { margin-left: 1.1rem; padding-left: .6rem; border-left: 2px solid var(--line); }
 .subacc .acc { border-top: 0; }
+
+/* ---- Smart insights ---- */
+.card.smart h3 { display: flex; align-items: center; gap: .4rem; } .insight { padding: .55rem 0 .55rem .7rem; border-top: 1px solid var(--line); border-left: 3px solid var(--line-strong); margin-top: .5rem; }
+.insight:first-of-type { margin-top: .3rem; } .insight b, .insight small { display: block; } .insight b { font-weight: 500; font-size: .9rem; } .insight small { color: var(--dim); font-size: .8rem; margin-top: .15rem; }
+.insight.bad { border-left-color: var(--bad); } .insight.warn { border-left-color: var(--orange); } .insight.good { border-left-color: #3DD68C; } .insight.info { border-left-color: #4DA3FF; }
+.smart-note { margin: .2rem 0 0; color: var(--orange-light); }

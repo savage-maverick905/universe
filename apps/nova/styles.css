@@ -176,3 +176,34 @@ input[type=color] { height: 2.5rem; padding: .2rem; }
 @keyframes fabin { from { transform: scale(.3); opacity: 0; } }
 .kb-open .fab { display: none; } @media (min-width: 901px) { .fab { right: 2rem; bottom: 2rem; } .newbtn { display: inline-flex; } } @media (max-width: 900px) { .page-head .newbtn { display: none; } }
 .page-head h1 { font-size: 1.6rem; }
+
+/* ---- Timetables ---- */
+.tt-week { display: grid; grid-template-columns: repeat(7, 1fr); gap: .35rem; margin: 0 0 1rem; }
+.tt-week button { display: flex; flex-direction: column; align-items: center; gap: .1rem; padding: .5rem 0; font: inherit; color: var(--dim); background: var(--card); border: 1px solid var(--line); border-radius: 12px; cursor: pointer; }
+.tt-week button small { font-size: .68rem; text-transform: uppercase; letter-spacing: .04em; } .tt-week button b { font-size: 1rem; color: var(--text); font-variant-numeric: tabular-nums; }
+.tt-week button.today { border-color: var(--line-strong); } .tt-week button.on { background: var(--orange); border-color: var(--orange); } .tt-week button.on small, .tt-week button.on b { color: #000; }
+.tt-clash { margin-bottom: 1rem; } .tt-warn { display: grid; place-items: center; width: 2rem; height: 2rem; border-radius: 50%; color: var(--bad-text); background: var(--bad-soft); } .tt-warn .icon { width: 1rem; height: 1rem; }
+.tt-agenda { margin-bottom: .75rem; }
+.tt-item { display: flex; align-items: center; gap: .75rem; padding: .7rem .8rem; border-top: 1px solid var(--line); border-left: 3px solid var(--c, var(--orange)); cursor: pointer; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; touch-action: manipulation; transition: background .15s, opacity .15s; }
+.tt-item:first-child { border-top: 0; } .tt-item:hover, .tt-item:focus-visible { background: var(--hover); outline: none; } .tt-item:active { background: var(--raise); }
+.tt-item.clash { box-shadow: inset 0 0 0 1px rgba(229, 72, 77, .55); }
+.tt-time { flex: none; width: 4.6rem; font-size: .8rem; font-weight: 600; color: var(--c, var(--orange)); font-variant-numeric: tabular-nums; } .tt-time small { display: block; font-weight: 400; color: var(--mute); }
+.tt-main { flex: 1; min-width: 0; } .tt-main b, .tt-main small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .tt-main b { font-weight: 500; font-size: .92rem; } .tt-main small { color: var(--dim); font-size: .78rem; }
+.tt-item.st-done .tt-main b { text-decoration: line-through; color: var(--dim); } .tt-item.st-done, .tt-item.st-skipped, .tt-item.st-missed { opacity: .7; }
+.tt-st { font-weight: 600; } .tt-st.done { color: #3DD68C; background: rgba(61, 214, 140, .14); } .tt-st.in_progress { color: #4DA3FF; background: rgba(77, 163, 255, .14); } .tt-st.partly { color: #F5C84B; background: rgba(245, 200, 75, .14); }
+.tt-st.postponed { color: #C084FC; background: rgba(192, 132, 252, .14); } .tt-st.skipped { color: var(--dim); background: var(--raise); } .tt-st.missed { color: var(--bad-text); background: var(--bad-soft); }
+.ico-s { display: inline-flex; vertical-align: -.15em; } .ico-s .icon { width: .85em; height: .85em; }
+.tt-menu button { display: flex; align-items: center; gap: .6rem; } .tt-menu button .icon:last-child { margin-left: auto; color: var(--orange); } .tt-menu button.on { background: var(--hover); }
+.tt-sdot { width: .7rem; height: .7rem; border-radius: 50%; background: var(--mute); flex: none; } .tt-sdot.done { background: #3DD68C; } .tt-sdot.in_progress { background: #4DA3FF; } .tt-sdot.partly { background: #F5C84B; } .tt-sdot.postponed { background: #C084FC; } .tt-sdot.missed { background: var(--bad); }
+.tt-h2 { font-size: 1.05rem; margin: 1.4rem 0 .6rem; }
+.tt-card { border-left: 3px solid var(--c, var(--orange)); } .tt-card.off { opacity: .6; } .tt-card-h { display: flex; align-items: center; gap: .6rem; margin-bottom: .5rem; }
+.tt-dot { flex: none; width: .7rem; height: .7rem; border-radius: 50%; background: var(--c, var(--orange)); display: inline-block; vertical-align: middle; }
+.tt-list { margin: 0 -1.1rem .5rem; } .tt-li { display: flex; align-items: center; border-top: 1px solid var(--line); } .tt-li-main { flex: 1; min-width: 0; text-align: left; padding: .55rem 1.1rem; font: inherit; color: inherit; background: transparent; border: 0; cursor: pointer; }
+.tt-li-main b, .tt-li-main small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .tt-li-main b { font-weight: 500; font-size: .9rem; } .tt-li-main small { color: var(--dim); font-size: .78rem; }
+.tt-move { display: flex; padding-right: .6rem; } .flip-v .icon { transform: rotate(180deg); }
+.tt-swatches { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .35rem; } .tt-swatches button { width: 2rem; height: 2rem; border-radius: 50%; background: var(--c); border: 2px solid transparent; cursor: pointer; } .tt-swatches button.on { border-color: var(--text); box-shadow: 0 0 0 2px var(--bg); }
+.tt-clash-list h3 { margin: 1rem 0 .4rem; font-size: .9rem; color: var(--dim); } .tt-clash-row { padding: .6rem 0; border-top: 1px solid var(--line); } .tt-clash-row > div { display: flex; flex-direction: column; gap: .35rem; margin-top: .4rem; }
+.tt-pill { display: flex; align-items: center; gap: .5rem; width: 100%; text-align: left; padding: .5rem .7rem; font: inherit; font-size: .85rem; color: inherit; background: var(--raise); border: 1px solid var(--line); border-radius: 10px; cursor: pointer; }
+.tt-links h3 { margin: .8rem 0 .3rem; font-size: .9rem; } .tt-lt { display: flex; align-items: center; gap: .5rem; padding: .3rem 0; font-size: .88rem; } .tt-lt .icon { width: 1rem; height: 1rem; color: var(--dim); } .tt-lt.done span { text-decoration: line-through; color: var(--dim); } .tt-lt small { margin-left: auto; color: var(--mute); }
+.tt-pick { max-height: 46vh; overflow: auto; margin: .6rem 0; } .tt-pick-row { display: flex; align-items: center; gap: .6rem; padding: .55rem .2rem; border-top: 1px solid var(--line); font-size: .9rem; } .tt-pick-row small { margin-left: auto; color: var(--mute); }
+@media (max-width: 640px) { .tt-time { width: 3.9rem; } .tt-week button { padding: .45rem 0; } }

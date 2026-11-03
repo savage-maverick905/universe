@@ -5,7 +5,8 @@ import { reportsView } from './reports.js';
 import { icon, hasIcon } from '/shared/icons.js';
 
 import { settingsView } from './settings.js';
-import { h, api as rawApi, toast } from '/shared/ui.js';
+import { h, api as rawApi, toast, cachedMe, isOffline } from '/shared/ui.js';
+import { offlinePanel, showOfflineScreen } from '/shared/offline.js';
 import { showAuth } from '/shared/auth.js';
 import { renderWidget } from '/shared/widgets.js';
 import { askFinancePin, unlockOrbit } from '/shared/pin-gate.js';
@@ -98,11 +99,19 @@ async function route() {
     else if (hash === '#/assistant') await assistantView({ h, api, toast, shell, me });
     else if (hash === '#/settings') await settingsView({ me, shell, onSignOut: signOut });
     else await homeView();
-  } catch (x) { if (x.status === 401) { me = null; boot('Your session ended. Sign in again.'); } else toast(x.message); }
+  } catch (x) {
+    if (x.status === 401) { me = null; boot('Your session ended. Sign in again.'); }
+    else if (isOffline(x)) shell(({ '#/apps': 'apps', '#/reports': 'reports', '#/assistant': 'assistant', '#/settings': 'settings' })[location.hash] || 'home', offlinePanel({ app: 'Universe', retry: route }));
+    else toast(x.message);
+  }
 }
 async function boot(note = '') {
   try { me = await api('GET', '/api/auth/me'); }
-  catch { me = await showAuth({ root, brand, note }); }
+  catch (e) {
+    if (!isOffline(e)) me = await showAuth({ root, brand, note });
+    else if (cachedMe()) me = cachedMe();
+    else return showOfflineScreen({ root, brand, retry: () => boot(note) });
+  }
   await route();
   try { const { apps } = await api('GET', '/api/apps'); startNotifier(apps.filter((a) => a.status === 'enabled' && ['nova', 'finance'].includes(a.id)).map((a) => `/api/apps/${a.id}/notifications`)); } catch { /* nudges are optional */ }
 }

@@ -7,6 +7,8 @@ import { lockScreen } from './views/lock.js';
 import { startNotifier } from '/shared/notify.js';
 import { icon } from '/shared/icons.js';
 import { showAuth } from '/shared/auth.js';
+import { isOffline } from '/shared/ui.js';
+import { offlinePanel, showOfflineScreen } from '/shared/offline.js';
 import { api as rootApi } from '/shared/ui.js';
 import { registerServiceWorker, canPromptInstall, promptInstall, onInstallChange, isStandalone } from '/shared/pwa.js';
 
@@ -52,7 +54,7 @@ async function route() {
     const mod = await load[key]();
     if (page === 'add') { history.replaceState(null, '', '#/activity'); await mod.render({ frame, goto, state, rest: [], openAdd: true }); return; }
     await mod.render({ frame, goto, state, rest, page });
-  } catch (e) { if (e.status === 423) return; frame(key, h('div', { class: 'card' }, h('h3', {}, 'Something went wrong'), h('p', { class: 'err' }, e.message), h('button', { class: 'btn small', onclick: route }, 'Try again'))); }
+  } catch (e) { if (e.status === 423) return; if (isOffline(e)) { frame(key, offlinePanel({ app: 'Orbit', retry: route })); return; } frame(key, h('div', { class: 'card' }, h('h3', {}, 'Something went wrong'), h('p', { class: 'err' }, e.message), h('button', { class: 'btn small', onclick: route }, 'Try again'))); }
 }
 addEventListener('hashchange', route);
 
@@ -84,9 +86,13 @@ async function start() {
   if (!location.hash) location.hash = '#/'; else route();
 }
 async function boot(note = '') {
-  try { const me = await rootApi('GET', '/api/auth/me'); state.me = me; } catch { state.me = null; }
+  try { const me = await rootApi('GET', '/api/auth/me'); state.me = me; } catch (e) {
+    state.me = null;
+    // Orbit is behind a PIN that only the server can check, so with no connection it cannot open. Say so, and carry on by itself when you are back online.
+    if (isOffline(e)) return showOfflineScreen({ root, brand, retry: () => boot(note) });
+  }
   if (!state.me) { state.me = await showAuth({ root, brand, note }); }
   document.title = 'Orbit — by Universe';
-  try { await start(); startNotifier(['/api/apps/finance/notifications']); } catch (e) { root.replaceChildren(h('main', { class: 'auth' }, h('h1', {}, 'Orbit'), h('p', { class: 'err' }, e.status === 403 ? 'Your account does not have access to Orbit. Ask an admin to grant the finance permissions.' : e.status === 404 ? 'Orbit is not installed. An admin can install it from the Universe dashboard.' : e.message))); }
+  try { await start(); startNotifier(['/api/apps/finance/notifications']); } catch (e) { if (isOffline(e)) return showOfflineScreen({ root, brand, retry: () => boot(note) }); root.replaceChildren(h('main', { class: 'auth' }, h('h1', {}, 'Orbit'), h('p', { class: 'err' }, e.status === 403 ? 'Your account does not have access to Orbit. Ask an admin to grant the finance permissions.' : e.status === 404 ? 'Orbit is not installed. An admin can install it from the Universe dashboard.' : e.message))); }
 }
 boot();

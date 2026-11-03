@@ -2,7 +2,7 @@
   "manifestVersion": 1,
   "id": "nova",
   "name": "Nova",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Nova turns ideas into plans and plans into finished work: projects, tasks, a schedule for events and activities, milestones, routines, a board, a calendar and an overview of what needs attention.",
   "icon": "target",
   "entry": "index.html",
@@ -45,6 +45,7 @@
     "nova_milestones",
     "nova_settings",
     "nova_events",
+    "nova_timetables",
     "nova_proposals"
   ],
   "widgets": [

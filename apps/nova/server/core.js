@@ -18,7 +18,8 @@ export function makeCore(s) {
   const settings = s.storage.collection('nova_settings', { indexes: ['ownerId'] });
   const proposals = s.storage.collection('nova_proposals', { indexes: ['ownerId'] });
   const events = s.storage.collection('nova_events', { indexes: ['ownerId'] });
-  const cols = { projects, tasks, milestones, settings, proposals, events };
+  const timetables = s.storage.collection('nova_timetables', { indexes: ['ownerId'] });
+  const cols = { projects, tasks, milestones, settings, proposals, events, timetables };
 
   // ---- Who owns what. Another person's id looks exactly like an id that does not exist (404). ----
   const mineOf = (col) => (user) => col.find({ where: { ownerId: user.id }, limit: 20000 });
@@ -228,6 +229,10 @@ export function makeCore(s) {
     if (doc.milestoneId) {
       const m = await ownMilestone(doc.milestoneId, user);
       if (m.projectId !== doc.projectId) throw badRequest('The milestone must belong to the task\'s project');
+    }
+    if (doc.timetableItemId) { // a task can be linked to one timetable item; both must be this person's
+      const tt = doc.timetableId ? await timetables.get(doc.timetableId) : null;
+      if (!tt || tt.ownerId !== user.id || !tt.items.some((i) => i.id === doc.timetableItemId)) throw badRequest('That timetable item does not exist');
     }
     if (doc.startDate && doc.dueDate && doc.startDate > doc.dueDate) throw badRequest('The start date must not be after the due date');
     if (doc.recurrence && !doc.dueDate) throw badRequest('A repeating task needs a due date');

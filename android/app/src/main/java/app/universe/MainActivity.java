@@ -2,7 +2,14 @@ package app.universe;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.app.DownloadManager;
+import android.content.Context;
 import android.content.pm.PackageManager;
+import android.net.ConnectivityManager;
+import android.net.NetworkCapabilities;
+import android.os.Environment;
+import android.webkit.DownloadListener;
+import android.webkit.URLUtil;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.net.Uri;
@@ -48,6 +55,29 @@ public class MainActivity extends Activity {
         s.setDisplayZoomControls(false);
         s.setUserAgentString(s.getUserAgentString() + " UniverseApp/2");
         CookieManager.getInstance().setAcceptCookie(true);
+        applyCacheMode();
+
+        // Real http(s) downloads (links the server answers with a file). Files the page makes itself go through Bridge/Files.
+        web.setDownloadListener(new DownloadListener() {
+            @Override
+            public void onDownloadStart(String url, String ua, String disposition, String mime, long length) {
+                if (url == null || !url.startsWith("https://")) return;
+                try {
+                    if (Build.VERSION.SDK_INT < 29) throw new IllegalStateException("needs storage permission");
+                    String name = URLUtil.guessFileName(url, disposition, mime);
+                    DownloadManager.Request r = new DownloadManager.Request(Uri.parse(url));
+                    r.addRequestHeader("Cookie", String.valueOf(CookieManager.getInstance().getCookie(url)));
+                    r.addRequestHeader("User-Agent", ua);
+                    r.setMimeType(mime);
+                    r.setTitle(name);
+                    r.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
+                    r.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, name);
+                    ((DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE)).enqueue(r);
+                } catch (Exception e) {
+                    try { startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url))); } catch (Exception ignored) { /* nothing can open it */ }
+                }
+            }
+        });
 
         Hub.load(getApplicationContext());
         Hub.web = web;
@@ -77,6 +107,7 @@ public class MainActivity extends Activity {
 
             @Override
             public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
+                // The service worker normally answers with the app's stored screens; this page only appears the very first time an app is opened with no connection.
                 if (request.isForMainFrame()) view.loadDataWithBaseURL(BuildConfig.BASE_URL, offlineHtml(), "text/html", "UTF-8", null);
             }
         });
@@ -102,6 +133,27 @@ public class MainActivity extends Activity {
             String u = urlFrom(getIntent());
             web.loadUrl(u != null ? u : BuildConfig.BASE_URL + BuildConfig.APP_PATH);
         }
+    }
+
+    private boolean online() {
+        try {
+            ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+            NetworkCapabilities c = cm.getNetworkCapabilities(cm.getActiveNetwork());
+            return c != null && c.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET);
+        } catch (Exception e) {
+            return true;
+        }
+    }
+
+    /** With no connection, serve what is stored on the device (the app's own files) instead of failing straight away. */
+    private void applyCacheMode() {
+        web.getSettings().setCacheMode(online() ? WebSettings.LOAD_DEFAULT : WebSettings.LOAD_CACHE_ELSE_NETWORK);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        applyCacheMode();
     }
 
     /** "/apps/nova/", "#/new" (a page inside this app) or a full URL on our own site. Anything else is ignored. */

@@ -34,3 +34,6 @@ Each request's writes are one `storage.transaction` and, on Vercel, one GitHub c
 
 ## Tests
 `npm test` runs `finance-core.test.js` (maths), `finance.test.js` (API, PIN, access control, idempotency, debts, import/export, AI) and `finance-ui.test.js` (renders every screen against the API with a fake DOM; not a browser test).
+
+## Smart layer (no AI key needed)
+`server/smart.js` works out insights from your own transactions with plain maths, behind the PIN: month-end spending forecast, budgets near or over their limit, categories up on last month, unusually large purchases, repeating payments that look like subscriptions, savings rate and uncategorised items (Home > Smart insights). The add-transaction form also suggests the category and usual amount from what you entered for similar descriptions before (only fills empty fields). Endpoints: `/smart/insights`, `/smart/suggest`. Tests: `tests/finance-smart.test.js`.

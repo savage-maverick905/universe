@@ -48,6 +48,22 @@ export function txnSheet({ txn = null, preset = {}, onDone = () => {} } = {}) {
   const dir = select([{ value: 'increase', label: 'Increase the balance' }, { value: 'decrease', label: 'Decrease the balance' }], txn?.direction || 'increase');
   const refundOf = h('input', { type: 'hidden', value: txn?.refundOf || base.refundOf || '' });
   const rules = h('p', { class: 'rule' });
+  // Smart suggestion: after you type what it was for, fill the category (and amount) you used for similar ones before. Only fills empty fields.
+  const smartNote = h('p', { class: 'fine smart-note', hidden: '' });
+  let smartTimer = null, smartSeen = '';
+  if (!editing) desc.addEventListener('input', () => {
+    clearTimeout(smartTimer); const q = desc.value.trim();
+    if (q.length < 3 || !['expense', 'income', 'refund'].includes(type) || q === smartSeen) return;
+    smartTimer = setTimeout(async () => {
+      try {
+        const { suggestion: sg } = await api('GET', `/smart/suggest?q=${encodeURIComponent(q)}&type=${type}`); smartSeen = q; if (!sg || desc.value.trim() !== q) return;
+        const bits = [];
+        if (sg.categoryId && cat && !cat.value && [...cat.options].some((o) => o.value === sg.categoryId)) { cat.value = sg.categoryId; cat.dispatchEvent(new Event('change', { bubbles: true })); bits.push(sg.categoryPath || 'category'); }
+        if (sg.typicalMinor && !amount.value.trim() && sg.currency) { amount.value = decimal(sg.typicalMinor, sg.currency); bits.push(money(sg.typicalMinor, sg.currency)); }
+        if (bits.length) { smartNote.textContent = `Suggested from ${sg.count} similar: ${bits.join(', ')}. Change it if that is wrong.`; smartNote.hidden = false; }
+      } catch { /* suggestions are optional */ }
+    }, 350);
+  });
   const RULE = { expense: 'Counts as spending.', income: 'Counts as income.', transfer: 'Moves your own money. Not income or spending (a fee counts as spending).', refund: 'Money back for a purchase. Not income: it reduces spending in that category.', adjustment: 'Corrects the balance. Not income or spending.' };
   function draw() {
     rules.textContent = RULE[type] || '';
@@ -61,7 +77,7 @@ export function txnSheet({ txn = null, preset = {}, onDone = () => {} } = {}) {
       type === 'adjustment' ? field('Direction', dir) : null,
       needsCat ? field('Category', cat) : null,
       ['income', 'expense', 'refund'].includes(type) ? field(type === 'income' ? 'From' : 'Payee', who) : null,
-      field('Description', desc), h('div', { class: 'two' }, field('Date', date), field('Time (optional)', time)),
+      field('Description', desc), smartNote, h('div', { class: 'two' }, field('Date', date), field('Time (optional)', time)),
       h('details', {}, h('summary', {}, 'More details'), field('Tags', tags), field('Notes', notes)), rules);
   }
   const seg = h('div', { class: 'seg5', role: 'tablist' }, types.map((t) => h('button', { type: 'button', role: 'tab', 'aria-selected': String(t === type), class: t === type ? 'on' : '', disabled: editing && t !== type ? '' : null, onclick: () => { type = t; cat = catSel(); seg.querySelectorAll('button').forEach((b, i) => { b.className = types[i] === type ? 'on' : ''; b.setAttribute('aria-selected', String(types[i] === type)); }); draw(); } }, (t === 'adjustment' ? 'Adjust' : TYPE_LABEL[t]))));

@@ -4,10 +4,11 @@ import { makeCore } from './core.js';
 import { makeAi } from './ai.js';
 import { makeReport } from './report.js';
 import { routes } from './routes.js';
+import { makeTimetables } from './timetables.js';
 
 export function register({ router, services: s }) {
   const core = makeCore(s), ai = makeAi(s, core);
-  routes({ router, s, core, ai });
+  routes({ router, s, core, ai, tt: makeTimetables(s, core) });
   ai.registerTools();
   s.reports?.registerApp('nova', 'nova-overview', { handler: makeReport(core) });
 }

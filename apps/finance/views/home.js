@@ -13,12 +13,13 @@ export const txnRow = (t, { onclick, acctId } = {}) => {
 };
 export async function render({ frame, goto, openAdd }) {
   const range = 'this_month';
-  const [d, tr] = await Promise.all([api('GET', `/dashboard?range=${range}`), api('GET', '/reports/trend?range=last_30_days&granularity=day')]);
+  const [d, tr, sm] = await Promise.all([api('GET', `/dashboard?range=${range}`), api('GET', '/reports/trend?range=last_30_days&granularity=day'), api('GET', '/smart/insights').catch((e) => { if (e.offline) throw e; return { insights: [] }; })]);
   const cur = S.settings.currency, sum = d.summary[cur] || { income: 0, netExpense: 0, net: 0 };
   const totals = Object.entries(d.totalBalances);
   const hero = h('section', { class: 'hero' }, h('small', {}, 'Total balance'), totals.length ? totals.map(([c, v]) => h('div', { class: 'big' }, money(v, c))) : h('div', { class: 'big' }, money(0, cur)),
     h('div', { class: 'chips' }, h('span', {}, `${d.range.from} to ${d.range.to}`), h('span', {}, `${d.coverage.transactions} transactions`)));
   const stats = h('div', { class: 'grid3' }, [['Income', sum.income, 'pos'], ['Spent', sum.netExpense, 'neg'], ['Net', sum.net, sum.net >= 0 ? 'pos' : 'neg']].map(([l, v, c]) => h('div', { class: 'card stat2' }, h('span', {}, l), h('b', { class: c }, money(v, cur)))));
+  const smart = sm.insights.length ? h('div', { class: 'card smart' }, h('h3', {}, icon('sparkle', 16), ' Smart insights'), sm.insights.map((i) => h('div', { class: `insight ${i.tone}` }, h('b', {}, i.title), i.detail ? h('small', {}, i.detail) : null))) : null;
   const empty = !S.accounts.length ? emptyState('Start with an account', 'Add the places your money lives: cash, OPay, PalmPay, Moniepoint, your bank.', h('a', { class: 'btn small', href: '#/accounts' }, 'Add account')) : null;
   const chart = h('div', { class: 'card' }, h('div', { class: 'card-h' }, h('h3', {}, 'Last 30 days'), h('div', { class: 'legend' }, h('i', { class: 'b' }), 'Income', h('i', { class: 'o' }), 'Spent')), tr.points.length ? barChart(tr.points, cur) : h('p', { class: 'muted' }, 'No activity in this period yet.'));
   const budgets = d.budgets.length ? h('div', { class: 'card' }, h('h3', {}, 'Budgets'), d.budgets.map((b) => h('div', { class: 'brow' }, h('div', { class: 'line' }, h('span', {}, b.categoryPath), h('b', { class: b.state }, `${money(b.spentMinor, b.currency)} / ${money(b.availableMinor, b.currency)}`)), progress(b.percent, b.state)))) : null;
@@ -27,6 +28,6 @@ export async function render({ frame, goto, openAdd }) {
   const goals = d.goals.length ? h('div', { class: 'card' }, h('h3', {}, 'Goals'), d.goals.map((g) => h('div', { class: 'brow' }, h('div', { class: 'line' }, h('span', {}, g.name), h('b', {}, `${g.percent}%`)), progress(g.percent)))) : null;
   const recent = h('div', { class: 'card' }, h('div', { class: 'line' }, h('h3', {}, 'Recent'), h('a', { href: '#/activity' }, 'See all')), d.recent.length ? d.recent.map((t) => txnRow(t, { onclick: () => goto(`#/activity/${t.id}`) })) : h('p', { class: 'muted' }, 'Nothing yet. Tap + to add your first transaction.'));
   const note = d.coverage.uncategorised ? h('p', { class: 'fine' }, `${d.coverage.uncategorised} transactions have no category, so category reports are incomplete.`) : null;
-  frame('home', h('div', { class: 'page-head' }, h('h1', {}, 'Orbit')), hero, empty, stats, h('div', { class: 'grid' }, chart, budgets, upcoming, debts, goals, recent), note,
+  frame('home', h('div', { class: 'page-head' }, h('h1', {}, 'Orbit')), hero, empty, stats, h('div', { class: 'grid' }, smart, chart, budgets, upcoming, debts, goals, recent), note,
     S.accounts.length ? h('button', { class: 'fab', 'aria-label': 'Add transaction', onclick: () => txnSheet({ onDone: () => goto('#/') }) }, icon('plus')) : null);
 }

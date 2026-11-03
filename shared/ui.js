@@ -22,11 +22,28 @@ export function h(tag, props = {}, ...kids) {
   return e;
 }
 
-// JSON fetch. Errors carry the server's message and the HTTP status.
+// ---- Offline-friendly session memory ----
+// The last signed-in session (name, permissions) is kept on this device so an app can open its screens with no connection
+// instead of showing a sign-in form. It holds no passwords and no app data; it is dropped on sign-out or when the server says you are signed out.
+const ME_KEY = 'universe.session';
+export const cachedMe = () => { try { const j = JSON.parse(localStorage.getItem(ME_KEY)); return j?.me?.user ? j.me : null; } catch { return null; } };
+export const rememberMe = (me) => { try { if (me?.user) localStorage.setItem(ME_KEY, JSON.stringify({ me, at: Date.now() })); } catch { /* storage may be blocked */ } };
+export const forgetMe = () => { try { localStorage.removeItem(ME_KEY); } catch { /* storage may be blocked */ } };
+// True for "could not reach the server" (as opposed to the server answering with an error).
+export const isOffline = (e) => !!e && e.offline === true;
+
+// JSON fetch. Errors carry the server's message and the HTTP status. No connection = an error with offline: true and status 0.
 export async function api(method, path, body, signal) {
-  const res = await fetch(path, { signal, method, headers: { 'X-Requested-With': 'universe', ...(body ? { 'Content-Type': 'application/json' } : {}) }, body: body ? JSON.stringify(body) : undefined });
+  let res;
+  try { res = await fetch(path, { signal, method, headers: { 'X-Requested-With': 'universe', ...(body ? { 'Content-Type': 'application/json' } : {}) }, body: body ? JSON.stringify(body) : undefined }); }
+  catch (e) { if (e?.name === 'AbortError') throw e; throw Object.assign(new Error("You're offline"), { status: 0, offline: true, cause: e }); }
   const json = await res.json().catch(() => null);
-  if (!res.ok) throw Object.assign(new Error(json?.error?.message || res.statusText || 'Request failed'), { status: res.status, code: json?.error?.code });
+  if (!res.ok) {
+    if (res.status === 401 && json?.error?.code === 'unauthenticated') forgetMe();
+    throw Object.assign(new Error(json?.error?.message || res.statusText || 'Request failed'), { status: res.status, code: json?.error?.code });
+  }
+  if (path === '/api/auth/me' || path === '/api/auth/login' || path === '/api/auth/register') rememberMe(json);
+  else if (path === '/api/auth/logout') forgetMe();
   return json;
 }
 

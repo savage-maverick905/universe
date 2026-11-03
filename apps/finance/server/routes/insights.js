@@ -9,6 +9,7 @@ import { debtState } from '../debts.js';
 import { goalProgress, dueOccurrences } from '../planning.js';
 import { formatMoney } from '../money.js';
 import { byId, pathOf } from '../categories.js';
+import { insights as smartInsights, suggest as smartSuggest } from '../smart.js';
 
 export function insightRoutes({ router, s, store, pins, guard, P }) {
   const { col, all } = store;
@@ -42,6 +43,17 @@ export function insightRoutes({ router, s, store, pins, guard, P }) {
       goals: goals.filter((g) => !g.archived).slice(0, 4).map((g) => ({ id: g.id, name: g.name, currency: g.currency, targetMinor: g.targetMinor, ...goalProgress(g, txns, today) })),
       upcoming: rules.filter((r) => !r.archived).flatMap((r) => dueOccurrences(r, today, { horizonDays: r.reminderDays ?? 7, max: 3 }).map((o) => ({ ...o, name: r.name, amountMinor: r.amountMinor, currency: r.currency, type: r.type }))).sort((a, b) => a.dueDate.localeCompare(b.dueDate)).slice(0, 5),
       recent, coverage: counts(txns) };
+  }));
+
+  // Smart layer: checkable maths over your own transactions (no AI provider, nothing leaves the server).
+  router.add('GET', `${P}/smart/insights`, use(async ({ user }) => {
+    const [st, accounts, txns, cats, budgets] = await Promise.all([col.settings.get(user.id), all(col.accounts, user.id), all(col.txns, user.id), all(col.cats, user.id), all(col.budgets, user.id)]);
+    return { today: todayIn(st.timezone), insights: smartInsights({ txns, cats, accounts, budgets, today: todayIn(st.timezone), currency: st.currency, custom: st.customCurrencies, weekStartsOn: st.weekStartsOn }) };
+  }));
+  router.add('GET', `${P}/smart/suggest`, use(async ({ user, query }) => {
+    const type = ['expense', 'income', 'refund'].includes(query.get('type')) ? query.get('type') : 'expense';
+    const [txns, cats] = await Promise.all([all(col.txns, user.id), all(col.cats, user.id)]), s = smartSuggest(txns, (query.get('q') || '').slice(0, 120), type);
+    return { suggestion: s ? { ...s, categoryPath: s.categoryId ? pathOf(byId(cats), s.categoryId) : '' } : null };
   }));
 
   router.add('GET', `${P}/reports/summary`, use(async ({ user, query }) => {

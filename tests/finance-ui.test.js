@@ -20,6 +20,7 @@ class El {
 const text = (e) => (e == null ? '' : e.nodeType === 3 ? e.data : e.textContent);
 globalThis.document = { createElement: (t) => new El(t), createElementNS: (n, t) => new El(t), createTextNode: (d) => ({ nodeType: 3, data: String(d), get textContent() { return this.data; } }), body: new El('body'), documentElement: new El('html'), addEventListener() {}, getElementById: () => new El('div'), querySelector: () => null, querySelectorAll: () => [], hidden: false };
 Object.assign(globalThis, { window: globalThis, location: { hash: '', pathname: '/apps/finance/' }, history: { replaceState() {} }, addEventListener() {}, scrollTo() {}, matchMedia: () => ({ matches: false }), URL: Object.assign(URL, { createObjectURL: () => 'blob:x' }) });
+globalThis.MutationObserver ??= class { observe() {} disconnect() {} }; // shared/native.js watches the page for the splash screen and page transitions
 Object.defineProperty(globalThis, 'navigator', { value: { onLine: true, userAgent: 'x', platform: 'x', maxTouchPoints: 0 }, configurable: true });
 Object.defineProperty(globalThis, 'crypto', { value: globalThis.crypto, configurable: true });
 

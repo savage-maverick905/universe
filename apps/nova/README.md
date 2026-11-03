@@ -59,3 +59,10 @@ In-app AI reuses Universe's provider, default model and personal API key setting
 
 ## Environment
 No new variables. AI needs what the assistant already needs (`GROQ_API_KEY` or a personal key).
+
+## Timetables (v1.2)
+Weekly plans (School, Work, Gym...) under **More > Timetables**. Each item runs on chosen weekdays and is either **fixed** (6:00 to 7:00) or a **length** (1 hour, 30 min). Length items have no clock time: they start when the previous item ends, from the timetable's "Day starts at" time, or from an optional "Starts at". Mixing both is fine; the order of items matters for length items (use the up/down buttons).
+- **Overlaps:** every item is resolved to a real clock range and compared with every other item on the same weekday, across all active timetables. A banner lists them, items are marked "Clash", and saving an item warns you straight away. Back-to-back is not a clash. Pause a timetable to leave it out.
+- **Status:** press and hold (right-click on a computer) an item to set Done, In progress, Partly done, Postponed, Skipped or Missed for that day. It is saved per date, so next week starts fresh.
+- **Tasks:** open an item and tap "Link tasks", or pick the item inside a task's editor ("Timetable"). Deleting an item or timetable only removes the link, never the tasks.
+- API: `/timetables`, `/timetables/:id/items`, `/timetable-day?date=`, `/timetable-clashes`. Tests: `tests/nova-timetables.test.js`.

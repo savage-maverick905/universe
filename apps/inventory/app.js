@@ -2,7 +2,8 @@ import '/shared/select.js';
 import { api, h, toast, B, setUnauthorizedHandler } from './services/api.js';
 import { createUploader, thumbUrl } from './services/media.js';
 import { icon } from '/shared/icons.js';
-import { dialog, closer, initial, api as rootApi } from '/shared/ui.js';
+import { dialog, closer, initial, api as rootApi, cachedMe, isOffline } from '/shared/ui.js';
+import { offlinePanel, showOfflineScreen, cachedMeta, rememberMeta } from '/shared/offline.js';
 import { showAuth } from '/shared/auth.js';
 import { accountPanels } from '/shared/account.js';
 import { renderWidget } from '/shared/widgets.js';
@@ -219,15 +220,24 @@ async function route() {
     else if (hash === '#/settings') settingsPage();
     else if (hash === '#/new') { await itemsPage(); history.replaceState(null, '', '#/'); editItem(); }
     else await itemsPage();
-  } catch (x) { if (x.status !== 401) toast(x.message); }
+  } catch (x) {
+    if (x.status === 401) return;
+    if (isOffline(x)) { frame(({ '#/overview': 'overview', '#/organize': 'organize', '#/settings': 'settings' })[location.hash] || 'items', offlinePanel({ app: 'Inventory', retry: S.meta?.offline ? boot : route })); return; }
+    toast(x.message);
+  }
 }
 
 async function boot(note = '') {
   try { me = await rootApi('GET', '/api/auth/me'); }
-  catch { me = await showAuth({ root, brand, note }); }
-  try { S.meta = await api('GET', '/meta'); }
+  catch (e) {
+    if (!isOffline(e)) me = await showAuth({ root, brand, note });
+    else if (cachedMe()) me = cachedMe();
+    else return showOfflineScreen({ root, brand, retry: () => boot(note) });
+  }
+  try { S.meta = await api('GET', '/meta'); rememberMeta('inventory', S.meta); }
   catch (x) {
     if (x.status === 401) return;
+    if (isOffline(x)) { S.meta = { statuses: [], conditions: [], acquisitionMethods: [], cloudinary: null, ...(cachedMeta('inventory') || {}), offline: true }; await route(); return; }
     frame('items', h('h1', {}, 'Inventory'), h('p', { class: 'muted' }, x.status === 403 ? 'Your account does not have access to Inventory yet. Ask an admin to give you access.' : `Inventory could not load: ${x.message}`),
       h('div', { class: 'row' }, h('button', { class: 'btn ghost', onclick: signOut }, 'Sign out')));
     return;

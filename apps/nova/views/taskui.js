@@ -86,6 +86,15 @@ export async function openTask(task, { onChange = () => {}, projectId = null, ti
   const missingDeps = t.dependencies?.filter((d) => d.status === 'done') || []; // finished dependencies are not in the open list; keep them
   if (!canWrite) deps.setAttribute('disabled', '');
 
+  // Timetable link: this task belongs to one timetable item (optional)
+  let ttLoaded = false;
+  const tl = h('select', { 'aria-label': 'Timetable item' }, h('option', { value: '' }, 'Not linked'));
+  api('GET', '/timetables').then(({ timetables }) => {
+    for (const tt of timetables) for (const it of tt.items) tl.append(h('option', { value: `${tt.id}|${it.id}`, selected: t.timetableItemId === it.id ? '' : null }, `${tt.name} · ${it.title}`));
+    ttLoaded = true;
+  }).catch(() => { /* offline or no access: leave any existing link untouched */ });
+  if (!canWrite) tl.setAttribute('disabled', '');
+
   // Repeat
   const rec = t.recurrence, recFreq = select([['', 'Does not repeat'], ['daily', 'Daily'], ['weekly', 'Weekly'], ['monthly', 'Monthly'], ['yearly', 'Yearly']], rec?.freq || '', () => drawRec(), 'Repeat');
   const interval = h('input', { type: 'number', min: 1, max: 99, value: rec?.interval || 1, 'aria-label': 'Repeat every' });
@@ -107,6 +116,7 @@ export async function openTask(task, { onChange = () => {}, projectId = null, ti
       startDate: f.start.value || null, dueDate: f.due.value || null, tags: f.tags.value.split(',').map((x) => x.trim()).filter(Boolean), assignedToMe: f.mine.checked, notes: f.notes.value,
       subtasks: subs.map((x) => ({ ...(x.id ? { id: x.id } : {}), title: x.title, done: !!x.done })),
       dependsOn: [...[...deps.selectedOptions].map((o) => o.value), ...missingDeps.map((d) => d.id)] };
+    if (ttLoaded) { const [a, b] = (tl.value || '|').split('|'); body.timetableId = a || null; body.timetableItemId = b || null; }
     const fr = recFreq.value;
     body.recurrence = !fr ? null : { freq: fr, interval: Number(interval.value) || 1, ...(fr === 'weekly' ? { byDay: [...days] } : {}),
       ...(endMode.value === 'until' ? { until: endDate.value || null } : endMode.value === 'count' ? { count: Number(endCount.value) } : {}) };
@@ -138,8 +148,8 @@ export async function openTask(task, { onChange = () => {}, projectId = null, ti
 
   const fine = h('details', {}, h('summary', {}, 'Subtasks, dependencies, repeat and notes'),
     h('h3', {}, 'Subtasks'), subList, canWrite ? h('div', { class: 'row' }, subInput, h('button', { type: 'button', class: 'btn ghost small', onclick: addSub }, 'Add')) : null,
-    field('Depends on (finish these first)', deps, 'Hold Ctrl or Cmd to pick several'), h('h3', {}, 'Repeat'), recFreq, recBox, field('Notes', f.notes));
-  if (!isNew || subs.length || t.notes || t.recurrence || t.dependsOn.length) fine.open = true;
+    field('Depends on (finish these first)', deps, 'Hold Ctrl or Cmd to pick several'), h('h3', {}, 'Timetable'), tl, h('h3', {}, 'Repeat'), recFreq, recBox, field('Notes', f.notes));
+  if (!isNew || subs.length || t.notes || t.recurrence || t.dependsOn.length || t.timetableItemId) fine.open = true;
 
   const actions = [save, closer('Cancel')];
   if (!isNew && canWrite) {

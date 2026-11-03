@@ -62,7 +62,7 @@ export function projectIn(body, { partial = false } = {}) {
 }
 export const projectDefaults = () => ({ description: '', icon: null, color: null, status: 'active', priority: 'medium', startDate: null, deadline: null, tags: [], archived: false });
 
-const TASK_KEYS = ['title', 'description', 'projectId', 'milestoneId', 'status', 'priority', 'startDate', 'dueDate', 'assignedToMe', 'tags', 'notes', 'subtasks', 'dependsOn', 'recurrence', 'archived'];
+const TASK_KEYS = ['title', 'description', 'projectId', 'milestoneId', 'status', 'priority', 'startDate', 'dueDate', 'assignedToMe', 'tags', 'notes', 'subtasks', 'dependsOn', 'recurrence', 'archived', 'timetableId', 'timetableItemId'];
 export function taskIn(body, { partial = false } = {}) {
   const b = allowKeys(v.object(body), TASK_KEYS), o = {};
   if (!partial && !('title' in b)) throw badRequest('title is required');
@@ -81,9 +81,13 @@ export function taskIn(body, { partial = false } = {}) {
   if ('dependsOn' in b) o.dependsOn = [...new Set(v.stringArray(b.dependsOn, 'dependsOn', { max: 20, itemMax: 100 }).map((x) => v.anyId(x, 'dependsOn id')))];
   if ('recurrence' in b) o.recurrence = recurrenceIn(b.recurrence);
   if ('archived' in b) { if (typeof b.archived !== 'boolean') throw badRequest('archived must be true or false'); o.archived = b.archived; }
+  if ('timetableItemId' in b || 'timetableId' in b) { // link to a timetable item: both ids together, or both cleared
+    o.timetableItemId = nullable(b.timetableItemId ?? null, (x) => v.anyId(x, 'timetableItemId')); o.timetableId = nullable(b.timetableId ?? null, (x) => v.anyId(x, 'timetableId'));
+    if (!!o.timetableItemId !== !!o.timetableId) { if (!o.timetableItemId) o.timetableId = null; else throw badRequest('timetableId is required with timetableItemId'); }
+  }
   return o;
 }
-export const taskDefaults = () => ({ description: '', projectId: null, milestoneId: null, status: 'todo', priority: 'medium', startDate: null, dueDate: null, assignedToMe: true, tags: [], notes: '', subtasks: [], dependsOn: [], recurrence: null, archived: false });
+export const taskDefaults = () => ({ description: '', projectId: null, milestoneId: null, status: 'todo', priority: 'medium', startDate: null, dueDate: null, assignedToMe: true, tags: [], notes: '', subtasks: [], dependsOn: [], recurrence: null, archived: false, timetableId: null, timetableItemId: null });
 
 export const EVENT_KINDS = [['event', 'Event'], ['activity', 'Activity'], ['meeting', 'Meeting'], ['appointment', 'Appointment'], ['reminder', 'Reminder']];
 export const EVENT_KIND_IDS = EVENT_KINDS.map(([id]) => id);
