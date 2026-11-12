@@ -13,6 +13,7 @@ import { sanitizeRich, richToText, toRich } from '../lib/boards/rich.js';
 import { bi } from '../lib/boards/icons.js';
 import { STICKY } from '../lib/boards/colors.js';
 import { buildInspector } from '../lib/boards/inspector.js';
+import { ensureBoardsCss } from '../lib/boards/css.js';
 import { exportDialog, historyDialog, settingsDialog, shortcutsDialog, objectsPanel } from '../lib/boards/dialogs.js';
 const NS = 'http://www.w3.org/2000/svg', svgEl = (t, a = {}) => { const e = document.createElementNS(NS, t); for (const [k, v] of Object.entries(a)) e.setAttribute(k, v); return e; };
 const PREF = 'pulsar:boards:prefs';
@@ -20,6 +21,7 @@ const SIZES = { page: [260, 130], journal: [260, 130], collection: [280, 170], d
 const TOOLS = [['select', 'Select (V)'], ['hand', 'Hand (H)'], ['pen', 'Pen (P)'], ['pencil', 'Pencil (B)'], ['highlighter', 'Highlighter (M)'], ['eraser', 'Eraser (E)'], ['lasso', 'Lasso (L)'], ['text', 'Text (T)'], ['sticky', 'Sticky note (N)'], ['shapes', 'Shapes (R)'], ['connector', 'Connector (C)'], ['frame', 'Frame (F)']];
 
 export async function boardView(id, ctx) {
+  await ensureBoardsCss();
   ctx.setCrumbs([{ label: [icon('grid', 15), 'Boards'], href: '#/boards' }, { label: 'Loading…' }]); ctx.setStatus('saving');
   const { board, items, offline } = await loadBoard(id);
   const model = new BoardModel(); model.load(items);

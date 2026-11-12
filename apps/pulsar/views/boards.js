@@ -6,9 +6,11 @@ import { readPackage, remapIds } from '../lib/boards/export.js';
 import { uid } from '../lib/boards/model.js';
 import { coverStyle } from '../lib/boards/dialogs.js';
 import { resolveRefs, keyOf } from '../lib/boards/resources.js';
+import { ensureBoardsCss } from '../lib/boards/css.js';
 const newId = () => `bd_${[...crypto.getRandomValues(new Uint8Array(9))].map((b) => (b % 36).toString(36)).join('')}`;
 export async function createBoard({ title = 'Untitled board', items = [], description = '', settings } = {}) { const first = items.slice(0, 3000), rest = items.slice(3000); const { board } = await rawApi('POST', '/boards', { id: newId(), title, description, items: first, ...(settings ? { settings } : {}) }); for (let i = 0; i < rest.length; i += 400) await rawApi('POST', `/boards/${board.id}/ops`, { opId: `imp-${uid('')}`, sid: 'import', upsert: rest.slice(i, i + 400) }); return board; }
 export async function boardsView(ctx) {
+  await ensureBoardsCss();
   ctx.setCrumbs([{ label: [icon('grid', 15), 'Boards'] }]); const wrap = h('div', { class: 'content bds' }); ctx.main(wrap); let boards = [], archived = [], q = '', filter = 'all', folder = '';
   const load = async () => { try { [boards, archived] = await Promise.all([rawApi('GET', '/boards').then((r) => r.boards), rawApi('GET', '/boards?archived=1').then((r) => r.boards)]); } catch (e) { wrap.replaceChildren(h('p', { class: 'err', role: 'alert' }, e.message || 'Could not load boards'), h('button', { class: 'btn', onclick: load }, 'Try again')); return false; } return true; };
   const patch = async (b, p) => { try { await rawApi('PATCH', `/boards/${b.id}`, p); await load() && draw(); } catch (e) { toast(e.message); } };
