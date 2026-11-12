@@ -7,6 +7,8 @@ import { registerServiceWorker } from '/shared/pwa.js';
 import { h, S, api, rawApi, loadNodes, kids, byId, iconOf, goto, toast, createNode, pathOf, menu, offline } from './lib/state.js';
 import { pageView } from './views/page.js';
 import { journalView } from './views/journal.js';
+import { boardsView } from './views/boards.js';
+import { boardView } from './views/board.js';
 import { dashboard, searchView, trashView, settingsView, exportView, quickSwitcher, newPage } from './views/more.js';
 
 const root = document.getElementById('app');
@@ -43,7 +45,7 @@ function drawSide() {
     return [r, ...(isOpen ? ch.map((c) => row(c, lv + 1)).flat() : [])]; };
   const favs = S.nodes.filter((n) => n.favorite && !n.trashedAt), hash = location.hash || '#/'; const nav = (href, label, ic) => h('a', { href, 'aria-current': hash === href || (href !== '#/' && hash.startsWith(href)) ? 'page' : null, onclick: () => document.body.classList.remove('nav-open') }, h('span', {}, ic), label);
   shell.side.replaceChildren(h('a', { class: 'pbrand', href: '#/' }, h('i', {}, icon('file', 16)), 'Pulsar'),
-    h('div', { class: 'scroll' }, h('div', { class: 'nav', role: 'navigation', 'aria-label': 'Main' }, h('button', { type: 'button', onclick: () => { document.body.classList.remove('nav-open'); quickSwitcher(); } }, h('span', {}, icon('zap', 17)), 'Quick search', h('small', { style: 'margin-left:auto;color:var(--mute)' }, 'Ctrl K')), nav('#/', 'Home', icon('home', 17)), nav('#/journal', 'Journal', icon('book', 17)), nav('#/search', 'Search', icon('search', 17)), nav('#/export', 'Export & backup', icon('download', 17)), nav('#/trash', 'Trash', icon('trash', 17)), nav('#/settings', 'Settings', icon('settings', 17))),
+    h('div', { class: 'scroll' }, h('div', { class: 'nav', role: 'navigation', 'aria-label': 'Main' }, h('button', { type: 'button', onclick: () => { document.body.classList.remove('nav-open'); quickSwitcher(); } }, h('span', {}, icon('zap', 17)), 'Quick search', h('small', { style: 'margin-left:auto;color:var(--mute)' }, 'Ctrl K')), nav('#/', 'Home', icon('home', 17)), nav('#/journal', 'Journal', icon('book', 17)), nav('#/boards', 'Boards', icon('grid', 17)), nav('#/search', 'Search', icon('search', 17)), nav('#/export', 'Export & backup', icon('download', 17)), nav('#/trash', 'Trash', icon('trash', 17)), nav('#/settings', 'Settings', icon('settings', 17))),
       favs.length ? [h('div', { class: 'sec' }, 'Favorites'), ...favs.map((n) => h('a', { class: `trow${cur === n.id ? ' cur' : ''}`, href: `#/p/${n.id}`, style: 'text-decoration:none', onclick: () => document.body.classList.remove('nav-open') }, h('span', { class: 'ti' }, iconOf(n, 17)), h('span', { class: 'tt' }, n.title || 'Untitled')))] : null,
       h('div', { class: 'sec' }, 'Workspace', h('span', {}, h('button', { class: 'ib2', style: 'min-width:30px;min-height:30px', type: 'button', 'aria-label': 'New page or collection', onclick: (e) => menu([{ label: 'New page…', run: () => newPage(null) }, { label: 'New collection', run: async () => { const n = await createNode({ kind: 'collection', title: 'Untitled' }); goto(`#/p/${n.id}`); drawSide(); } }, { label: 'New database', run: async () => { const n = await createNode({ kind: 'database', title: 'Untitled' }); goto(`#/p/${n.id}`); drawSide(); } }], e.currentTarget) }, icon('plus', 16)))),
       ...(kids(null).length ? kids(null).flatMap((n) => row(n, 0)) : [h('p', { class: 'sub', style: 'padding:.4rem .6rem' }, 'No pages yet. Use + to create one.')])));
@@ -68,6 +70,8 @@ async function route() {
   try {
     if (a === 'p' && b) { if (!S.nodes.length) await loadNodes(); cleanup = await pageView(b, ctx); }
     else if (a === 'journal') await journalView(b, ctx);
+    else if (a === 'boards') { if (!S.nodes.length) await loadNodes().catch(() => {}); await boardsView(ctx); }
+    else if (a === 'b' && b) { if (!S.nodes.length) await loadNodes().catch(() => {}); cleanup = await boardView(b, ctx); }
     else if (a === 'search') await searchView(q, ctx);
     else if (a === 'trash') await trashView(ctx);
     else if (a === 'settings') settingsView(ctx, { lock, onSignOut: async () => { await offline.forget(); S.me = null; boot(); } });

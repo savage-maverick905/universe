@@ -28,3 +28,13 @@ Collections `pulsar_nodes` (pages, collections, databases, entries, journal; sch
 * PDFs use built-in Latin fonts: emoji and non-Latin scripts become "?" (export reports how many). Markdown/JSON keep everything.
 * The PIN lock is a screen cover on the device, not encryption.
 * Vercel caps request bodies (~4.5 MB): each save and upload must stay under that.
+
+## Boards
+
+Boards are infinite visual canvases (`#/boards`, `#/b/<id>`): text, sticky notes, images, files, links, shapes, frames, freehand drawing, connectors with relationship labels, and live or snapshot cards for your Pulsar pages, collections, databases, journal entries and other boards. Boards are private to their owner.
+
+- **Server** — `server/boards.js` (registered from `server/index.js`). Collections: `pulsar_boards`, `pulsar_board_items` (one document per object, so autosave sends only what changed), `pulsar_board_versions` (history snapshots, pruned: 20 automatic + 30 manual). Autosave batches carry an `opId` (idempotent) and run in one transaction.
+- **Client** — `views/boards.js` (home), `views/board.js` (editor), `lib/boards/*` (geometry, connector routing, strokes, model + undo/redo, persistence + recovery journal, export/import, resources, colour picker, inspector, dialogs, templates). `boards.css` is the stylesheet.
+- **Tests** — `tests/pulsar-boards.test.js`.
+- **Links previews** fetch server side and refuse private, loopback and link-local addresses (the check is pinned to the connection, not just the first lookup).
+- **Assets** — images and files reuse the existing `/assets` endpoint. `?inline=1` is allowed only for PDFs and plain text so a board card can preview them.

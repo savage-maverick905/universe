@@ -5,6 +5,7 @@ import { notFound, badRequest, conflict, HttpError } from '../../../shared/error
 import { newId } from '../../../shared/ids.js';
 import { reply } from '../../../http/http.js';
 import { sanitizeHtml, blocksPlain, blockLinks } from '../lib/inline.js';
+import { registerBoards } from './boards.js';
 
 const P = '/api/apps/pulsar';
 const KINDS = ['page', 'collection', 'database', 'entry'];
@@ -207,12 +208,14 @@ export function register({ router, services: s }) {
     await assets.insert({ id, ownerId: user.id, kind: 'cloudinary', mime: 'image/*', name: str(b.publicId, 'publicId', 200), size: int(b.bytes, 0, 1e9, 0), url: src, width: int(b.width, 0, 100000, 0), height: int(b.height, 0, 100000, 0), schemaVersion: 1 });
     return reply(201, { asset: { id, src, isImage: true } });
   });
-  router.add('GET', `${P}/assets/:id/file`, async ({ user, params, res }) => {
+  router.add('GET', `${P}/assets/:id/file`, async ({ user, params, res, query }) => {
     await can(user, 'page.read'); const a = await assets.get(params.id); if (!a || a.ownerId !== user.id) throw notFound('File not found');
     if (a.kind === 'cloudinary') { res.statusCode = 302; res.setHeader('Location', a.url); res.end(); return { __handled: true }; }
     const buf = Buffer.from(a.data, 'base64'), isImg = !!IMG_MIME[a.mime];
     res.statusCode = 200; res.setHeader('Content-Type', a.mime); res.setHeader('Content-Length', buf.length); res.setHeader('Cache-Control', 'private, max-age=31536000, immutable'); res.setHeader('X-Content-Type-Options', 'nosniff');
-    res.setHeader('Content-Disposition', `${isImg ? 'inline' : 'attachment'}; filename="${a.name.replace(/"/g, '')}"`); res.end(buf); return { __handled: true };
+    const inline = isImg || (query.get('inline') === '1' && (a.mime === 'application/pdf' || a.mime === 'text/plain')); // PDFs/text may be previewed in a board card; never html
+    if (inline && !isImg) res.setHeader('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'");
+    res.setHeader('Content-Disposition', `${inline ? 'inline' : 'attachment'}; filename="${a.name.replace(/"/g, '')}"`); res.end(buf); return { __handled: true };
   });
 
   // ---- backup import (batches of nodes from a Pulsar JSON backup) ----
@@ -233,6 +236,8 @@ export function register({ router, services: s }) {
     }
     return res;
   }, { bodyLimit: 4 * 1024 * 1024 });
+
+  registerBoards({ router, s, nodes, can, cloud }); // Pulsar Boards (server/boards.js)
 
   router.add('GET', `${P}/widget/summary`, async ({ user }) => { await can(user, 'stats.read'); const all = (await mine(user)).filter((n) => !n.trashedAt); return { stats: [{ label: 'Pages', value: all.filter((n) => n.kind === 'page' && !n.journalDate).length }, { label: 'Journal entries', value: all.filter((n) => n.journalDate).length }, { label: 'Databases', value: all.filter((n) => n.kind === 'database').length }] }; });
 }
